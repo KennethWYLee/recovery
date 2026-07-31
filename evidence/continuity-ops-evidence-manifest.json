@@ -3,16 +3,16 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:29:32.845Z",
+  "generatedAt": "2026-07-31T08:30:54.622Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
-    "status": "source_tree_has_uncommitted_changes",
-    "repositoryRelativePath": "demo-recovery-lab",
-    "head": "72151705587c1aa654830955a61454b3e3671aba",
-    "shortHead": "72151705587c",
-    "sourceDirtyEntryCount": 90,
-    "limitation": "The project contains uncommitted changes, so this manifest does not describe a clean commit rebuild."
+    "status": "source_tree_clean",
+    "repositoryRelativePath": ".",
+    "head": "8ee5ccc806887d04a15f33a8ca7da98e4e4f0a69",
+    "shortHead": "8ee5ccc80688",
+    "sourceDirtyEntryCount": 0,
+    "limitation": "The project files resolve to this commit; CI and deployment identity remain separate evidence."
   },
   "runtime": {
     "node": "v24.15.0",
