@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceId": "CO-VRF-FAILURE-RECOVERY-001",
+  "product": "Continuity Ops",
+  "productVersion": "2.2.0",
+  "generatedAt": "2026-07-31T08:27:14.066Z",
+  "evidenceStatus": "verified_local_controlled",
+  "verificationType": "unmigrated_database_failure_and_recovery",
+  "result": "passed_with_documented_limits",
+  "buildArtifact": {
+    "path": "dist/server/index.js",
+    "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158"
+  },
+  "environment": {
+    "runtime": "v24.15.0",
+    "platform": "win32",
+    "database": "isolated synthetic local D1"
+  },
+  "temporaryStateCleanup": "scheduled_after_runner_exit",
+  "failureObservation": {
+    "expectedStatus": 503,
+    "observedStatus": 503,
+    "expectedProblemCode": "DATABASE_NOT_READY",
+    "observedProblemCode": "DATABASE_NOT_READY",
+    "requestIdPresent": true
+  },
+  "recovery": {
+    "action": "Apply migrations 0001 through 0004 to the same isolated state and restart the same Worker artifact.",
+    "migrationDurationMs": 5147,
+    "healthStatus": 200,
+    "accessStatus": 200,
+    "overviewStatus": 200,
+    "coreReadChecksPassed": 3
+  },
+  "totalDurationMs": 8091,
+  "limitations": [
+    "This exercise verifies a local unmigrated-D1 failure and recovery; it does not simulate an in-flight network partition, partial remote D1 outage, or third-party service failure.",
+    "The result is not a production RTO or RPO and does not verify Cloudflare D1 Time Travel, hosted permissions, concurrent writes, application rollback, or migration rollback.",
+    "The browser error presentation and alert delivery were not exercised by this script."
+  ]
+}

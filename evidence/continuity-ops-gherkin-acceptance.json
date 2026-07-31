@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceId": "CO-VRF-GHERKIN-001",
+  "product": "Continuity Ops",
+  "productVersion": "2.2.0",
+  "generatedAt": "2026-07-31T08:21:30.432Z",
+  "evidenceStatus": "verified_local",
+  "verificationType": "executable_gherkin_domain_acceptance",
+  "result": "passed_with_documented_limits",
+  "tool": {
+    "name": "@cucumber/cucumber",
+    "version": "13.2.0",
+    "runtime": "v24.15.0"
+  },
+  "summary": {
+    "features": 1,
+    "scenarios": 8,
+    "steps": 28,
+    "passedSteps": 28,
+    "failedSteps": 0
+  },
+  "inputs": [
+    {
+      "path": "features/core-reliability.feature",
+      "sha256": "0a0bab5ad039150227bb6c60cf6c873905c96f5fc5121aabdc9fd723bd51bf2f"
+    },
+    {
+      "path": "features/step_definitions/core-reliability.steps.mjs",
+      "sha256": "a440cebddfd66647ad40b401ecc4a07e5e6affabcf722ea032976d53bf1b9819"
+    },
+    {
+      "path": "lib/operations-domain.ts",
+      "sha256": "11febf89dc9a9d062c15a8b7da8c7d5b4f5aff8e18ca940924120f4a5f567886"
+    }
+  ],
+  "scenarioNames": [
+    "A responder cannot resolve an incident",
+    "An assigned commander can resolve a monitored incident",
+    "An observer cannot be assigned operational response duties",
+    "Completed work rejects insecure evidence",
+    "Completed work accepts durable HTTPS evidence",
+    "A deprecated service cannot receive a new incident",
+    "The open queue excludes closed and cancelled incidents",
+    "Only an explicit final marker removes the next-update requirement"
+  ],
+  "limitations": [
+    "These scenarios make selected core reliability rules readable and executable; they do not replace API, D1, browser, security, or external-user testing.",
+    "The suite intentionally covers a risk-selected subset. Gherkin quantity and a passing result are not a quality score.",
+    "The step definitions and product code are in the same repository, so this is not an independent holdout or third-party oracle."
+  ]
+}

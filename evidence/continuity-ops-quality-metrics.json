@@ -1,0 +1,289 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceId": "CO-VRF-QUALITY-001",
+  "product": "Continuity Ops",
+  "productVersion": "2.2.0",
+  "generatedAt": "2026-07-31T08:21:47.701Z",
+  "evidenceStatus": "verified_local",
+  "verificationType": "unit_coverage_and_static_complexity_diagnostics",
+  "result": "coverage_passed_with_complexity_findings",
+  "environment": {
+    "nodeVersion": "v24.15.0",
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "unitTestRun": {
+    "command": "node --experimental-strip-types --experimental-test-coverage --test tests/operations-domain.test.ts tests/operations-authorization.test.ts tests/operations-time.test.ts tests/service-lifecycle-cursor.test.ts tests/operations-input.test.ts",
+    "suites": [
+      "tests/operations-domain.test.ts",
+      "tests/operations-authorization.test.ts",
+      "tests/operations-time.test.ts",
+      "tests/service-lifecycle-cursor.test.ts",
+      "tests/operations-input.test.ts"
+    ],
+    "tests": 29,
+    "passed": 29,
+    "failed": 0,
+    "exitCode": 0
+  },
+  "coverage": {
+    "provider": "Node.js built-in test coverage",
+    "gateScope": "aggregate_of_the_five_unit_suites_and_their_five_measured_lib_sources",
+    "thresholds": {
+      "linePercent": 90,
+      "branchPercent": 80,
+      "functionPercent": 80
+    },
+    "result": "passed",
+    "aggregate": {
+      "linePercent": 95.38,
+      "branchPercent": 82.47,
+      "functionPercent": 87.88,
+      "gate": {
+        "line": {
+          "actual": 95.38,
+          "minimum": 90,
+          "passed": true
+        },
+        "branch": {
+          "actual": 82.47,
+          "minimum": 80,
+          "passed": true
+        },
+        "function": {
+          "actual": 87.88,
+          "minimum": 80,
+          "passed": true
+        }
+      }
+    },
+    "perFile": [
+      {
+        "path": "lib/operations-auth.ts",
+        "linePercent": 95.13,
+        "branchPercent": 76.32,
+        "functionPercent": 87.5,
+        "uncoveredLineRanges": [
+          "145-146",
+          "163-164",
+          "209-210",
+          "215-217",
+          "224-225"
+        ],
+        "comparisonToAggregateThresholds": {
+          "line": {
+            "actual": 95.13,
+            "minimum": 90,
+            "passed": true
+          },
+          "branch": {
+            "actual": 76.32,
+            "minimum": 80,
+            "passed": false
+          },
+          "function": {
+            "actual": 87.5,
+            "minimum": 80,
+            "passed": true
+          }
+        },
+        "thresholdRole": "diagnostic_only"
+      },
+      {
+        "path": "lib/operations-domain.ts",
+        "linePercent": 93.96,
+        "branchPercent": 84.48,
+        "functionPercent": 80,
+        "uncoveredLineRanges": [
+          "106-107",
+          "110-111",
+          "127-128",
+          "131-132",
+          "135-136",
+          "173-174",
+          "296-297",
+          "299-300",
+          "306-307",
+          "312-313"
+        ],
+        "comparisonToAggregateThresholds": {
+          "line": {
+            "actual": 93.96,
+            "minimum": 90,
+            "passed": true
+          },
+          "branch": {
+            "actual": 84.48,
+            "minimum": 80,
+            "passed": true
+          },
+          "function": {
+            "actual": 80,
+            "minimum": 80,
+            "passed": true
+          }
+        },
+        "thresholdRole": "diagnostic_only"
+      },
+      {
+        "path": "lib/operations-input.ts",
+        "linePercent": 95.83,
+        "branchPercent": 87.88,
+        "functionPercent": 100,
+        "uncoveredLineRanges": [
+          "74-76",
+          "118-119"
+        ],
+        "comparisonToAggregateThresholds": {
+          "line": {
+            "actual": 95.83,
+            "minimum": 90,
+            "passed": true
+          },
+          "branch": {
+            "actual": 87.88,
+            "minimum": 80,
+            "passed": true
+          },
+          "function": {
+            "actual": 100,
+            "minimum": 80,
+            "passed": true
+          }
+        },
+        "thresholdRole": "diagnostic_only"
+      },
+      {
+        "path": "lib/operations-time.ts",
+        "linePercent": 100,
+        "branchPercent": 80,
+        "functionPercent": 100,
+        "uncoveredLineRanges": [],
+        "comparisonToAggregateThresholds": {
+          "line": {
+            "actual": 100,
+            "minimum": 90,
+            "passed": true
+          },
+          "branch": {
+            "actual": 80,
+            "minimum": 80,
+            "passed": true
+          },
+          "function": {
+            "actual": 100,
+            "minimum": 80,
+            "passed": true
+          }
+        },
+        "thresholdRole": "diagnostic_only"
+      },
+      {
+        "path": "lib/service-lifecycle-cursor.ts",
+        "linePercent": 96.59,
+        "branchPercent": 84.78,
+        "functionPercent": 92.86,
+        "uncoveredLineRanges": [
+          "26-27",
+          "116-117",
+          "128-129"
+        ],
+        "comparisonToAggregateThresholds": {
+          "line": {
+            "actual": 96.59,
+            "minimum": 90,
+            "passed": true
+          },
+          "branch": {
+            "actual": 84.78,
+            "minimum": 80,
+            "passed": true
+          },
+          "function": {
+            "actual": 92.86,
+            "minimum": 80,
+            "passed": true
+          }
+        },
+        "thresholdRole": "diagnostic_only"
+      }
+    ]
+  },
+  "complexity": {
+    "provider": "ESLint complexity rule",
+    "threshold": 15,
+    "role": "diagnostic_only_not_a_functional_acceptance_gate",
+    "result": "findings_present",
+    "findingCount": 4,
+    "findings": [
+      {
+        "path": "lib/operations-auth.ts",
+        "line": 99,
+        "column": 8,
+        "measuredComplexity": 20,
+        "threshold": 15,
+        "message": "Function 'resolveExternalOperationsIdentity' has a complexity of 20. Maximum allowed is 15."
+      },
+      {
+        "path": "lib/operations-auth.ts",
+        "line": 171,
+        "column": 8,
+        "measuredComplexity": 27,
+        "threshold": 15,
+        "message": "Function 'rejectedMutationAudit' has a complexity of 27. Maximum allowed is 15."
+      },
+      {
+        "path": "lib/operations-domain.ts",
+        "line": 294,
+        "column": 8,
+        "measuredComplexity": 21,
+        "threshold": 15,
+        "message": "Function 'operationsRouteTemplate' has a complexity of 21. Maximum allowed is 15."
+      },
+      {
+        "path": "lib/operations-input.ts",
+        "line": 38,
+        "column": 8,
+        "measuredComplexity": 21,
+        "threshold": 15,
+        "message": "Async function 'readBoundedJsonObject' has a complexity of 21. Maximum allowed is 15."
+      }
+    ]
+  },
+  "crapMetric": {
+    "status": "not_calculated",
+    "reason": "Node's built-in text report does not provide a stable function-by-function mapping between cyclomatic complexity and function coverage. A CRAP value would therefore be fabricated rather than reproducible."
+  },
+  "sourceBinding": [
+    {
+      "path": "lib/operations-domain.ts",
+      "sha256": "11febf89dc9a9d062c15a8b7da8c7d5b4f5aff8e18ca940924120f4a5f567886"
+    },
+    {
+      "path": "lib/operations-auth.ts",
+      "sha256": "532dc5cd375a2eef9c9948014d6fa24878d03bb821373ac60e297a2cc2d7173d"
+    },
+    {
+      "path": "lib/operations-time.ts",
+      "sha256": "e704b46918946c79a76778db4e348346e1d6d2951d616a85a8a70f016f046609"
+    },
+    {
+      "path": "lib/service-lifecycle-cursor.ts",
+      "sha256": "51e16880e7bab22210955a8e616d90e0134b59c0c5fc33ac94e7d8c38c2b357b"
+    },
+    {
+      "path": "lib/operations-input.ts",
+      "sha256": "c9721d36d74aa31dcce6983b8f14a8fef8253922901e743a88fd3f6dc4d0426a"
+    }
+  ],
+  "interpretation": [
+    "The 90% line, 80% branch, and 80% function thresholds apply to the aggregate measured unit-test scope; per-file comparisons identify gaps but are not separate pass/fail gates.",
+    "Coverage and cyclomatic complexity are risk indicators. Passing coverage thresholds or remaining below a complexity threshold does not prove functional correctness, security, usability, or release readiness.",
+    "Complexity findings above 15 identify review and refactoring candidates; they do not by themselves fail a feature or the product."
+  ],
+  "limitations": [
+    "This report covers only the five named TypeScript unit suites and the five library sources they exercise; it excludes Worker handlers, React UI, migrations, browser paths, and external integrations.",
+    "Line, branch, and function percentages do not measure the quality of assertions or the correctness of the test oracle.",
+    "CRAP is intentionally not reported without credible function-level coverage joined to the same functions measured for complexity."
+  ]
+}

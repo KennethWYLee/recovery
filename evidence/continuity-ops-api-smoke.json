@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "1.1",
+  "evidenceId": "CO-VRF-API-001",
+  "product": "Continuity Ops",
+  "productVersion": "2.2.0",
+  "generatedAt": "2026-07-31T08:23:30.814Z",
+  "evidenceStatus": "verified_local",
+  "verificationType": "isolated_local_worker_d1_api_smoke",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:3013",
+    "runtime": "Cloudflare Worker local build preview",
+    "database": "isolated local D1",
+    "identitySource": "local_environment"
+  },
+  "buildArtifact": {
+    "path": "dist/server/index.js",
+    "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158"
+  },
+  "result": "passed",
+  "checkSummary": {
+    "positive": 27,
+    "negative": 44,
+    "total": 71
+  },
+  "checks": [
+    {
+      "name": "professional root and operations surfaces, social preview, and root/API security headers",
+      "result": "passed"
+    },
+    {
+      "name": "health and authenticated administrative access",
+      "result": "passed"
+    },
+    {
+      "name": "member provisioning and active-administrator invariant",
+      "result": "passed"
+    },
+    {
+      "name": "simultaneous identical idempotent delivery creates one service and replays one response",
+      "result": "passed",
+      "details": {
+        "concurrentRequests": 2,
+        "createdResponses": 1,
+        "replayedResponses": 1,
+        "distinctBusinessRecords": 1
+      }
+    },
+    {
+      "name": "simultaneous optimistic updates preserve one winner and reject one stale write",
+      "result": "passed",
+      "details": {
+        "concurrentRequests": 2,
+        "successfulUpdates": 1,
+        "versionConflicts": 1,
+        "finalVersion": 2
+      }
+    },
+    {
+      "name": "SQL metacharacters and an XSS-shaped value round-trip only as normalized JSON text",
+      "result": "passed",
+      "details": {
+        "storedRows": 1,
+        "responseMediaType": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "control characters are normalized and the exact 600-character description boundary is accepted",
+      "result": "passed",
+      "details": {
+        "normalizedControlCharacters": true,
+        "acceptedDescriptionLength": 600
+      }
+    },
+    {
+      "name": "service create, replay, versioned PATCH, stale-write guard, and runbook round-trip",
+      "result": "passed"
+    },
+    {
+      "name": "incident creation and idempotent replay",
+      "result": "passed"
+    },
+    {
+      "name": "qualified commander assignment and consistent detail, list, and overview projection",
+      "result": "passed"
+    },
+    {
+      "name": "critical task creation and HTTPS evidenceRef round-trip",
+      "result": "passed"
+    },
+    {
+      "name": "task completion requires and persists HTTPS evidence",
+      "result": "passed"
+    },
+    {
+      "name": "structured communication review prerequisites, scheduled/final publication, replay, and version guards",
+      "result": "passed"
+    },
+    {
+      "name": "state-changing transition early replay",
+      "result": "passed"
+    },
+    {
+      "name": "verification metadata validation and persistence round-trip",
+      "result": "passed"
+    },
+    {
+      "name": "critical task cancellation requires a durable reason, including same-request priority downgrade",
+      "result": "passed"
+    },
+    {
+      "name": "all three atomic resolution-readiness gates and successful resolution",
+      "result": "passed"
+    },
+    {
+      "name": "partial PIR draft, strict completion, and stateful replay",
+      "result": "passed"
+    },
+    {
+      "name": "atomic incident reopen resets mitigatedAt and returns completed PIR to draft",
+      "result": "passed"
+    },
+    {
+      "name": "second monitoring cycle rejects old evidence and accepts new verification",
+      "result": "passed"
+    },
+    {
+      "name": "assignment soft revoke, active-only detail, and same-role reassignment",
+      "result": "passed"
+    },
+    {
+      "name": "atomic commander handoff, active-only assignment state, replay, and summary consistency",
+      "result": "passed"
+    },
+    {
+      "name": "unknown external telemetry and null SLO attainment are distinct from incident impact",
+      "result": "passed"
+    },
+    {
+      "name": "service lifecycle confirmation, exact replay, append-only evidence, cursor pagination, and list/detail round-trip",
+      "result": "passed"
+    },
+    {
+      "name": "final incident, PIR, task, communication, timeline, and list consistency",
+      "result": "passed"
+    },
+    {
+      "name": "append-only success audit and payload-free denied/failure audit records",
+      "result": "passed"
+    },
+    {
+      "name": "all observed HTTP requests completed without an unexpected 5xx response",
+      "result": "passed",
+      "details": {
+        "observedResponseCount": 168,
+        "unexpectedServerErrorCount": 0
+      }
+    }
+  ],
+  "scope": [
+    "professional root and operations surfaces, social preview, and root/API HTTP security headers",
+    "authenticated access and active-administrator protection",
+    "simultaneous same-key create replay and same-version optimistic update conflict with single-row and audit consistency",
+    "non-object and malformed UTF-8 JSON rejection, normalized control characters, exact text boundary, and SQL/XSS-shaped text round-trip as JSON data",
+    "service create, versioned update, replay, open-incident deprecation guard, and runbook round-trip",
+    "incident lifecycle, current monitoring-cycle resolution gates, transition replay, reopen, and closure",
+    "timeline verification metadata validation and durable round-trip",
+    "structured incident communication review prerequisites, publication, replay, external-update, and terminal-state controls",
+    "task completion rejection without evidence and HTTPS evidence persistence",
+    "partial and completed post-incident reviews with stateful replay and reopen invalidation",
+    "assignment soft revoke, same-role reassignment, and atomic final-commander handoff",
+    "unknown external telemetry semantics and append-only audit retrieval"
+  ],
+  "observed": {
+    "runId": "ms8odzgx-77500678",
+    "serviceId": "svc-f615263d-a858-4dce-b919-8b14a73d51c7",
+    "serviceVersion": 29,
+    "incidentId": "inc-daa64336-074d-4134-9d37-0f11e82968cc",
+    "incidentNumber": "INC-20260731-2968CC",
+    "finalIncidentStatus": "closed",
+    "finalIncidentVersion": 12,
+    "finalReviewVersion": 5,
+    "criticalTaskId": "task-16c326a1-7088-4736-a8eb-cd43f402aba4",
+    "finalCriticalTaskVersion": 2,
+    "evidenceRequiredTaskId": "task-77d483da-26b2-4aee-ad04-3e5a8f24beeb",
+    "publishedCommunicationId": "comm-b211fc7c-5d4b-4340-92a5-0f3b75fe536c",
+    "publishedCommunicationVersion": 4,
+    "communicationTimelineEventCount": 10,
+    "firstVerificationEventId": "tl-effc605a-711c-4117-95c5-b52f463186ac",
+    "secondVerificationEventId": "tl-ee9ff48c-342c-4f0a-8c2e-235969661aed",
+    "finalCommanderUserId": "usr-f185a2a0f814cc4422917efa",
+    "timelineEventCount": 38,
+    "auditEventCountReturned": 99,
+    "distinctResponseRequestIds": 165,
+    "observedResponseCount": 168,
+    "unexpectedServerErrorCount": 0,
+    "concurrentIdenticalCreate": {
+      "requests": 2,
+      "created": 1,
+      "replayed": 1,
+      "businessRows": 1,
+      "successAuditRows": 1
+    },
+    "concurrentVersionUpdate": {
+      "requests": 2,
+      "succeeded": 1,
+      "conflicted": 1,
+      "successAuditRows": 1
+    }
+  },
+  "limitations": [
+    "The run uses a local Worker preview and isolated local D1 state; it does not verify hosted identity integration or production deployment.",
+    "The primary API sequence runs as the configured local administrator. Separate unit and authorization tests cover the organization-role permission matrix.",
+    "Request telemetry is emitted by the local Worker process, but this report does not assert ingestion, retention, alerting, or production observability delivery.",
+    "The test data is synthetic and does not represent external professional-user evidence.",
+    "Authentication and Origin failures are not persisted as application audit rows because no verified active actor has been established for those requests.",
+    "The local preview verifies that a mutation without Origin is rejected. A foreign-Origin request is covered by the authorization unit suite because Wrangler 4.114.0 terminates its local proxy before forwarding that request to the Worker.",
+    "Concurrent requests are dispatched from one local Node.js process against one Wrangler and D1 instance; this verifies observed local race handling, not distributed production capacity or a load-test result.",
+    "No backup restoration, rollback exercise, independent security review, accessibility conformance review, or load test is implied."
+  ]
+}

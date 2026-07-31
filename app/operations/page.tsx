@@ -1,0 +1,85 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import Link from "next/link";
+import { operationsEnvironment } from "@/db/operations";
+import {
+  chatGPTSignInPath,
+  chatGPTSignOutPath,
+  getChatGPTUser,
+} from "@/app/chatgpt-auth";
+import { OperationsApp, type InitialIdentity } from "./OperationsApp";
+
+export const metadata: Metadata = {
+  title: "Operations",
+};
+
+export const dynamic = "force-dynamic";
+
+function isLocalRequest(host: string): boolean {
+  try {
+    const hostname = new URL(`http://${host}`).hostname;
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
+function localIdentity(host: string): InitialIdentity | null {
+  if (!isLocalRequest(host)) return null;
+
+  const environment = operationsEnvironment();
+  const email = environment.CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL?.trim();
+  const displayName = environment.CONTINUITY_OPS_LOCAL_OPERATOR_NAME?.trim();
+  if (!email || !displayName) return null;
+
+  return {
+    displayName,
+    email,
+    mode: "local",
+    signOutPath: "/operations",
+  };
+}
+
+export default async function OperationsPage() {
+  const requestHeaders = await headers();
+  const host = (requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "")
+    .split(",")[0]
+    .trim();
+  const hostedUser = await getChatGPTUser();
+  const identity: InitialIdentity | null = hostedUser
+    ? {
+        displayName: hostedUser.displayName,
+        email: hostedUser.email,
+        mode: "hosted",
+        signOutPath: chatGPTSignOutPath("/operations"),
+      }
+    : localIdentity(host);
+
+  if (!identity) {
+    const local = isLocalRequest(host);
+    return (
+      <main className="auth-page">
+        <section className="auth-card" aria-labelledby="auth-title">
+          <div className="product-mark" aria-hidden="true">CO</div>
+          <p className="eyebrow">CONTINUITY OPS</p>
+          <h1 id="auth-title">使用組織身分進入事件指揮中心</h1>
+          <p>
+            此系統包含服務狀態、事件處置與稽核紀錄。只有經組織驗證並獲授權的人員可以存取。
+          </p>
+          {local ? (
+            <div className="auth-guidance" role="status">
+              本機環境尚未設定開發身分。請設定
+              <code>CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL</code> 與
+              <code>CONTINUITY_OPS_LOCAL_OPERATOR_NAME</code> 後重新啟動服務。
+            </div>
+          ) : (
+            <Link className="button primary wide" href={chatGPTSignInPath("/operations")}>以組織身分登入</Link>
+          )}
+          <small>所有高風險操作會在伺服器端重新驗證權限並留下稽核紀錄。</small>
+        </section>
+      </main>
+    );
+  }
+
+  return <OperationsApp initialIdentity={identity} />;
+}

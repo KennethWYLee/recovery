@@ -1,0 +1,73 @@
+name: Continuity Ops CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: continuity-ops-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify source and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      CONTINUITY_OPS_ENVIRONMENT: development
+      CONTINUITY_OPS_ORGANIZATION_NAME: Continuity Ops CI
+      CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL: ci-operator@example.invalid
+      CONTINUITY_OPS_LOCAL_OPERATOR_ID: ci-operator
+      CONTINUITY_OPS_LOCAL_OPERATOR_NAME: CI Operator
+      CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL: ci-operator@example.invalid
+      CONTINUITY_OPS_LOCAL_OPERATOR_ROLE: admin
+      CONTINUITY_OPS_CURSOR_HMAC_SECRET: test-only-ci-cursor-hmac-secret-at-least-32
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Use the project Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm run audit:production
+
+      - name: Scan project sources and generate the dependency SBOM
+        run: npm run gate:supply-chain
+
+      - name: Type-check and lint
+        run: npm run gate:static
+
+      - name: Run unit, Gherkin, migration, evidence-tool, fault-injection, and quality checks
+        run: npm run gate:test
+
+      - name: Build and inspect the production bundle
+        run: npm run gate:build
+
+      - name: Preserve the verified build for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: continuity-ops-${{ github.sha }}
+          path: |
+            dist
+            evidence/continuity-ops-fault-injection.json
+            evidence/continuity-ops-gherkin-acceptance.json
+            evidence/continuity-ops-gherkin-fault-injection.json
+            evidence/continuity-ops-quality-metrics.json
+            evidence/continuity-ops-evidence-manifest.json
+            evidence/continuity-ops-sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 7

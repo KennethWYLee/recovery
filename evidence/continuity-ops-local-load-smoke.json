@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceId": "CO-VRF-LOAD-001",
+  "product": "Continuity Ops",
+  "productVersion": "2.2.0",
+  "generatedAt": "2026-07-31T08:23:37.002Z",
+  "evidenceStatus": "verified_local_controlled",
+  "verificationType": "bounded_read_only_local_load_smoke",
+  "result": "passed_with_documented_limits",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:3013",
+    "runtime": "v24.15.0",
+    "dataClassification": "synthetic_local",
+    "requestTimeoutMs": 10000
+  },
+  "buildArtifact": {
+    "path": "dist/server/index.js",
+    "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158"
+  },
+  "workload": {
+    "warmupRequests": 20,
+    "routes": [
+      "/api/v1/health",
+      "/api/v1/access",
+      "/api/v1/overview",
+      "/api/v1/services",
+      "/api/v1/incidents?status=open",
+      "/api/v1/audit"
+    ],
+    "stages": [
+      {
+        "concurrency": 1,
+        "requests": 40
+      },
+      {
+        "concurrency": 5,
+        "requests": 100
+      },
+      {
+        "concurrency": 20,
+        "requests": 200
+      },
+      {
+        "concurrency": 50,
+        "requests": 250
+      }
+    ],
+    "mutationsPerformed": 0
+  },
+  "stages": [
+    {
+      "concurrency": 1,
+      "requests": 40,
+      "elapsedMs": 405.05,
+      "requestsPerSecond": 98.75,
+      "validResponses": 40,
+      "invalidResponses": 0,
+      "serverErrors": 0,
+      "statusCounts": {
+        "200": 40
+      },
+      "latencyMs": {
+        "min": 4.8,
+        "mean": 9.51,
+        "p50": 9.27,
+        "p95": 15.18,
+        "p99": 15.58,
+        "max": 15.58
+      }
+    },
+    {
+      "concurrency": 5,
+      "requests": 100,
+      "elapsedMs": 877.25,
+      "requestsPerSecond": 113.99,
+      "validResponses": 100,
+      "invalidResponses": 0,
+      "serverErrors": 0,
+      "statusCounts": {
+        "200": 100
+      },
+      "latencyMs": {
+        "min": 4.75,
+        "mean": 25.81,
+        "p50": 25.04,
+        "p95": 43.95,
+        "p99": 45.63,
+        "max": 48.64
+      }
+    },
+    {
+      "concurrency": 20,
+      "requests": 200,
+      "elapsedMs": 1683.1,
+      "requestsPerSecond": 118.83,
+      "validResponses": 200,
+      "invalidResponses": 0,
+      "serverErrors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "latencyMs": {
+        "min": 11.49,
+        "mean": 83.96,
+        "p50": 84.41,
+        "p95": 152.73,
+        "p99": 169.77,
+        "max": 176.27
+      }
+    },
+    {
+      "concurrency": 50,
+      "requests": 250,
+      "elapsedMs": 1968.97,
+      "requestsPerSecond": 126.97,
+      "validResponses": 250,
+      "invalidResponses": 0,
+      "serverErrors": 0,
+      "statusCounts": {
+        "200": 250
+      },
+      "latencyMs": {
+        "min": 13.86,
+        "mean": 221.41,
+        "p50": 140.16,
+        "p95": 955.96,
+        "p99": 1679.42,
+        "max": 1837.85
+      }
+    }
+  ],
+  "summary": {
+    "totalRequests": 590,
+    "validResponses": 590,
+    "invalidResponses": 0,
+    "serverErrors": 0,
+    "peakConcurrency": 50
+  },
+  "conclusions": [
+    "Every bounded local read response satisfied the expected status, JSON envelope, content type, and request-ID contract.",
+    "Latency and throughput are observations for this local machine and synthetic D1 state, not production objectives or capacity claims."
+  ],
+  "limitations": [
+    "This is a short, read-only local load smoke; it is not a soak, stress, rate-limit, hosted-edge, or production capacity test.",
+    "The run does not establish an SLO, RTO, RPO, Cloudflare Worker limit, D1 production throughput, or concurrent mutation safety.",
+    "No external services, external users, production identity edge, CDN, or internet network path were exercised."
+  ]
+}

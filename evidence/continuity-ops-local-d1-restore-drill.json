@@ -1,0 +1,221 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceId": "CO-VRF-D1-RESTORE-001",
+  "product": "Continuity Ops",
+  "productVersion": "2.2.0",
+  "generatedAt": "2026-07-31T08:12:00.569Z",
+  "evidenceStatus": "verified_local_controlled",
+  "verificationType": "isolated_local_d1_logical_export_restore_drill",
+  "environment": {
+    "scope": "local_only",
+    "dataClassification": "synthetic_controlled",
+    "sourceState": "new_isolated_state",
+    "restoreState": "new_isolated_state",
+    "remoteCommandsUsed": false,
+    "stagingOrProductionEvidence": false
+  },
+  "result": "passed",
+  "tooling": {
+    "wranglerVersion": "4.116.0",
+    "commands": [
+      "d1 migrations apply --local",
+      "d1 execute --local",
+      "d1 export --local"
+    ]
+  },
+  "run": {
+    "runId": "local-20260731081134-5762937c",
+    "retainedStateDirectory": ".wrangler/backup-restore-drills/local-20260731081134-5762937c",
+    "statesRetainedForInspection": true,
+    "preExistingStateReadOrChanged": false
+  },
+  "backup": {
+    "method": "Wrangler local logical SQL export",
+    "format": "sql",
+    "path": ".wrangler/backup-restore-drills/local-20260731081134-5762937c/continuity-ops-local-logical-backup.sql",
+    "bytes": 37468,
+    "sha256": "9816591f6dab317c4aa7221b50625bf92dc1c955c36b31079eea7b73de82d38d",
+    "unchangedAfterRestore": true
+  },
+  "artifactBinding": {
+    "applicationArtifact": null,
+    "schemaMigrations": [
+      {
+        "name": "0001_continuity_ops_v2.sql",
+        "sha256": "505938328b192fa9df4072b9f70f20c6d413e5138b6a582167cee35c51e6002f"
+      },
+      {
+        "name": "0002_continuity_ops_contract_upgrade.sql",
+        "sha256": "cfb857711d231cdafc677d9dffefaa13da0984454ae8aded44bbee89c98a36d9"
+      },
+      {
+        "name": "0003_assignment_role_integrity.sql",
+        "sha256": "7878722ba4709cbbff6112623aa362d65eef4b25cf1e8e7a5a78b40ce4a38caf"
+      },
+      {
+        "name": "0004_service_lifecycle_accountability.sql",
+        "sha256": "a48dedfd4e9b939e13e4a89335ba43197ec618a175825ce08a8e896d9ccffb0c"
+      }
+    ],
+    "migrationSetSha256": "58b3db537cc577fc469e7ec4b8c2c6f6ac3349017621f98000df4acebab04697",
+    "note": "The drill is bound to the exact migration-file hashes and backup hash, not to a built Worker artifact."
+  },
+  "checks": [
+    {
+      "id": "logical_backup_present_and_unchanged",
+      "passed": true,
+      "observed": {
+        "bytes": 37468,
+        "sha256": "9816591f6dab317c4aa7221b50625bf92dc1c955c36b31079eea7b73de82d38d"
+      }
+    },
+    {
+      "id": "table_inventory_and_row_counts_match",
+      "passed": true,
+      "observed": {
+        "sourceTableCount": 15,
+        "restoredTableCount": 15
+      }
+    },
+    {
+      "id": "migration_history_matches",
+      "passed": true,
+      "observed": {
+        "sourceMigrationCount": 4,
+        "restoredMigrationCount": 4
+      }
+    },
+    {
+      "id": "source_foreign_keys_clean",
+      "passed": true,
+      "observed": {
+        "violationCount": 0
+      }
+    },
+    {
+      "id": "restored_foreign_keys_clean",
+      "passed": true,
+      "observed": {
+        "violationCount": 0
+      }
+    },
+    {
+      "id": "controlled_marker_restored",
+      "passed": true,
+      "observed": {
+        "sourceCount": 1,
+        "restoredCount": 1
+      }
+    }
+  ],
+  "source": {
+    "tableCounts": {
+      "d1_migrations": 4,
+      "ops_audit_events": 0,
+      "ops_idempotency_receipts": 0,
+      "ops_incident_assignments": 0,
+      "ops_incident_communications": 0,
+      "ops_incident_tasks": 0,
+      "ops_incident_timeline": 0,
+      "ops_incidents": 0,
+      "ops_memberships": 0,
+      "ops_organizations": 1,
+      "ops_post_incident_reviews": 0,
+      "ops_service_lifecycle_events": 0,
+      "ops_services": 0,
+      "ops_users": 0,
+      "ops_write_guards": 1
+    },
+    "migrationHistory": [
+      {
+        "id": 1,
+        "name": "0001_continuity_ops_v2.sql",
+        "appliedAt": "2026-07-31 08:11:37"
+      },
+      {
+        "id": 2,
+        "name": "0002_continuity_ops_contract_upgrade.sql",
+        "appliedAt": "2026-07-31 08:11:38"
+      },
+      {
+        "id": 3,
+        "name": "0003_assignment_role_integrity.sql",
+        "appliedAt": "2026-07-31 08:11:39"
+      },
+      {
+        "id": 4,
+        "name": "0004_service_lifecycle_accountability.sql",
+        "appliedAt": "2026-07-31 08:11:39"
+      }
+    ],
+    "foreignKeyViolations": [],
+    "controlledMarkerCount": 1
+  },
+  "restored": {
+    "tableCounts": {
+      "d1_migrations": 4,
+      "ops_audit_events": 0,
+      "ops_idempotency_receipts": 0,
+      "ops_incident_assignments": 0,
+      "ops_incident_communications": 0,
+      "ops_incident_tasks": 0,
+      "ops_incident_timeline": 0,
+      "ops_incidents": 0,
+      "ops_memberships": 0,
+      "ops_organizations": 1,
+      "ops_post_incident_reviews": 0,
+      "ops_service_lifecycle_events": 0,
+      "ops_services": 0,
+      "ops_users": 0,
+      "ops_write_guards": 1
+    },
+    "migrationHistory": [
+      {
+        "id": 1,
+        "name": "0001_continuity_ops_v2.sql",
+        "appliedAt": "2026-07-31 08:11:37"
+      },
+      {
+        "id": 2,
+        "name": "0002_continuity_ops_contract_upgrade.sql",
+        "appliedAt": "2026-07-31 08:11:38"
+      },
+      {
+        "id": 3,
+        "name": "0003_assignment_role_integrity.sql",
+        "appliedAt": "2026-07-31 08:11:39"
+      },
+      {
+        "id": 4,
+        "name": "0004_service_lifecycle_accountability.sql",
+        "appliedAt": "2026-07-31 08:11:39"
+      }
+    ],
+    "foreignKeyViolations": [],
+    "controlledMarkerCount": 1
+  },
+  "elapsedMs": {
+    "source_migrations": 5447,
+    "source_controlled_seed": 1704,
+    "source_table_inventory": 1790,
+    "source_table_counts": 1806,
+    "source_migration_history": 1599,
+    "source_foreign_keys": 1575,
+    "source_controlled_marker": 1493,
+    "logical_export": 1470,
+    "isolated_restore": 1875,
+    "restored_table_inventory": 1447,
+    "restored_table_counts": 1428,
+    "restored_migration_history": 1422,
+    "restored_foreign_keys": 1453,
+    "restored_controlled_marker": 1449,
+    "total": 25974
+  },
+  "limitations": [
+    "This is a controlled local D1 drill with synthetic migration data; it is not a staging or production backup test.",
+    "The measured elapsed time is not an RTO. No recovery point, concurrent write, network, dataset-size, or operational approval requirement was tested.",
+    "The drill verifies a Wrangler logical SQL export and isolated import; it does not verify D1 Time Travel, hosted backup retention, or remote restore permissions.",
+    "Wrangler D1 local execute rejects PRAGMA integrity_check with SQLITE_AUTH, so this drill uses supported row-count, migration-history, controlled-marker, and foreign_key_check verification instead.",
+    "The isolated states and logical backup are retained under the git-ignored .wrangler directory for inspection; this script never deletes prior data."
+  ]
+}

@@ -1,0 +1,463 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceId": "CO-VRF-TELEMETRY-001",
+  "product": "Continuity Ops",
+  "generatedAt": "2026-07-31T08:26:55.557Z",
+  "evidenceStatus": "verified_local_controlled",
+  "verificationType": "local_controlled_wrangler_request_telemetry_analysis",
+  "sourceClassification": {
+    "environment": "local",
+    "data": "controlled_test_telemetry",
+    "productionOrStagingEvidence": false
+  },
+  "result": "passed",
+  "input": {
+    "totalInputLines": 1836,
+    "nonBlankLineCount": 1833,
+    "blankLineCount": 3,
+    "parsedJsonLineCount": 880,
+    "nonJsonLineCount": 953,
+    "telemetryRecordCount": 879,
+    "unparseableTelemetryCandidateCount": 0,
+    "telemetryCandidateCount": 879
+  },
+  "validation": {
+    "validRecords": {
+      "numerator": 879,
+      "denominator": 879,
+      "percentage": 100
+    },
+    "violationCount": 0,
+    "violations": [],
+    "allowedFields": [
+      "event",
+      "requestId",
+      "route",
+      "method",
+      "status",
+      "problemCode",
+      "latencyMs",
+      "apiVersion",
+      "deploymentVersion",
+      "schemaVersion"
+    ],
+    "sensitiveValuesRetained": false,
+    "rawRequestIdsIncluded": false
+  },
+  "requestOutcomes": {
+    "allValidRecords": 879,
+    "successful": {
+      "numerator": 828,
+      "denominator": 879,
+      "percentage": 94.2
+    },
+    "errors": {
+      "numerator": 51,
+      "denominator": 879,
+      "percentage": 5.8
+    },
+    "clientErrors": {
+      "numerator": 51,
+      "denominator": 879,
+      "percentage": 5.8
+    },
+    "serverErrors": {
+      "numerator": 0,
+      "denominator": 879,
+      "percentage": 0
+    },
+    "byStatus": [
+      {
+        "status": 200,
+        "count": 809,
+        "denominator": 879,
+        "percentage": 92.04
+      },
+      {
+        "status": 201,
+        "count": 19,
+        "denominator": 879,
+        "percentage": 2.16
+      },
+      {
+        "status": 400,
+        "count": 20,
+        "denominator": 879,
+        "percentage": 2.28
+      },
+      {
+        "status": 403,
+        "count": 3,
+        "denominator": 879,
+        "percentage": 0.34
+      },
+      {
+        "status": 404,
+        "count": 2,
+        "denominator": 879,
+        "percentage": 0.23
+      },
+      {
+        "status": 409,
+        "count": 21,
+        "denominator": 879,
+        "percentage": 2.39
+      },
+      {
+        "status": 413,
+        "count": 2,
+        "denominator": 879,
+        "percentage": 0.23
+      },
+      {
+        "status": 415,
+        "count": 3,
+        "denominator": 879,
+        "percentage": 0.34
+      }
+    ],
+    "byMethod": [
+      {
+        "method": "DELETE",
+        "count": 4,
+        "denominator": 879,
+        "percentage": 0.46
+      },
+      {
+        "method": "GET",
+        "count": 746,
+        "denominator": 879,
+        "percentage": 84.87
+      },
+      {
+        "method": "PATCH",
+        "count": 65,
+        "denominator": 879,
+        "percentage": 7.39
+      },
+      {
+        "method": "POST",
+        "count": 55,
+        "denominator": 879,
+        "percentage": 6.26
+      },
+      {
+        "method": "PUT",
+        "count": 9,
+        "denominator": 879,
+        "percentage": 1.02
+      }
+    ]
+  },
+  "problemCodes": {
+    "denominator": 51,
+    "records": [
+      {
+        "problemCode": "COMMUNICATION_NEXT_UPDATE_REQUIRED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "COMMUNICATION_STATUS_CONFLICT",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "CROSS_ORIGIN_REQUEST_REJECTED",
+        "count": 2,
+        "denominator": 51,
+        "percentage": 3.92
+      },
+      {
+        "problemCode": "IDEMPOTENCY_KEY_REUSED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INCIDENT_COMMANDER_REQUIRED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INCIDENT_COMMUNICATION_PUBLISH_BLOCKED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INCIDENT_NOT_FOUND",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INCIDENT_NOT_RESOLVED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INCIDENT_ROLE_INCOMPATIBLE",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INVALID_FIELD",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INVALID_JSON",
+        "count": 3,
+        "denominator": 51,
+        "percentage": 5.88
+      },
+      {
+        "problemCode": "INVALID_LIFECYCLE_CURSOR",
+        "count": 3,
+        "denominator": 51,
+        "percentage": 5.88
+      },
+      {
+        "problemCode": "INVALID_OBSERVATION_WINDOW",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INVALID_REVIEW_STATUS",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INVALID_SHA256_DIGEST",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "INVALID_URL",
+        "count": 2,
+        "denominator": 51,
+        "percentage": 3.92
+      },
+      {
+        "problemCode": "INVALID_UTF8",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "JSON_CONTENT_TYPE_REQUIRED",
+        "count": 3,
+        "denominator": 51,
+        "percentage": 5.88
+      },
+      {
+        "problemCode": "LAST_ADMIN_REQUIRED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "REQUEST_TOO_LARGE",
+        "count": 2,
+        "denominator": 51,
+        "percentage": 3.92
+      },
+      {
+        "problemCode": "RESOLUTION_CRITERIA_REQUIRED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "RESOLUTION_CRITICAL_TASKS_OPEN",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "RESOLUTION_VERIFICATION_REQUIRED",
+        "count": 2,
+        "denominator": 51,
+        "percentage": 3.92
+      },
+      {
+        "problemCode": "RESOURCE_ALREADY_EXISTS",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "REVIEW_SECTIONS_INCOMPLETE",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "ROUTE_NOT_FOUND",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "SERVICE_HAS_OPEN_INCIDENTS",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "SERVICE_NOT_ACTIVE",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "SERVICE_SLUG_IMMUTABLE",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "SERVICE_STATUS_CHANGE_CONFIRMATION_REQUIRED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "SERVICE_STATUS_CHANGE_REASON_REQUIRED",
+        "count": 2,
+        "denominator": 51,
+        "percentage": 3.92
+      },
+      {
+        "problemCode": "TASK_CANCELLATION_REASON_REQUIRED",
+        "count": 2,
+        "denominator": 51,
+        "percentage": 3.92
+      },
+      {
+        "problemCode": "TASK_EVIDENCE_REQUIRED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "TRANSITION_NOT_ALLOWED",
+        "count": 1,
+        "denominator": 51,
+        "percentage": 1.96
+      },
+      {
+        "problemCode": "VERSION_CONFLICT",
+        "count": 5,
+        "denominator": 51,
+        "percentage": 9.8
+      }
+    ]
+  },
+  "latencyMs": {
+    "sampleCount": 879,
+    "denominator": 879,
+    "percentileMethod": "nearest_rank",
+    "minimum": 0,
+    "maximum": 30,
+    "mean": 6.85,
+    "p50": 6,
+    "p95": 13,
+    "p99": 16
+  },
+  "versions": {
+    "api": [
+      {
+        "version": "2.2.0",
+        "count": 879
+      }
+    ],
+    "schema": [
+      {
+        "version": "0004",
+        "count": 879
+      }
+    ],
+    "deployment": [
+      {
+        "version": "local-final-predeployment",
+        "count": 879
+      }
+    ],
+    "expectedApiVersion": "2.2.0",
+    "expectedSchemaVersion": "0004",
+    "expectedDeploymentVersion": "local-final-predeployment",
+    "apiMismatch": {
+      "numerator": 0,
+      "denominator": 879,
+      "percentage": 0
+    },
+    "schemaMismatch": {
+      "numerator": 0,
+      "denominator": 879,
+      "percentage": 0
+    },
+    "deploymentMismatch": {
+      "numerator": 0,
+      "denominator": 879,
+      "percentage": 0
+    },
+    "unversioned": {
+      "numerator": 0,
+      "denominator": 879,
+      "percentage": 0
+    },
+    "releaseBlockerCount": 0
+  },
+  "smokeCorrelation": {
+    "method": "exact_request_id_match_with_digest_only_output",
+    "smokeEvidenceRequestIds": 44,
+    "validTelemetryRequestIds": 879,
+    "coverage": {
+      "numerator": 44,
+      "denominator": 44,
+      "percentage": 100
+    },
+    "matchedRequestCount": 44,
+    "missingRequestCount": 0,
+    "telemetryOnlyRequestCount": 835,
+    "missingRequestFingerprints": [],
+    "rawRequestIdsIncluded": false
+  },
+  "limitations": [
+    "This report analyzes controlled local Wrangler output only; it is not staging or production observability evidence.",
+    "Latency describes only the requests present in the supplied file and does not establish an SLO or load-test result.",
+    "Smoke correlation covers only request IDs retained by the smoke evidence document; raw request IDs are never written to this report.",
+    "The report does not prove telemetry ingestion, retention, alert delivery, sampling behavior, or incident response in a hosted environment."
+  ],
+  "productVersion": "2.2.0",
+  "artifacts": {
+    "telemetry": {
+      "path": ".wrangler/deploy-final-20260731c.stdout.log",
+      "bytes": 616910,
+      "sha256": "900a2d085fa3e551fdc55f5ddeb9046eb207eb27832d3de900c686e7ea9cbd93",
+      "rawContentRetained": false
+    },
+    "smokeEvidence": {
+      "path": "evidence/continuity-ops-security-negative-tests.json",
+      "bytes": 14470,
+      "sha256": "bc2d864ef01cc0ef7c576be412d521689fcd2d0ae557a50d541ec77e3de72155",
+      "evidenceId": "CO-VRF-SEC-001",
+      "associatedBuildArtifact": {
+        "path": "dist/server/index.js",
+        "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158"
+      },
+      "rawRequestIdsRetained": false
+    }
+  }
+}

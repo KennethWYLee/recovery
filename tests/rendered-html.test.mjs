@@ -1,0 +1,76 @@
+import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const forbiddenProductCopy = /Recovery Lab|ACE Next|活動協作|classroom beta|system prompt|\bprompt\b|\brubric\b|vibe coding|AI agent|AGENTS\.md|課堂|課程|教學|老師|教師|學生|專題|初審|複審|評分|配分|滿分|委員|評審|作業|系統手冊|NTUB|北商|資管專題評分/i;
+const publicTextExtensions = new Set([".css", ".html", ".js", ".json", ".sql", ".txt", ".xml"]);
+
+async function collectPublicTextFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await collectPublicTextFiles(entryPath));
+    } else if (entry.isFile() && publicTextExtensions.has(path.extname(entry.name).toLowerCase())) {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+}
+
+test("production bundle exposes the professional operations product and security headers", async () => {
+  const worker = await readFile(new URL("../dist/server/index.js", import.meta.url), "utf8");
+
+  assert.match(worker, /Continuity Ops/);
+  assert.match(worker, /\/api\/v1\/incidents/);
+  assert.match(worker, /x-content-type-options/);
+  assert.match(worker, /content-security-policy/);
+  assert.match(worker, /frame-ancestors 'none'/);
+  assert.match(worker, /strict-transport-security/);
+  assert.doesNotMatch(worker, /FACILITATOR_KEY_NOT_CONFIGURED|trust-competence-draft/);
+  assert.doesNotMatch(worker, /Building your site|react-loading-skeleton/);
+  assert.doesNotMatch(worker, forbiddenProductCopy);
+});
+
+test("client bundle contains the incident command workspace without teaching or grading copy", async () => {
+  const assets = await readdir(new URL("../dist/client/assets/", import.meta.url));
+  const operationsAsset = assets.find((name) => name.startsWith("OperationsApp-") && name.endsWith(".js"));
+  const cssAssets = assets.filter((name) => name.endsWith(".css"));
+
+  assert.ok(operationsAsset, "OperationsApp client asset is missing");
+  assert.ok(cssAssets.length > 0, "compiled stylesheet is missing");
+
+  const [operations, css] = await Promise.all([
+    readFile(new URL(`../dist/client/assets/${operationsAsset}`, import.meta.url), "utf8"),
+    Promise.all(cssAssets.map((name) => readFile(new URL(`../dist/client/assets/${name}`, import.meta.url), "utf8")))
+      .then((parts) => parts.join("\n")),
+  ]);
+
+  assert.match(operations, /事件指揮中心/);
+  assert.match(operations, /營運總覽/);
+  assert.match(operations, /服務目錄/);
+  assert.match(operations, /稽核紀錄/);
+  assert.match(operations, /事後檢討/);
+  assert.match(operations, /\/api\/v1\/overview/);
+  assert.match(operations, /Idempotency-Key|idempotencyKey/);
+  assert.doesNotMatch(operations, forbiddenProductCopy);
+  assert.match(css, /focus-visible/);
+  assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /@media/);
+});
+
+test("every textual deployment artifact excludes prompts, grading language, and classroom framing", async () => {
+  const distDirectory = fileURLToPath(new URL("../dist/", import.meta.url));
+  const files = await collectPublicTextFiles(distDirectory);
+
+  assert.ok(files.length > 0, "deployment output does not contain any inspectable text files");
+  for (const file of files) {
+    const contents = await readFile(file, "utf8");
+    assert.doesNotMatch(contents, forbiddenProductCopy, `non-product copy leaked into ${path.relative(distDirectory, file)}`);
+  }
+});

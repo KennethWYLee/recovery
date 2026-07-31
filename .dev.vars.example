@@ -1,0 +1,14 @@
+# Copy to .dev.vars for local development and never commit the resulting file.
+# Local operator identity is accepted only for localhost requests.
+CONTINUITY_OPS_ENVIRONMENT=development
+CONTINUITY_OPS_ORGANIZATION_NAME=Continuity Ops Local
+CONTINUITY_OPS_ORGANIZATION_TIMEZONE=Asia/Taipei
+CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL=local-operator@example.invalid
+CONTINUITY_OPS_DEPLOYMENT_VERSION=local-development
+# Local-only signing key. Use an independently generated secret of at least 32
+# characters in each deployed environment; never commit a real value.
+CONTINUITY_OPS_CURSOR_HMAC_SECRET=replace-with-local-random-secret-at-least-32-characters
+CONTINUITY_OPS_LOCAL_OPERATOR_ID=local-operator
+CONTINUITY_OPS_LOCAL_OPERATOR_NAME=Local Operator
+CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL=local-operator@example.invalid
+CONTINUITY_OPS_LOCAL_OPERATOR_ROLE=admin

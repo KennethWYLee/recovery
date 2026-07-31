@@ -1,0 +1,949 @@
+{
+  "schemaVersion": "1.1",
+  "evidenceId": "CO-VRF-MANIFEST-001",
+  "product": "Continuity Ops",
+  "productVersion": "2.2.0",
+  "generatedAt": "2026-07-31T08:29:32.845Z",
+  "evidenceStatus": "generated_local",
+  "verificationType": "source_and_build_integrity_manifest",
+  "sourceControl": {
+    "status": "source_tree_has_uncommitted_changes",
+    "repositoryRelativePath": "demo-recovery-lab",
+    "head": "72151705587c1aa654830955a61454b3e3671aba",
+    "shortHead": "72151705587c",
+    "sourceDirtyEntryCount": 90,
+    "limitation": "The project contains uncommitted changes, so this manifest does not describe a clean commit rebuild."
+  },
+  "runtime": {
+    "node": "v24.15.0",
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "packageIdentity": {
+    "name": "continuity-ops",
+    "version": "2.2.0",
+    "lockfileVersion": 3,
+    "aligned": true
+  },
+  "source": {
+    "fileCount": 93,
+    "files": [
+      {
+        "path": ".dev.vars.example",
+        "bytes": 853,
+        "sha256": "fc6c017f396dbbe949b245ce0253095a9a5ced63d4afdc5e3b49000200f8224b"
+      },
+      {
+        "path": ".env.example",
+        "bytes": 1354,
+        "sha256": "95554652ee06b73f9117f738a789883c317bccffe449682e3e33fb411ec9c431"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "bytes": 2178,
+        "sha256": "d0412291ee260229c3eee142c23825dc91ed73ea2b841cd834987c979f682bc1"
+      },
+      {
+        "path": ".gitignore",
+        "bytes": 588,
+        "sha256": "c94666d3ea41b606581ccad3472484198c0bf0339deb715b5492c8f1d5bfc65d"
+      },
+      {
+        "path": ".openai/hosting.json",
+        "bytes": 91,
+        "sha256": "cd3a5d1bd928361fdd21a22745570476ecb3daebe1d1ff34a2249378ee01dd03"
+      },
+      {
+        "path": "app/api/v1/_data.ts",
+        "bytes": 11412,
+        "sha256": "95aa6d4aa8e0370a78271e1d4327520d37ecadc6faa89a6203f8860d4abc82bf"
+      },
+      {
+        "path": "app/api/v1/_handlers.ts",
+        "bytes": 120699,
+        "sha256": "cd4d8d8fc08889987d35636f6f1f2fed5d396234adba1b0d8b502c98ba55ab55"
+      },
+      {
+        "path": "app/api/v1/_shared.ts",
+        "bytes": 7784,
+        "sha256": "de8c76485944e4c4628baeaa540a3a5fde8395a2cc2337b113677177583bbac7"
+      },
+      {
+        "path": "app/api/v1/[...path]/route.ts",
+        "bytes": 1605,
+        "sha256": "a74d17cb2c25b00cb27b7f6174bcf1fedd15dc5b71a506a8103a7eda70eea900"
+      },
+      {
+        "path": "app/chatgpt-auth.ts",
+        "bytes": 2490,
+        "sha256": "1407f614cc83d7049fdb08cd713d2516866ba58e24e820f7f4fd9d718b9d3007"
+      },
+      {
+        "path": "app/globals.css",
+        "bytes": 57219,
+        "sha256": "3cf6d9e486189f68add10496e216e3f7c2c2fa43be9966c51d728fbef4271cc0"
+      },
+      {
+        "path": "app/layout.tsx",
+        "bytes": 1963,
+        "sha256": "e18751e7eeeb4d600d5aa31990fab3fe8bd82fc959cc5a4dbb11452ebc433c4e"
+      },
+      {
+        "path": "app/operations/OperationsApp.tsx",
+        "bytes": 234676,
+        "sha256": "ce8bd24916e299077b9bfb652cb3ff044c1f943393751f1444053d699ac30e87"
+      },
+      {
+        "path": "app/operations/page.tsx",
+        "bytes": 2847,
+        "sha256": "ce2177958aa329126b23ba1418c83d26cdbb8c62facf9c18518eb8926f9356c5"
+      },
+      {
+        "path": "app/page.tsx",
+        "bytes": 107,
+        "sha256": "ac2169b4dcb33c3c603f195ae33e4944d4d0fec57a20880baab637fa51e75c0b"
+      },
+      {
+        "path": "build/sites-vite-plugin.ts",
+        "bytes": 1200,
+        "sha256": "c09c3311a15a2eadbc2d47bed2b325f0546cc4581f66cffcdffb6ab64a3d4316"
+      },
+      {
+        "path": "cloudflare-env.d.ts",
+        "bytes": 792,
+        "sha256": "a854885415c6747ae3c8260ee1f43d15388678dc0d59e48223037d9be8fac930"
+      },
+      {
+        "path": "db/operations-schema.ts",
+        "bytes": 20975,
+        "sha256": "7148271e1e32671230b2db60f361c12e25a52d8a51c44d95f9740ef10d79e1d4"
+      },
+      {
+        "path": "db/operations.ts",
+        "bytes": 11100,
+        "sha256": "1f8d77cabadae533d3845eaa94a0ed07c78ff235f9ff648657fd8fca15729f29"
+      },
+      {
+        "path": "docs/architecture/core-request-sequences.md",
+        "bytes": 6531,
+        "sha256": "46296a1848653dd007a4147e18d223058d0c832a81c9ffd2b3c262529e0db04b"
+      },
+      {
+        "path": "docs/architecture/data-model.md",
+        "bytes": 8723,
+        "sha256": "3435f25c500e3cf97ffc208c40f6fe8f885c72bdc7aa42b723345cf83b2c0529"
+      },
+      {
+        "path": "docs/architecture/decision-records.md",
+        "bytes": 10041,
+        "sha256": "c7370a5087c08f9af5555a350be396c2f1e5a2aeabe77b3cb1e3892a35dc6914"
+      },
+      {
+        "path": "docs/architecture/failure-modes.md",
+        "bytes": 10823,
+        "sha256": "a8650c91dfbf16df5d265be8680a4f71be90dbfdc514d5aff275797697e4a52d"
+      },
+      {
+        "path": "docs/architecture/system-context-and-components.md",
+        "bytes": 6800,
+        "sha256": "8282769eb270e42e491acb661b7e03edeb5bdc14daf3d70fd8abcab8076d8162"
+      },
+      {
+        "path": "docs/assurance/acceptance-contracts.md",
+        "bytes": 13067,
+        "sha256": "81673510b0f8afe1590bc51da52bfd09cff28e57c916ceb31a72a70911fdc6c4"
+      },
+      {
+        "path": "docs/assurance/assurance-pack-index.md",
+        "bytes": 6592,
+        "sha256": "03c6376f355196ee26600fb07198677f924f515dce27f03ca798c9d559d1686f"
+      },
+      {
+        "path": "docs/assurance/evidence-status-register.md",
+        "bytes": 13841,
+        "sha256": "574d7416cec829414532050caaad1e426846131b942c6d1c35963c0fb0126d75"
+      },
+      {
+        "path": "docs/assurance/external-professional-validation-protocol.md",
+        "bytes": 10331,
+        "sha256": "dfa7a842b1112be3d84500af19b580e24663045781ec99d59f08437768e1dda4"
+      },
+      {
+        "path": "docs/assurance/independent-qa-protocol.md",
+        "bytes": 9214,
+        "sha256": "967e524d4eb06f441bac0cdc745a914555c600dcbea6bb3d35bd5d9dfcdabc02"
+      },
+      {
+        "path": "docs/assurance/local-verification-record-20260731.md",
+        "bytes": 11926,
+        "sha256": "16c18867592f2d73cb953e33fc97c488dc21b3dff70d5684894b221602163510"
+      },
+      {
+        "path": "docs/assurance/operational-evidence-tools.md",
+        "bytes": 6289,
+        "sha256": "5aecf3982c8bc2ea2dcd063b8172c63e57e7af7a40aace977cec32ad5d581a13"
+      },
+      {
+        "path": "docs/assurance/personal-evidence-templates.md",
+        "bytes": 11741,
+        "sha256": "fa462be307f5e0f23a281831514b7ceea53b17904e8a1998705f13de4dcfd3d3"
+      },
+      {
+        "path": "docs/assurance/README.md",
+        "bytes": 8930,
+        "sha256": "3ce29c3fb4797765d8757db35cfb45db6dac2abeabdbe89308f84733dbeca3dc"
+      },
+      {
+        "path": "docs/assurance/requirement-traceability.md",
+        "bytes": 11399,
+        "sha256": "8a19331255eb369e05879938f8d61767f342903fd2bfb82a8fec915609b611d0"
+      },
+      {
+        "path": "docs/assurance/rubric-v1.16-crosswalk.md",
+        "bytes": 4766,
+        "sha256": "8327e10df75f4c2768b951e66dadf07ace7cd857901ac273f88de48311c14439"
+      },
+      {
+        "path": "docs/assurance/verification-plan.md",
+        "bytes": 16133,
+        "sha256": "eb516c7b595b2394f49e867bb6dd3af321276917c64fc2fffdd6595b9dcf30dd"
+      },
+      {
+        "path": "docs/operations-runbook.md",
+        "bytes": 19202,
+        "sha256": "0e77fe150face9656040c2c42d1015bec783be742b9ae0b774ccad84c9adfe64"
+      },
+      {
+        "path": "docs/product-design.md",
+        "bytes": 5065,
+        "sha256": "41793e858d859dfe91aee1cd872706204e0f1560cf6d340c080dca8586cd496a"
+      },
+      {
+        "path": "docs/security-model.md",
+        "bytes": 17332,
+        "sha256": "d607be23be44a2fcb0170a7d971b036ac8cac6159aa60f87eecc48679732781a"
+      },
+      {
+        "path": "docs/security-supply-chain.md",
+        "bytes": 3113,
+        "sha256": "248bf831e63415f3888c74fbdd48d1bb2fecee25b2564028030f35a2a229d5f7"
+      },
+      {
+        "path": "drizzle/0001_continuity_ops_v2.sql",
+        "bytes": 30170,
+        "sha256": "505938328b192fa9df4072b9f70f20c6d413e5138b6a582167cee35c51e6002f"
+      },
+      {
+        "path": "drizzle/0002_continuity_ops_contract_upgrade.sql",
+        "bytes": 35808,
+        "sha256": "cfb857711d231cdafc677d9dffefaa13da0984454ae8aded44bbee89c98a36d9"
+      },
+      {
+        "path": "drizzle/0003_assignment_role_integrity.sql",
+        "bytes": 2807,
+        "sha256": "7878722ba4709cbbff6112623aa362d65eef4b25cf1e8e7a5a78b40ce4a38caf"
+      },
+      {
+        "path": "drizzle/0004_service_lifecycle_accountability.sql",
+        "bytes": 5597,
+        "sha256": "a48dedfd4e9b939e13e4a89335ba43197ec618a175825ce08a8e896d9ccffb0c"
+      },
+      {
+        "path": "eslint.config.mjs",
+        "bytes": 483,
+        "sha256": "275a07c13fc7c83a652efcfa9fb6a207c451a2f5088e6793415ce44281285720"
+      },
+      {
+        "path": "features/core-reliability.feature",
+        "bytes": 2220,
+        "sha256": "0a0bab5ad039150227bb6c60cf6c873905c96f5fc5121aabdc9fd723bd51bf2f"
+      },
+      {
+        "path": "features/step_definitions/core-reliability.steps.mjs",
+        "bytes": 3133,
+        "sha256": "a440cebddfd66647ad40b401ecc4a07e5e6affabcf722ea032976d53bf1b9819"
+      },
+      {
+        "path": "lib/operations-auth.ts",
+        "bytes": 9440,
+        "sha256": "532dc5cd375a2eef9c9948014d6fa24878d03bb821373ac60e297a2cc2d7173d"
+      },
+      {
+        "path": "lib/operations-domain.ts",
+        "bytes": 12397,
+        "sha256": "11febf89dc9a9d062c15a8b7da8c7d5b4f5aff8e18ca940924120f4a5f567886"
+      },
+      {
+        "path": "lib/operations-input.ts",
+        "bytes": 3667,
+        "sha256": "c9721d36d74aa31dcce6983b8f14a8fef8253922901e743a88fd3f6dc4d0426a"
+      },
+      {
+        "path": "lib/operations-time.ts",
+        "bytes": 2355,
+        "sha256": "e704b46918946c79a76778db4e348346e1d6d2951d616a85a8a70f016f046609"
+      },
+      {
+        "path": "lib/service-lifecycle-cursor.ts",
+        "bytes": 6013,
+        "sha256": "51e16880e7bab22210955a8e616d90e0134b59c0c5fc33ac94e7d8c38c2b357b"
+      },
+      {
+        "path": "next.config.ts",
+        "bytes": 140,
+        "sha256": "a972c4f0ffa6dd714e7909b02d1ac19d2f2fe3d01f191efd2c5054bd6f142ec1"
+      },
+      {
+        "path": "package-lock.json",
+        "bytes": 385791,
+        "sha256": "5496118cd0c8b01abbaa9b8e72d1670b4678eac22dce016b542ac6d05f31b4fa"
+      },
+      {
+        "path": "package.json",
+        "bytes": 4625,
+        "sha256": "2fe0491874c73004a4e0082d210981ad50e3df4b2852e5bd138149837f06ccbe"
+      },
+      {
+        "path": "postcss.config.mjs",
+        "bytes": 101,
+        "sha256": "7b299d3d3b16699ddda397c0b2373b3af4f25f8fc9ccc9b3d9e64ef083bc1c21"
+      },
+      {
+        "path": "PROJECT.md",
+        "bytes": 8743,
+        "sha256": "91cceadf22fa2d987988407c4dd2d27bbadf1022d0f3772b187a0eaa41f3807c"
+      },
+      {
+        "path": "public/continuity-ops-social-preview-v2.png",
+        "bytes": 1750173,
+        "sha256": "22a280603722e971b098e93c9a58b51e100b98f6530d7192834d595774e6a7ff"
+      },
+      {
+        "path": "public/og.png",
+        "bytes": 1474092,
+        "sha256": "c4c35e88f216411381303ccb356c167c7d2ab0b0b2b8f17233ad2cae975f2a6a"
+      },
+      {
+        "path": "README.md",
+        "bytes": 12229,
+        "sha256": "c45dda25d929fe19323c0dcebcc4aba1c8a3bc6da5250eb3a10057785f3e8799"
+      },
+      {
+        "path": "scripts/analyze-request-telemetry.mjs",
+        "bytes": 4191,
+        "sha256": "039dc6e751b46c61116cf547ccd1e68b1753014d8339680ddeecb3859183179f"
+      },
+      {
+        "path": "scripts/api-smoke.mjs",
+        "bytes": 78815,
+        "sha256": "34bb49dbba0fc249656b8a82f66a028030a4b8efc4b0f14a8769f82f03362f78"
+      },
+      {
+        "path": "scripts/d1-restore-drill-lib.mjs",
+        "bytes": 4931,
+        "sha256": "c92fac5b3a61430989a8ca2d4061a38a13e4f3c164feafcbcadf030a54482328"
+      },
+      {
+        "path": "scripts/fault-injection.mjs",
+        "bytes": 14082,
+        "sha256": "1c9cd3bb33b5141fc9d40bafb72310ee34f495a6c4c172964887e04c82b96f3b"
+      },
+      {
+        "path": "scripts/generate-cyclonedx-sbom.mjs",
+        "bytes": 3556,
+        "sha256": "6c2db4e98d70756c2e6be0a9e3972a45ec800af117ce793220e30c7776fe47b3"
+      },
+      {
+        "path": "scripts/generate-evidence-manifest.mjs",
+        "bytes": 12162,
+        "sha256": "8ba22d56b3a48d4a86705cf0d09c0b749fbba223a027db544523127e4f9a9fa5"
+      },
+      {
+        "path": "scripts/gherkin-fault-injection.mjs",
+        "bytes": 9504,
+        "sha256": "8ffeec4a013cfe21283125bad84abdd2100d0d480dbcfea98e5ec9d9b84874a4"
+      },
+      {
+        "path": "scripts/repository-secret-scan-lib.mjs",
+        "bytes": 6963,
+        "sha256": "afc2b89d90017d31a560364cc498ee76c0165981e2b163d1799bcf0ac8ba43d7"
+      },
+      {
+        "path": "scripts/request-telemetry-analysis-lib.mjs",
+        "bytes": 16270,
+        "sha256": "7fd2aae24724fbd4f9887c2819b8c7a84040d55a2ea27a5de4a8b1aa2c316869"
+      },
+      {
+        "path": "scripts/run-a11y-browser-harness.mjs",
+        "bytes": 6948,
+        "sha256": "c07ee732981fdd296811dc218822958afb9f6f58ce534d5df7eba247d009c957"
+      },
+      {
+        "path": "scripts/run-clean-room-verification.mjs",
+        "bytes": 13922,
+        "sha256": "e046beeb062a83414f52054d284de246b2d798c2c97910cee6436d38b5e74229"
+      },
+      {
+        "path": "scripts/run-gherkin-acceptance.mjs",
+        "bytes": 4088,
+        "sha256": "6546e5e70b3e207457e330f034950ec001873610b7d6124aeb07c14a3c73eacc"
+      },
+      {
+        "path": "scripts/run-independent-blackbox-qa.mjs",
+        "bytes": 26552,
+        "sha256": "fe318ee37f6afd1ec10ac792538df3db062f54351ebd4b91047443847165fb79"
+      },
+      {
+        "path": "scripts/run-local-d1-restore-drill.mjs",
+        "bytes": 16302,
+        "sha256": "c85199a1ae8bff1cbbdf843586fb993beda32a5ccd58352fed0de80084d4d06c"
+      },
+      {
+        "path": "scripts/run-local-failure-recovery.mjs",
+        "bytes": 11134,
+        "sha256": "b24513f655cd696d60aa577610dfd4b39fda6532d8f422d8a6d234db471bb118"
+      },
+      {
+        "path": "scripts/run-local-load-smoke.mjs",
+        "bytes": 7410,
+        "sha256": "607003e269a048febe8a8b5d5a23001cdf3dcd9340d0c4421d728a45c6a3f9cd"
+      },
+      {
+        "path": "scripts/run-quality-metrics.mjs",
+        "bytes": 8534,
+        "sha256": "9c4467c94841eecb3311b68a5e91972e05a391691a4b383786842b01be58e85f"
+      },
+      {
+        "path": "scripts/scan-repository-secrets.mjs",
+        "bytes": 2287,
+        "sha256": "f691d436bd1b216ad4577efb59276eaae74b09a6f27fa6fcc969cd3dec558ecf"
+      },
+      {
+        "path": "scripts/start-local-preview.mjs",
+        "bytes": 2263,
+        "sha256": "a5164804a72273df6af0dabe2d9b724764a9eda47fe44e5cc2e91f7ec59237ba"
+      },
+      {
+        "path": "tests/d1-restore-drill.test.mjs",
+        "bytes": 2943,
+        "sha256": "8c6f93d217179e68c7ab7c5c57638675aa8b552c24eeba9840d0f014e3997d8e"
+      },
+      {
+        "path": "tests/operations-authorization.test.ts",
+        "bytes": 8123,
+        "sha256": "921fffe27070f4f74b65d2194c202646498a90490a5f7ad922cdcb95c252ce88"
+      },
+      {
+        "path": "tests/operations-domain.test.ts",
+        "bytes": 9331,
+        "sha256": "69b54113e79091e08929b111d62a320a54775b9af3e10e2d42edeea91d846121"
+      },
+      {
+        "path": "tests/operations-input.test.ts",
+        "bytes": 3431,
+        "sha256": "7e48c10f891a8653389240ebff31fd73312aaa24a45223611518d8ee0f2831de"
+      },
+      {
+        "path": "tests/operations-migration.test.mjs",
+        "bytes": 67936,
+        "sha256": "291d45228946f2961e00b5f048474cc27508d53813c9d7c3599b1997c5e972f4"
+      },
+      {
+        "path": "tests/operations-time.test.ts",
+        "bytes": 1186,
+        "sha256": "407cd1f64b0e4143085f24b309f4534d1a8cc7d018057f5a7180cdd5bcd9f73c"
+      },
+      {
+        "path": "tests/rendered-html.test.mjs",
+        "bytes": 3695,
+        "sha256": "ba278741252616cef68b9d2407bd99e0e899e3f0edb58f24ec8125af0bdca050"
+      },
+      {
+        "path": "tests/repository-secret-scan.test.mjs",
+        "bytes": 3826,
+        "sha256": "70602045bf5f016c339c1682d89b0193142150a8f051e9581c545dc64cce7902"
+      },
+      {
+        "path": "tests/request-telemetry-analysis.test.mjs",
+        "bytes": 6512,
+        "sha256": "5392ee6fcb5076dc179f6e1c44d21f5c8d0e981d35adefe5a3fc372f418d39f0"
+      },
+      {
+        "path": "tests/service-lifecycle-cursor.test.ts",
+        "bytes": 3957,
+        "sha256": "24c82cf4d77097e7551b1e7326a2731264e7166e9af3d56e1647836769821a2e"
+      },
+      {
+        "path": "tsconfig.json",
+        "bytes": 739,
+        "sha256": "e52972e335a3a9dc29ebb958c97b5a46ec7f0d5357cb6ec3b85f32cf89cc1bdc"
+      },
+      {
+        "path": "vite.config.ts",
+        "bytes": 1800,
+        "sha256": "60fcc78b59290628807df97265d3f393bd9715bc83a43d3b0faa7f023871081e"
+      },
+      {
+        "path": "worker/index.ts",
+        "bytes": 3765,
+        "sha256": "657b451f685ad2cf4484ee739a7ef7851b570d8b5ececf18757f0f6fef7966d2"
+      },
+      {
+        "path": "wrangler.local.jsonc",
+        "bytes": 410,
+        "sha256": "d23d935430b52805a741b33b07650f960af8857dd3a316541864f4aa22def968"
+      }
+    ]
+  },
+  "build": {
+    "status": "local_build_present",
+    "fileCount": 38,
+    "aggregateSha256": "49d2993af0bcad17cfd87daeeed2dfe3e9a7818ac27cd2c3b66659d4bf8cd5b2",
+    "files": [
+      {
+        "path": "dist/.openai/drizzle/0001_continuity_ops_v2.sql",
+        "bytes": 30170,
+        "sha256": "505938328b192fa9df4072b9f70f20c6d413e5138b6a582167cee35c51e6002f"
+      },
+      {
+        "path": "dist/.openai/drizzle/0002_continuity_ops_contract_upgrade.sql",
+        "bytes": 35808,
+        "sha256": "cfb857711d231cdafc677d9dffefaa13da0984454ae8aded44bbee89c98a36d9"
+      },
+      {
+        "path": "dist/.openai/drizzle/0003_assignment_role_integrity.sql",
+        "bytes": 2807,
+        "sha256": "7878722ba4709cbbff6112623aa362d65eef4b25cf1e8e7a5a78b40ce4a38caf"
+      },
+      {
+        "path": "dist/.openai/drizzle/0004_service_lifecycle_accountability.sql",
+        "bytes": 5597,
+        "sha256": "a48dedfd4e9b939e13e4a89335ba43197ec618a175825ce08a8e896d9ccffb0c"
+      },
+      {
+        "path": "dist/.openai/hosting.json",
+        "bytes": 91,
+        "sha256": "cd3a5d1bd928361fdd21a22745570476ecb3daebe1d1ff34a2249378ee01dd03"
+      },
+      {
+        "path": "dist/client/_headers",
+        "bytes": 125,
+        "sha256": "9e55124bccd40b43dbc6e002daa777fa8f32a230420152910784ca65501d9e0f"
+      },
+      {
+        "path": "dist/client/.assetsignore",
+        "bytes": 24,
+        "sha256": "4f83140d5f4293ab55bd1207327e995c83258f1e7d3145b1b5d7a3d17fdfe0a7"
+      },
+      {
+        "path": "dist/client/.vite/manifest.json",
+        "bytes": 2423,
+        "sha256": "bb94e1cf426c990f7e9592bab3970117287e0f6310df1e40a60f71ae681c0697"
+      },
+      {
+        "path": "dist/client/assets/framework-ItqtACJ4.js",
+        "bytes": 189805,
+        "sha256": "0f090d029de3ee820dc427b1594a9ca10ca7043a46855b67535d6265141d0f05"
+      },
+      {
+        "path": "dist/client/assets/index-442tIDAD.js",
+        "bytes": 81136,
+        "sha256": "2bb2ff780619391b7d7aae09df1176cf28d1dc2fbed59e68b78fc17f5ea09e3a"
+      },
+      {
+        "path": "dist/client/assets/index-BKqHjGkT.css",
+        "bytes": 49629,
+        "sha256": "bce69b3686ead3febcb20cc015f675e58c07b30ad3969877f1f41f9a5ac0e82d"
+      },
+      {
+        "path": "dist/client/assets/layout-segment-context-DPP8CNA1.js",
+        "bytes": 288,
+        "sha256": "4127ebe088e19a58fc2c1e1b8562f6f0cb4fe0972f4974de46ce250d70441f4c"
+      },
+      {
+        "path": "dist/client/assets/link-Ckfnpygb.js",
+        "bytes": 8132,
+        "sha256": "99424921003d38253074f5ef8f758acaa788f6f19354ac09f2a9769b27342ce1"
+      },
+      {
+        "path": "dist/client/assets/OperationsApp-MUmDna2j.js",
+        "bytes": 156392,
+        "sha256": "5c041ba352ae2fe36f1088bc9892b942975d7157e5b6bdbdedfdd7166fda080e"
+      },
+      {
+        "path": "dist/client/assets/query-DNQgy4xD.js",
+        "bytes": 1564,
+        "sha256": "5e3ecc5fd4f80c9c8228cef75d2d4a8bb5f8f95ca267e7a4e62923aad52b5db8"
+      },
+      {
+        "path": "dist/client/assets/rolldown-runtime-QTnfLwEv.js",
+        "bytes": 694,
+        "sha256": "5db5ba82eef00d1dee7e86e663098c9427d01183a88d357437daff295aec3e75"
+      },
+      {
+        "path": "dist/client/assets/router-BcxofiWV.js",
+        "bytes": 9065,
+        "sha256": "d206622682703842fa38cabab22243453b47aa6f1adca83e5aaf85dfd4272f0d"
+      },
+      {
+        "path": "dist/client/continuity-ops-social-preview-v2.png",
+        "bytes": 1750173,
+        "sha256": "22a280603722e971b098e93c9a58b51e100b98f6530d7192834d595774e6a7ff"
+      },
+      {
+        "path": "dist/client/og.png",
+        "bytes": 1474092,
+        "sha256": "c4c35e88f216411381303ccb356c167c7d2ab0b0b2b8f17233ad2cae975f2a6a"
+      },
+      {
+        "path": "dist/server/__vite_rsc_assets_manifest.js",
+        "bytes": 1388,
+        "sha256": "0a5fd6f62ed60806a43649db2d4edb3c64524f3c84af23175fe1b57e5d4987e6"
+      },
+      {
+        "path": "dist/server/.vite/manifest.json",
+        "bytes": 282,
+        "sha256": "3ac175e8ab0969399128078c7d0350765a9ef2ef7c256c19b31d5add2f5f6fb8"
+      },
+      {
+        "path": "dist/server/assets/index-BKqHjGkT.css",
+        "bytes": 49629,
+        "sha256": "bce69b3686ead3febcb20cc015f675e58c07b30ad3969877f1f41f9a5ac0e82d"
+      },
+      {
+        "path": "dist/server/image-config.json",
+        "bytes": 2,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "path": "dist/server/index.js",
+        "bytes": 788962,
+        "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158"
+      },
+      {
+        "path": "dist/server/ssr/__vite_rsc_assets_manifest.js",
+        "bytes": 1388,
+        "sha256": "0a5fd6f62ed60806a43649db2d4edb3c64524f3c84af23175fe1b57e5d4987e6"
+      },
+      {
+        "path": "dist/server/ssr/assets/error-boundary-DhQ6gHP2.js",
+        "bytes": 8456,
+        "sha256": "fae780514ded2a69e9111147b50192b733cbab5d2bed88ed39e0e78e0624165a"
+      },
+      {
+        "path": "dist/server/ssr/assets/layout-segment-context-CRiFypRe.js",
+        "bytes": 1779,
+        "sha256": "ce06454ec85f8523905d8b62c3363cb7c536d21b9e2d03487851b6f06888bd6d"
+      },
+      {
+        "path": "dist/server/ssr/assets/link-BGQf37NJ.js",
+        "bytes": 20320,
+        "sha256": "dacf98d0033b10466523dc5ef402d041f8a91491c58ddc45d1268a8f05995941"
+      },
+      {
+        "path": "dist/server/ssr/assets/OperationsApp-CDEqO-dc.js",
+        "bytes": 304715,
+        "sha256": "991d43de5a61a35aee18eae3f5f07fb9b82e2b95787ba9e990fec486a6a009a5"
+      },
+      {
+        "path": "dist/server/ssr/assets/query-Du9M2EWL.js",
+        "bytes": 4554,
+        "sha256": "fe244d72ebd5c9a0a54b4e796d8ab563b5ac18242873dee89491c097725a447f"
+      },
+      {
+        "path": "dist/server/ssr/assets/react-DHKGyG9G.js",
+        "bytes": 17008,
+        "sha256": "05e233196c10804dc056ad10ff8b0e7865a6820c5659ba1b7acf781dacd637c4"
+      },
+      {
+        "path": "dist/server/ssr/assets/router-DHnoDhF3.js",
+        "bytes": 23324,
+        "sha256": "77bc1511678029d38aa220152c6d28fb0fbc1cd4c851147826320efa58c4b673"
+      },
+      {
+        "path": "dist/server/ssr/assets/url-utils-GEhRtWpk.js",
+        "bytes": 4184,
+        "sha256": "a5708b26a787433ebd5134b74f3f6b0f706e27e9fed331cb5ae808e32e941565"
+      },
+      {
+        "path": "dist/server/ssr/index.js",
+        "bytes": 565318,
+        "sha256": "d62048c6ee90127ae5d5226c4b6cbb74e9f5741020acd8d71fb6a3b0bc01abee"
+      },
+      {
+        "path": "dist/server/ssr/vinext-server.json",
+        "bytes": 86,
+        "sha256": "5446731761ca5dc9d5b94128056b39bb3c99523ad7dc810c3938e679cc669a6b"
+      },
+      {
+        "path": "dist/server/vinext-externals.json",
+        "bytes": 3,
+        "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+      },
+      {
+        "path": "dist/server/vinext-server.json",
+        "bytes": 86,
+        "sha256": "5446731761ca5dc9d5b94128056b39bb3c99523ad7dc810c3938e679cc669a6b"
+      },
+      {
+        "path": "dist/server/wrangler.json",
+        "bytes": 1324,
+        "sha256": "5f2bf91b01c8a3e7194e9ec0b5deabd9869fd86026f09c53793f8acdb65bce6d"
+      }
+    ],
+    "deploymentId": null,
+    "localRuntimeState": {
+      "directoryPresent": true,
+      "regularFileCount": 0,
+      "includedInManifest": false,
+      "note": "Empty local Wrangler runtime directories are not deployable files and are excluded; any regular file makes manifest generation fail."
+    }
+  },
+  "verificationEvidence": [
+    {
+      "path": "evidence/continuity-ops-gherkin-acceptance.json",
+      "bytes": 1942,
+      "sha256": "5a32ffd25e39dfdb252d366fe6a7c99f75e92b71bfc6a29ac7cb9abb4defb489",
+      "present": true,
+      "evidenceId": "CO-VRF-GHERKIN-001",
+      "evidenceStatus": "verified_local",
+      "result": "passed_with_documented_limits",
+      "verificationType": "executable_gherkin_domain_acceptance",
+      "generatedAt": "2026-07-31T08:21:30.432Z",
+      "limitationCount": 3,
+      "associatedBuildSha256": null,
+      "matchesCurrentWorkerBuild": null,
+      "bindingScope": "source_files",
+      "bindingEvaluation": "source_specific_hashes_recorded"
+    },
+    {
+      "path": "evidence/continuity-ops-gherkin-fault-injection.json",
+      "bytes": 15351,
+      "sha256": "f651ae15c80dbf8df8825a201656d1ebc6905effb5ed94d26ee873d9700e38a2",
+      "present": true,
+      "evidenceId": "CO-VRF-GHERKIN-FAULT-001",
+      "evidenceStatus": "verified_local",
+      "result": "passed",
+      "verificationType": "risk_oriented_gherkin_fault_injection",
+      "generatedAt": "2026-07-31T08:21:35.475Z",
+      "limitationCount": 3,
+      "associatedBuildSha256": null,
+      "matchesCurrentWorkerBuild": null,
+      "bindingScope": "source_files",
+      "bindingEvaluation": "source_specific_hashes_recorded"
+    },
+    {
+      "path": "evidence/continuity-ops-quality-metrics.json",
+      "bytes": 8797,
+      "sha256": "9958b9c12a9b4753a354dd538dd1180499d32d2af8529b6159757c489418a535",
+      "present": true,
+      "evidenceId": "CO-VRF-QUALITY-001",
+      "evidenceStatus": "verified_local",
+      "result": "coverage_passed_with_complexity_findings",
+      "verificationType": "unit_coverage_and_static_complexity_diagnostics",
+      "generatedAt": "2026-07-31T08:21:47.701Z",
+      "limitationCount": 3,
+      "associatedBuildSha256": null,
+      "matchesCurrentWorkerBuild": null,
+      "bindingScope": "source_files",
+      "bindingEvaluation": "source_specific_hashes_recorded"
+    },
+    {
+      "path": "evidence/continuity-ops-fault-injection.json",
+      "bytes": 67104,
+      "sha256": "a4bd18796db536aa47a00f4d1d8b0f9eca8831cc34d027917cd3d40c082839fb",
+      "present": true,
+      "evidenceId": "CO-VRF-FAULT-001",
+      "evidenceStatus": "verified_local",
+      "result": "passed",
+      "verificationType": "risk_oriented_targeted_fault_injection",
+      "generatedAt": "2026-07-31T08:21:44.225Z",
+      "limitationCount": 3,
+      "associatedBuildSha256": null,
+      "matchesCurrentWorkerBuild": null,
+      "bindingScope": "source_files",
+      "bindingEvaluation": "source_specific_hashes_recorded"
+    },
+    {
+      "path": "evidence/continuity-ops-api-smoke.json",
+      "bytes": 8789,
+      "sha256": "f74a9e373ddff4afb11ac9520bda45c67872024355ad4c9645fd135b96714a98",
+      "present": true,
+      "evidenceId": "CO-VRF-API-001",
+      "evidenceStatus": "verified_local",
+      "result": "passed",
+      "verificationType": "isolated_local_worker_d1_api_smoke",
+      "generatedAt": "2026-07-31T08:23:30.814Z",
+      "limitationCount": 8,
+      "associatedBuildSha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158",
+      "matchesCurrentWorkerBuild": true,
+      "bindingScope": "current_worker_artifact",
+      "bindingEvaluation": "matches_current_worker"
+    },
+    {
+      "path": "evidence/continuity-ops-security-negative-tests.json",
+      "bytes": 14470,
+      "sha256": "bc2d864ef01cc0ef7c576be412d521689fcd2d0ae557a50d541ec77e3de72155",
+      "present": true,
+      "evidenceId": "CO-VRF-SEC-001",
+      "evidenceStatus": "verified_local",
+      "result": "passed_with_documented_limits",
+      "verificationType": "local_api_security_and_invariant_negative_checks",
+      "generatedAt": "2026-07-31T08:23:30.814Z",
+      "limitationCount": 8,
+      "associatedBuildSha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158",
+      "matchesCurrentWorkerBuild": true,
+      "bindingScope": "current_worker_artifact",
+      "bindingEvaluation": "matches_current_worker"
+    },
+    {
+      "path": "evidence/continuity-ops-browser-qa.json",
+      "bytes": 4465,
+      "sha256": "8f8012010152cac46b8efa0fa4109f146dffe98013fd8c0c4adcc1c5db3bf861",
+      "present": true,
+      "evidenceId": "CO-VRF-BROWSER-001",
+      "evidenceStatus": "verified_local_controlled",
+      "result": "passed_with_documented_limits",
+      "verificationType": "internal_interactive_browser_and_axe_check",
+      "generatedAt": "2026-07-31T08:27:20.0580410Z",
+      "limitationCount": 6,
+      "associatedBuildSha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158",
+      "matchesCurrentWorkerBuild": true,
+      "bindingScope": "current_worker_artifact",
+      "bindingEvaluation": "matches_current_worker"
+    },
+    {
+      "path": "evidence/continuity-ops-independent-blackbox-qa.json",
+      "bytes": 14311,
+      "sha256": "f7ee1d4eb66ef81a90d38efe21b300dbedc5c50d88fe7df402d16ba7ec234274",
+      "present": true,
+      "evidenceId": "CO-VRF-QA-BLACKBOX-001",
+      "evidenceStatus": "verified_local_agent_designed",
+      "result": "passed_with_documented_limits",
+      "verificationType": "independent_agent_designed_blackbox_http_qa",
+      "generatedAt": "2026-07-31T08:23:31.252Z",
+      "limitationCount": 9,
+      "associatedBuildSha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158",
+      "matchesCurrentWorkerBuild": true,
+      "bindingScope": "current_worker_artifact",
+      "bindingEvaluation": "matches_current_worker"
+    },
+    {
+      "path": "evidence/continuity-ops-local-load-smoke.json",
+      "bytes": 3720,
+      "sha256": "fe6efd1924e88fda8890b98d0a510015d4a2bba7d0b6d9f779c37faabf0bebce",
+      "present": true,
+      "evidenceId": "CO-VRF-LOAD-001",
+      "evidenceStatus": "verified_local_controlled",
+      "result": "passed_with_documented_limits",
+      "verificationType": "bounded_read_only_local_load_smoke",
+      "generatedAt": "2026-07-31T08:23:37.002Z",
+      "limitationCount": 3,
+      "associatedBuildSha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158",
+      "matchesCurrentWorkerBuild": true,
+      "bindingScope": "current_worker_artifact",
+      "bindingEvaluation": "matches_current_worker"
+    },
+    {
+      "path": "evidence/continuity-ops-local-failure-recovery.json",
+      "bytes": 1661,
+      "sha256": "985969401c1be6714270a444b57b42669efc0e3cc8c56063fab8474a3ccba865",
+      "present": true,
+      "evidenceId": "CO-VRF-FAILURE-RECOVERY-001",
+      "evidenceStatus": "verified_local_controlled",
+      "result": "passed_with_documented_limits",
+      "verificationType": "unmigrated_database_failure_and_recovery",
+      "generatedAt": "2026-07-31T08:27:14.066Z",
+      "limitationCount": 3,
+      "associatedBuildSha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158",
+      "matchesCurrentWorkerBuild": true,
+      "bindingScope": "current_worker_artifact",
+      "bindingEvaluation": "matches_current_worker"
+    },
+    {
+      "path": "evidence/continuity-ops-request-telemetry-analysis.json",
+      "bytes": 11037,
+      "sha256": "33e9b3e4d04f509c0ea04ee9c887fbb67fccd5bbaa8dbef90f7ea39dd69ff49a",
+      "present": true,
+      "evidenceId": "CO-VRF-TELEMETRY-001",
+      "evidenceStatus": "verified_local_controlled",
+      "result": "passed",
+      "verificationType": "local_controlled_wrangler_request_telemetry_analysis",
+      "generatedAt": "2026-07-31T08:26:55.557Z",
+      "limitationCount": 4,
+      "associatedBuildSha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158",
+      "matchesCurrentWorkerBuild": true,
+      "bindingScope": "runtime_log_and_smoke_evidence",
+      "bindingEvaluation": "smoke_evidence_matches_current_worker"
+    },
+    {
+      "path": "evidence/continuity-ops-local-d1-restore-drill.json",
+      "bytes": 6931,
+      "sha256": "ecd13e9573b1988e217c3bd75d82679b6b78e0e8712ce23661fe021a219cf7aa",
+      "present": true,
+      "evidenceId": "CO-VRF-D1-RESTORE-001",
+      "evidenceStatus": "verified_local_controlled",
+      "result": "passed",
+      "verificationType": "isolated_local_d1_logical_export_restore_drill",
+      "generatedAt": "2026-07-31T08:12:00.569Z",
+      "limitationCount": 5,
+      "associatedBuildSha256": null,
+      "matchesCurrentWorkerBuild": null,
+      "bindingScope": "migration_files_and_backup",
+      "bindingEvaluation": "scope_specific_evidence_recorded"
+    },
+    {
+      "path": "evidence/continuity-ops-clean-room-verification.json",
+      "bytes": 3543,
+      "sha256": "479128261062696a59c8c9095e260120030e41f9909a69f8d3571224c24d1e6d",
+      "present": true,
+      "evidenceId": "CO-VRF-CLEAN-ROOM-001",
+      "evidenceStatus": "verified_local_controlled",
+      "result": "passed_with_documented_limits",
+      "verificationType": "isolated_snapshot_install_build_migrate_and_smoke",
+      "generatedAt": "2026-07-31T08:12:55.402Z",
+      "limitationCount": 4,
+      "associatedBuildSha256": "87397ba9922cc50fcdcde5cc5063fa14feae69c0813236fcc03c2f960f7ce61a",
+      "matchesCurrentWorkerBuild": false,
+      "bindingScope": "isolated_source_snapshot_build",
+      "bindingEvaluation": "isolated_build_recorded"
+    },
+    {
+      "path": "evidence/continuity-ops-sbom.cdx.json",
+      "bytes": 699903,
+      "sha256": "af1d5c0810b241e294a6c2f080e37c68f94012030e945367d88980c3dc8bda39",
+      "present": true,
+      "evidenceId": null,
+      "evidenceStatus": "inventory_generated",
+      "result": "not_applicable",
+      "verificationType": "cyclonedx_dependency_inventory",
+      "generatedAt": "2026-07-31T08:21:15.863Z",
+      "limitationCount": 0,
+      "associatedBuildSha256": null,
+      "matchesCurrentWorkerBuild": null,
+      "bindingScope": "dependency_inventory",
+      "bindingEvaluation": "scope_specific_evidence_recorded",
+      "sbom": {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.5",
+        "componentCount": 699
+      }
+    }
+  ],
+  "verificationEvidenceSummary": {
+    "expected": 14,
+    "present": 14,
+    "missing": 0,
+    "failed": 0,
+    "staleCurrentWorkerBindings": 0,
+    "uniqueStructuredEvidenceIds": 13
+  },
+  "secretHandling": {
+    "status": "values_excluded",
+    "note": "Only environment-variable templates are inventoried. Local and hosted secret values must remain outside the manifest and repository."
+  },
+  "releaseDecision": {
+    "status": "pending",
+    "note": "This inventory does not prove CI, staging, rollback, external use, security review, or production approval."
+  }
+}
