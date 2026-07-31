@@ -3,17 +3,17 @@
   "evidenceId": "CO-VRF-CLEAN-ROOM-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:47:50.171Z",
+  "generatedAt": "2026-07-31T08:55:44.817Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "isolated_snapshot_install_build_migrate_and_smoke",
   "result": "passed_with_documented_limits",
   "sourceSnapshot": {
     "fileCount": 93,
-    "sha256": "cd6d5d4f654a142073a53a94237505813f5a9c8189569ee5f2e933eb2e5faa12"
+    "sha256": "4a088b38659741e0570692f0c37fb242ec75eff7869196e12b1a8ad1f8ebd40f"
   },
   "cleanRoom": {
     "copiedFileCount": 93,
-    "copiedSnapshotSha256": "cd6d5d4f654a142073a53a94237505813f5a9c8189569ee5f2e933eb2e5faa12",
+    "copiedSnapshotSha256": "4a088b38659741e0570692f0c37fb242ec75eff7869196e12b1a8ad1f8ebd40f",
     "dependencyInstall": "npm ci",
     "node": "v24.15.0",
     "platform": "win32",
@@ -21,58 +21,58 @@
   },
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "4e18d07a1b7068213558abb44e7bd54e3fe24327c4038f4927f0d2dbc5cc4cef"
+    "sha256": "625b1ab614638566ba61e7a33887c01b5a103f658ff6d08ae28908625500f0fe"
   },
   "commands": [
     {
       "label": "temporary Git inventory initialization",
       "exitCode": 0,
-      "durationMs": 64
+      "durationMs": 66
     },
     {
       "label": "temporary Git source inventory",
       "exitCode": 0,
-      "durationMs": 329
+      "durationMs": 325
     },
     {
       "label": "locked dependency installation",
       "exitCode": 0,
-      "durationMs": 25269
+      "durationMs": 24359
     },
     {
       "label": "production dependency audit",
       "exitCode": 0,
-      "durationMs": 1600
+      "durationMs": 1596
     },
     {
       "label": "supply-chain gate",
       "exitCode": 0,
-      "durationMs": 3103
+      "durationMs": 3172
     },
     {
       "label": "static gate",
       "exitCode": 0,
-      "durationMs": 17936
+      "durationMs": 16426
     },
     {
       "label": "unit tests",
       "exitCode": 0,
-      "durationMs": 522
+      "durationMs": 528
     },
     {
       "label": "quality metrics",
       "exitCode": 0,
-      "durationMs": 3596
+      "durationMs": 3583
     },
     {
       "label": "migration tests",
       "exitCode": 0,
-      "durationMs": 7037
+      "durationMs": 6987
     },
     {
       "label": "fault injection",
       "exitCode": 0,
-      "durationMs": 5112
+      "durationMs": 5175
     },
     {
       "label": "operational evidence tool tests",
@@ -82,32 +82,32 @@
     {
       "label": "executable Gherkin acceptance",
       "exitCode": 0,
-      "durationMs": 1582
+      "durationMs": 1263
     },
     {
       "label": "Gherkin fault injection",
       "exitCode": 0,
-      "durationMs": 5264
+      "durationMs": 5300
     },
     {
       "label": "production build",
       "exitCode": 0,
-      "durationMs": 5559
+      "durationMs": 5587
     },
     {
       "label": "build integration",
       "exitCode": 0,
-      "durationMs": 473
+      "durationMs": 478
     },
     {
       "label": "fresh local D1 migrations",
       "exitCode": 0,
-      "durationMs": 5365
+      "durationMs": 5477
     },
     {
       "label": "clean-room API smoke",
       "exitCode": 0,
-      "durationMs": 2834
+      "durationMs": 2779
     }
   ],
   "apiSmoke": {
@@ -118,9 +118,9 @@
       "negative": 44,
       "total": 71
     },
-    "buildArtifactSha256": "4e18d07a1b7068213558abb44e7bd54e3fe24327c4038f4927f0d2dbc5cc4cef"
+    "buildArtifactSha256": "625b1ab614638566ba61e7a33887c01b5a103f658ff6d08ae28908625500f0fe"
   },
-  "totalDurationMs": 87698,
+  "totalDurationMs": 85193,
   "limitations": [
     "The clean room used a copied snapshot of the current uncommitted working tree; this is not a clean Git checkout, CI run, or commit-bound release.",
     "The isolated build may have a different digest because vinext generates nondeterministic build inputs; this run verifies behavior and traceability, not bit-for-bit reproducibility.",
