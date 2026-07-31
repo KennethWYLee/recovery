@@ -3,16 +3,16 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:49:04.629Z",
+  "generatedAt": "2026-07-31T08:56:07.538Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
-    "status": "source_tree_has_uncommitted_changes",
+    "status": "source_tree_clean",
     "repositoryRelativePath": ".",
-    "head": "4d225f6f43e81e065aa7c38475c9cb3b4abc90c8",
-    "shortHead": "4d225f6f43e8",
-    "sourceDirtyEntryCount": 5,
-    "limitation": "The project contains uncommitted changes, so this manifest does not describe a clean commit rebuild."
+    "head": "9d98251bd3caac575dabfe1fa707fa2ad99f9c46",
+    "shortHead": "9d98251bd3ca",
+    "sourceDirtyEntryCount": 0,
+    "limitation": "The project files resolve to this commit; CI and deployment identity remain separate evidence."
   },
   "runtime": {
     "node": "v24.15.0",
@@ -141,7 +141,7 @@
       {
         "path": "docs/architecture/failure-modes.md",
         "bytes": 10823,
-        "sha256": "a8650c91dfbf16df5d265be8680a4f71be90dbfdc514d5aff275797697e4a52d"
+        "sha256": "692a994c6e283ce5d859328a6aef207607b1dbb360de6fd117f58c538907612e"
       },
       {
         "path": "docs/architecture/system-context-and-components.md",
@@ -151,7 +151,7 @@
       {
         "path": "docs/assurance/acceptance-contracts.md",
         "bytes": 13067,
-        "sha256": "81673510b0f8afe1590bc51da52bfd09cff28e57c916ceb31a72a70911fdc6c4"
+        "sha256": "d3c0e0824fe0b3cc596b5545f057e1301a608cd52f830f191ca1654d6d84c45d"
       },
       {
         "path": "docs/assurance/assurance-pack-index.md",
@@ -160,8 +160,8 @@
       },
       {
         "path": "docs/assurance/evidence-status-register.md",
-        "bytes": 13841,
-        "sha256": "574d7416cec829414532050caaad1e426846131b942c6d1c35963c0fb0126d75"
+        "bytes": 13818,
+        "sha256": "4776e632b60324dc857f720d7d614425cc665044fadea6b547fc7f21b343e57c"
       },
       {
         "path": "docs/assurance/external-professional-validation-protocol.md",
@@ -175,13 +175,13 @@
       },
       {
         "path": "docs/assurance/local-verification-record-20260731.md",
-        "bytes": 11926,
-        "sha256": "16c18867592f2d73cb953e33fc97c488dc21b3dff70d5684894b221602163510"
+        "bytes": 11900,
+        "sha256": "d7373582a870628ee372a71202c5689eb17a84690c139fdd70b21b197deba4e2"
       },
       {
         "path": "docs/assurance/operational-evidence-tools.md",
-        "bytes": 6289,
-        "sha256": "5aecf3982c8bc2ea2dcd063b8172c63e57e7af7a40aace977cec32ad5d581a13"
+        "bytes": 6218,
+        "sha256": "ae9e4f095d8f7362140885dca943e3c56a24e75aaf999adcf7adf431b3a4226b"
       },
       {
         "path": "docs/assurance/personal-evidence-templates.md",
@@ -191,22 +191,22 @@
       {
         "path": "docs/assurance/README.md",
         "bytes": 8930,
-        "sha256": "3ce29c3fb4797765d8757db35cfb45db6dac2abeabdbe89308f84733dbeca3dc"
+        "sha256": "c3ea7145f7dec8c2dd24721b76027cd17bead5b1fcf9f8a9007af1fae7008a68"
       },
       {
         "path": "docs/assurance/requirement-traceability.md",
-        "bytes": 11399,
-        "sha256": "8a19331255eb369e05879938f8d61767f342903fd2bfb82a8fec915609b611d0"
+        "bytes": 11403,
+        "sha256": "c72bd39c420bbcf167f2b3e140502bfd086c2ee8bc8bd716dfb9a32269d99c6f"
       },
       {
         "path": "docs/assurance/rubric-v1.16-crosswalk.md",
         "bytes": 4766,
-        "sha256": "8327e10df75f4c2768b951e66dadf07ace7cd857901ac273f88de48311c14439"
+        "sha256": "622a256be16e74f8d4fb80fd95c8f1c6241ccc478316a79a5b336d3e992b3732"
       },
       {
         "path": "docs/assurance/verification-plan.md",
         "bytes": 16133,
-        "sha256": "eb516c7b595b2394f49e867bb6dd3af321276917c64fc2fffdd6595b9dcf30dd"
+        "sha256": "825992308e90a5c1172a0c82bcd9b8660505bd6a87efa674f48167985c9e0373"
       },
       {
         "path": "docs/operations-runbook.md",
@@ -895,15 +895,15 @@
     {
       "path": "evidence/continuity-ops-clean-room-verification.json",
       "bytes": 3543,
-      "sha256": "f54f35ca13aab50d40dda76559c2e33cac3846658f5029ba03a7cb840fe32b72",
+      "sha256": "0c005dcddd5757c0618ca9f6b8089d521a79878b685065577f92a2b7ad8be418",
       "present": true,
       "evidenceId": "CO-VRF-CLEAN-ROOM-001",
       "evidenceStatus": "verified_local_controlled",
       "result": "passed_with_documented_limits",
       "verificationType": "isolated_snapshot_install_build_migrate_and_smoke",
-      "generatedAt": "2026-07-31T08:47:50.171Z",
+      "generatedAt": "2026-07-31T08:55:44.817Z",
       "limitationCount": 4,
-      "associatedBuildSha256": "4e18d07a1b7068213558abb44e7bd54e3fe24327c4038f4927f0d2dbc5cc4cef",
+      "associatedBuildSha256": "625b1ab614638566ba61e7a33887c01b5a103f658ff6d08ae28908625500f0fe",
       "matchesCurrentWorkerBuild": false,
       "bindingScope": "isolated_source_snapshot_build",
       "bindingEvaluation": "isolated_build_recorded"
