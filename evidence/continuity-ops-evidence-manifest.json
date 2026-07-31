@@ -3,14 +3,14 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T14:58:24.033Z",
+  "generatedAt": "2026-07-31T14:59:19.414Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
     "status": "source_tree_clean",
     "repositoryRelativePath": ".",
-    "head": "ac67ece1c222c522146ba6dd5c95937590530b8e",
-    "shortHead": "ac67ece1c222",
+    "head": "baae3dd40d77b406f34969b5495928c7977290e5",
+    "shortHead": "baae3dd40d77",
     "sourceDirtyEntryCount": 0,
     "limitation": "The project files resolve to this commit; CI and deployment identity remain separate evidence."
   },
@@ -518,7 +518,7 @@
   "build": {
     "status": "local_build_present",
     "fileCount": 34,
-    "aggregateSha256": "d9b0cf91c9309de61637f37cbd0aaf546ef4bc201bce20b01cb894c44df28407",
+    "aggregateSha256": "30f424d4cbf96c0bc03d6c51edbf867545a445c756e6444b12ce340e22c64dc8",
     "files": [
       {
         "path": "dist/.openai/hosting.json",
@@ -618,7 +618,7 @@
       {
         "path": "dist/server/index.js",
         "bytes": 856679,
-        "sha256": "9501de5c8af845a428ebff03d5bc9705f22fe6bdab5be814a9987d7bea147f7a"
+        "sha256": "b0fb0bcf9cef8b90c616adabcf0c0a1ebbc0c00db5ed34c5508f15be6e07d879"
       },
       {
         "path": "dist/server/ssr/__vite_rsc_assets_manifest.js",
@@ -673,7 +673,7 @@
       {
         "path": "dist/server/ssr/vinext-server.json",
         "bytes": 86,
-        "sha256": "ecaf583fe2dcb6a78d3bd77b02aa54fc03870507c3c6244009a50cc5c938dda4"
+        "sha256": "e01a535d72f0ac20c4fdacbc8b23fa7888993034846bf75d4efa697f8ce1e19a"
       },
       {
         "path": "dist/server/vinext-externals.json",
@@ -683,7 +683,7 @@
       {
         "path": "dist/server/vinext-server.json",
         "bytes": 86,
-        "sha256": "ecaf583fe2dcb6a78d3bd77b02aa54fc03870507c3c6244009a50cc5c938dda4"
+        "sha256": "e01a535d72f0ac20c4fdacbc8b23fa7888993034846bf75d4efa697f8ce1e19a"
       },
       {
         "path": "dist/server/wrangler.json",
@@ -693,7 +693,7 @@
     ],
     "deploymentId": null,
     "localRuntimeState": {
-      "directoryPresent": true,
+      "directoryPresent": false,
       "regularFileCount": 0,
       "includedInManifest": false,
       "note": "Empty local Wrangler runtime directories are not deployable files and are excluded; any regular file makes manifest generation fail."
@@ -872,9 +872,9 @@
       "generatedAt": "2026-07-31T14:51:49.149Z",
       "limitationCount": 4,
       "associatedBuildSha256": "9501de5c8af845a428ebff03d5bc9705f22fe6bdab5be814a9987d7bea147f7a",
-      "matchesCurrentWorkerBuild": true,
+      "matchesCurrentWorkerBuild": false,
       "bindingScope": "current_worker_artifact",
-      "bindingEvaluation": "matches_current_worker"
+      "bindingEvaluation": "does_not_match_current_worker"
     },
     {
       "path": "evidence/continuity-ops-request-telemetry-analysis.json",
@@ -951,7 +951,7 @@
     "present": 15,
     "missing": 0,
     "failed": 0,
-    "staleCurrentWorkerBindings": 6,
+    "staleCurrentWorkerBindings": 7,
     "uniqueStructuredEvidenceIds": 14
   },
   "secretHandling": {
