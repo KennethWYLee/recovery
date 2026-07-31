@@ -3,14 +3,14 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T10:28:26.188Z",
+  "generatedAt": "2026-07-31T10:33:05.495Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
     "status": "source_tree_clean",
     "repositoryRelativePath": ".",
-    "head": "f088cc91e7a773a933139ccdf25e6947e5a072ba",
-    "shortHead": "f088cc91e7a7",
+    "head": "2bf462b400efa4d697ed02e1019a3b6cbb70baf4",
+    "shortHead": "2bf462b400ef",
     "sourceDirtyEntryCount": 0,
     "limitation": "The project files resolve to this commit; CI and deployment identity remain separate evidence."
   },
@@ -41,7 +41,7 @@
       {
         "path": ".github/workflows/ci.yml",
         "bytes": 2243,
-        "sha256": "0fccbfcb9668a3a2a3908580794d9e250346ec4b888df994eba903eff2847b16"
+        "sha256": "cd6fb1fbcbcc501c5d66bf57d7df27e654122b3f8dcdb8fecc6c4fa7bbc580c3"
       },
       {
         "path": ".gitignore",
@@ -910,16 +910,16 @@
     },
     {
       "path": "evidence/continuity-ops-clean-room-verification.json",
-      "bytes": 4591,
-      "sha256": "c4700cfb9509d2d7c64738773e1f52ee1e3aa67dded4148596c785f6e889ff18",
+      "bytes": 4592,
+      "sha256": "f63ab00d414246875a437de5f171fb6bfa6bb4eca9d928d7213955e1093eb8b0",
       "present": true,
       "evidenceId": "CO-VRF-CLEAN-ROOM-001",
       "evidenceStatus": "verified_local_controlled",
       "result": "passed_with_documented_limits",
       "verificationType": "isolated_snapshot_install_build_migrate_and_smoke",
-      "generatedAt": "2026-07-31T10:27:57.463Z",
+      "generatedAt": "2026-07-31T10:32:51.966Z",
       "limitationCount": 4,
-      "associatedBuildSha256": "a2a638d08c129a256f311f49082cc155fb0a7106b9d5b8e49348c5bad70b6b0f",
+      "associatedBuildSha256": "882d1e87b596cc7e38b97c3477e3f98d579284a63f719fc8d8c06a7d6c7aab97",
       "matchesCurrentWorkerBuild": false,
       "bindingScope": "isolated_source_snapshot_build",
       "bindingEvaluation": "isolated_build_recorded"
