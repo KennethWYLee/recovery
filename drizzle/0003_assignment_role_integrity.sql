@@ -7,6 +7,7 @@ CREATE TABLE ops_migration_0003_assignment_role_guard (
   passed INTEGER NOT NULL
     CONSTRAINT OPS_ASSIGNMENT_ROLE_INCOMPATIBLE CHECK (passed = 1)
 );
+--> statement-breakpoint
 
 INSERT INTO ops_migration_0003_assignment_role_guard (id, passed)
 SELECT 1, CASE WHEN NOT EXISTS (
@@ -24,8 +25,10 @@ SELECT 1, CASE WHEN NOT EXISTS (
     )
   )
 ) THEN 1 ELSE 0 END;
+--> statement-breakpoint
 
 DROP TABLE ops_migration_0003_assignment_role_guard;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_assignment_role_compatibility_insert_guard
 BEFORE INSERT ON ops_incident_assignments
@@ -47,6 +50,7 @@ WHEN NEW.status = 'active' AND NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_ASSIGNMENT_ROLE_INCOMPATIBLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_membership_assignment_compatibility_update_guard
 BEFORE UPDATE OF role, status ON ops_memberships

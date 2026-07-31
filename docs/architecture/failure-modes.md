@@ -30,7 +30,7 @@
 | FM-21 | 介面鍵盤、焦點、對比或螢幕閱讀器操作失敗 | 部分專業使用者無法完成核心任務 | WCAG 2.2 AA 人工與輔助技術查核 | 語意控制、焦點回復、非只靠顏色及響應式設計來源 | 只有局部人工檢查；不能宣稱完整符合 WCAG 2.2 AA。 |
 | FM-22 | 外部使用者需要提示、放棄或反覆重試，但團隊只報滿意度 | 高估真實任務可靠性 | 保存每人每任務的提示、失敗、放棄、重試及 request ID | [外部專業使用者驗證程序](../assurance/external-professional-validation-protocol.md) | 目前只有 `planned_template`，尚無外部結果。 |
 | FM-23 | 組織角色被指派不相容的事件角色，或先指派再降權 | 低權限帳號藉事件角色取得寫入能力，或 active assignment 與實際權限矛盾 | 建立所有組織角色 × 事件角色組合；再嘗試降權與停用 | 共用相容矩陣、API／UI 篩選、0003 insert 與 membership update triggers；legacy 不相容資料使 migration 停止 | 已以本機單元測試、migration 測試及指定 Worker 的 API 正反向案例驗證合格指揮官指派與觀察者遭拒；尚未驗證遠端環境的完整角色組合與身分邊界情況。 |
-| FM-24 | 服務被淘汰或重新啟用，卻沒有確認、原因、操作者、request ID 或時間，或事後改寫原因 | 生命週期決定無法追溯，可能錯誤停用重要服務 | 未確認、空白變形理由、錯誤角色、無狀態變更改寫 metadata、狀態 round-trip、歷史列更新／刪除 | UI 專用確認；API 要求確認與 8–1000 字原因；0004 驗證 actor／request ID／時間與空白變形，新增 append-only lifecycle event 並保護 metadata；本機 migration suite 最終 15/15 通過 | 指定 2.2.0 artifact 的 API 正反例與內部桌面確認介面已通過；既有 legacy 淘汰列不補造理由，遠端、行動裝置、獨立 QA 與正式 migration 未驗證。 |
+| FM-24 | 服務被淘汰或重新啟用，卻沒有確認、原因、操作者、request ID 或時間，或事後改寫原因 | 生命週期決定無法追溯，可能錯誤停用重要服務 | 未確認、空白變形理由、錯誤角色、無狀態變更改寫 metadata、狀態 round-trip、歷史列更新／刪除 | UI 專用確認；API 要求確認與 8–1000 字原因；0004 驗證 actor／request ID／時間與空白變形，新增 append-only lifecycle event 並保護 metadata；本機 migration suite 最終 16/16 通過 | 指定 2.2.0 artifact 的 API 正反例與內部桌面確認介面已通過；既有 legacy 淘汰列不補造理由，遠端、行動裝置、獨立 QA 與正式 migration 未驗證。 |
 | FM-25 | 生命週期歷程翻頁重複、漏資料、接受無效 cursor，或讀到其他服務資料 | 稽核人員誤判決定歷史，或發生跨資源資訊外洩 | 建立超過 25 筆且含同時間事件；逐頁核對唯一 ID 與完整集合；測重複／過長／格式錯誤 cursor 及跨組織、跨服務請求 | 以 `(changed_at, id)` keyset 穩定倒序；HMAC-SHA256 簽章且綁定 organization／service 的 opaque cursor；長度、格式與 scope 檢查 | cursor 單元案例、指定 2.2.0 API artifact 的多頁資料，以及同一 digest 的內部桌面 25+2 載入均已驗證；瀏覽器失敗重試、行動裝置與遠端隔離尚未驗證。 |
 
 ## 2. 問題處理順序

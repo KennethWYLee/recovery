@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-QUALITY-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:21:47.701Z",
+  "generatedAt": "2026-07-31T08:45:28.558Z",
   "evidenceStatus": "verified_local",
   "verificationType": "unit_coverage_and_static_complexity_diagnostics",
   "result": "coverage_passed_with_complexity_findings",

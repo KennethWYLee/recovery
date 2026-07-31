@@ -3,6 +3,91 @@ import { readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+const SITES_STATEMENT_BREAKPOINT = "--> statement-breakpoint";
+const sitesMigrationStatementCounts = new Map([
+  ["../drizzle/0001_continuity_ops_v2.sql", 71],
+  ["../drizzle/0002_continuity_ops_contract_upgrade.sql", 125],
+  ["../drizzle/0003_assignment_role_integrity.sql", 5],
+  ["../drizzle/0004_service_lifecycle_accountability.sql", 13],
+]);
+
+function countTopLevelSqlStatements(migration) {
+  let count = 0;
+  let inStatement = false;
+  let inTrigger = false;
+
+  for (const rawLine of migration.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("--")) {
+      continue;
+    }
+
+    if (!inStatement) {
+      inStatement = true;
+      inTrigger = /^CREATE\s+TRIGGER\b/iu.test(line);
+    }
+
+    const statementEnded = inTrigger
+      ? rawLine === rawLine.trimStart() && /^END;$/iu.test(line)
+      : line.endsWith(";");
+
+    if (statementEnded) {
+      count += 1;
+      inStatement = false;
+      inTrigger = false;
+    }
+  }
+
+  assert.equal(inStatement, false, "Migration ended with incomplete SQL");
+  return count;
+}
+
+test("Sites receives one complete SQL statement per migration batch item", async () => {
+  const db = new DatabaseSync(":memory:");
+  db.exec("PRAGMA foreign_keys = ON");
+
+  for (const [file, expectedStatementCount] of sitesMigrationStatementCounts) {
+    const migration = await readFile(new URL(file, import.meta.url), "utf8");
+    const statements = migration
+      .split(SITES_STATEMENT_BREAKPOINT)
+      .map((statement) => statement.trim())
+      .filter(Boolean);
+
+    assert.equal(
+      statements.length,
+      countTopLevelSqlStatements(migration),
+      `${file} must place a Sites statement breakpoint between every top-level SQL statement`,
+    );
+    assert.equal(
+      statements.length,
+      expectedStatementCount,
+      `${file} statement inventory changed; verify every new boundary before updating this contract`,
+    );
+
+    db.exec("BEGIN");
+    try {
+      for (const [index, statement] of statements.entries()) {
+        try {
+          db.prepare(statement).run();
+        } catch (cause) {
+          throw new Error(`${file} statement ${index + 1} cannot run independently`, { cause });
+        }
+      }
+      db.exec("COMMIT");
+    } catch (error) {
+      try {
+        db.exec("ROLLBACK");
+      } catch {
+        // SQLite may already have closed the transaction after an error.
+      }
+      throw error;
+    }
+  }
+
+  assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+  db.close();
+});
+
 async function migratedDatabase() {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");

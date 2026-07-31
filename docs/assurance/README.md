@@ -33,7 +33,7 @@
 - 是否通過必須以當次的 commit、CI run、artifact digest 與實際輸出判定，不可使用舊報告代替。
 - 最終受驗 Worker SHA-256 為 `1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158`。本機已有 71/71 API、12/12 agent 設計黑箱、590/590 短時唯讀負載、879/879 telemetry、瀏覽器／Axe 選定規則、資料庫未就緒後恢復及 D1 logical export/import 的限定結果。
 - Gherkin 的 8 個情境、28/28 steps 已通過；另有 6/6 個手工設計規則故障被對應情境抓到。後者只涵蓋六項選定風險，不是完整 mutation campaign、所有需求或獨立人類 QA。
-- clean-room 隔離快照驗證已在本機完成：92 個來源快照檔、17 個命令 exit 0、API 71/71。來源是目前未提交工作目錄的複本，vinext digest 不證明 bit-for-bit 可重現；本機合成 D1／身分也不涵蓋 hosted identity、外部服務或外部使用者。
+- clean-room 隔離快照驗證已在本機完成：93 個來源快照檔、17 個命令 exit 0、API 71/71。來源是目前未提交工作目錄的複本，vinext digest 不證明 bit-for-bit 可重現；本機合成 D1／身分也不涵蓋 hosted identity、外部服務或外部使用者。
 - 目前不宣稱已部署、已完成正式獨立人類 QA、獨立資安查核、完整 WCAG 2.2 AA、遠端還原、RTO／RPO、production 容量或外部使用驗證。
 
 ## 目前實作事實

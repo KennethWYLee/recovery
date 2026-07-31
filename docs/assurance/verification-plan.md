@@ -37,7 +37,7 @@
 
 CI 僅產生待審的建置產物，不自動部署生產環境。
 
-需要執行中的 Worker 或隔離狀態的 `test:blackbox:local`、`test:load:local`、`test:failure-recovery:local` 與 `test:clean-room` 應另外保存環境、artifact digest、完整分母與限制。4 項均已有本機結果；clean-room 的 92 個來源快照檔、17 個命令及 71/71 API 已通過，但來源是未提交工作目錄的複本，不能改寫成 clean Git checkout、CI 或 commit-bound release。
+需要執行中的 Worker 或隔離狀態的 `test:blackbox:local`、`test:load:local`、`test:failure-recovery:local` 與 `test:clean-room` 應另外保存環境、artifact digest、完整分母與限制。4 項均已有本機結果；clean-room 的 93 個來源快照檔、17 個命令及 71/71 API 已通過，但來源是未提交工作目錄的複本，不能改寫成 clean Git checkout、CI 或 commit-bound release。
 
 目前 6/6 個手工設計的 Gherkin 規則故障被對應情境抓到，0 survived。這只檢查目前 8 個情境中的六項風險，不是完整 mutation campaign 或 mutation score，也不代表所有需求或正式獨立人類 QA。
 
@@ -94,7 +94,7 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 
 ## 6. 復原與回復演練
 
-本機前置結果已確認兩件事：未套 migration 的隔離 D1 會讓 health 明確回傳 503，套用 0001–0004 並重啟後 3 個核心讀取恢復；另有 15 個資料表、4/4 migration 的 logical export/import 查核。5,147 ms 的 migration 與 25,974 ms 的本機還原耗時只是觀察值，不是 RTO 或 RPO。
+本機前置結果已確認兩件事：未套 migration 的隔離 D1 會讓 health 明確回傳 503，套用 0001–0004 並重啟後 3 個核心讀取恢復；另有 15 個資料表、4/4 migration 的 logical export/import 查核。5,441 ms 的 migration 與 26,273 ms 的本機還原耗時只是觀察值，不是 RTO 或 RPO。
 
 - 定義並核准 RTO、RPO 及可接受的資料遺失範圍。
 - 取得 D1 備份，在隔離環境完成還原與資料一致性查核。

@@ -3,9 +3,13 @@
 -- their missing historical reason is not reconstructed or fabricated.
 
 ALTER TABLE ops_services ADD COLUMN status_change_reason TEXT;
+--> statement-breakpoint
 ALTER TABLE ops_services ADD COLUMN status_changed_at TEXT;
+--> statement-breakpoint
 ALTER TABLE ops_services ADD COLUMN status_changed_by_user_id TEXT REFERENCES ops_users(id);
+--> statement-breakpoint
 ALTER TABLE ops_services ADD COLUMN status_change_request_id TEXT;
+--> statement-breakpoint
 
 CREATE TABLE ops_service_lifecycle_events (
   id TEXT PRIMARY KEY NOT NULL,
@@ -25,9 +29,11 @@ CREATE TABLE ops_service_lifecycle_events (
     REFERENCES ops_services(id, organization_id) ON DELETE RESTRICT,
   CHECK (from_status <> to_status)
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_service_lifecycle_events_service_time_idx
   ON ops_service_lifecycle_events (organization_id, service_id, changed_at DESC);
+--> statement-breakpoint
 
 -- Lifecycle evidence is derived exclusively from the corresponding service
 -- transition below. A direct INSERT cannot invent or alter history: every
@@ -53,18 +59,21 @@ WHEN NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_SERVICE_LIFECYCLE_EVENT_NOT_DERIVED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_service_lifecycle_events_immutable_update
 BEFORE UPDATE ON ops_service_lifecycle_events
 BEGIN
   SELECT RAISE(ABORT, 'OPS_SERVICE_LIFECYCLE_EVENT_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_service_lifecycle_events_immutable_delete
 BEFORE DELETE ON ops_service_lifecycle_events
 BEGIN
   SELECT RAISE(ABORT, 'OPS_SERVICE_LIFECYCLE_EVENT_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_service_initial_lifecycle_guard
 BEFORE INSERT ON ops_services
@@ -76,6 +85,7 @@ WHEN NEW.status <> 'active'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_SERVICE_MUST_START_ACTIVE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_service_status_change_evidence_guard
 BEFORE UPDATE OF status ON ops_services
@@ -108,6 +118,7 @@ BEGIN
     THEN RAISE(ABORT, 'OPS_SERVICE_STATUS_CHANGE_ACTOR_INVALID')
   END;
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_service_status_metadata_immutable_guard
 BEFORE UPDATE OF status_change_reason, status_changed_at, status_changed_by_user_id, status_change_request_id ON ops_services
@@ -120,6 +131,7 @@ WHEN NEW.status = OLD.status AND (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_SERVICE_STATUS_METADATA_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_service_status_change_history_append
 AFTER UPDATE OF status ON ops_services

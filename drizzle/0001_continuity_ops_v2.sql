@@ -1,4 +1,5 @@
 PRAGMA foreign_keys = ON;
+--> statement-breakpoint
 
 CREATE TABLE ops_organizations (
   id TEXT PRIMARY KEY NOT NULL,
@@ -7,9 +8,11 @@ CREATE TABLE ops_organizations (
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+--> statement-breakpoint
 
 INSERT INTO ops_organizations (id, name, timezone, status)
 VALUES ('ops-singleton', 'Continuity Ops', 'UTC', 'active');
+--> statement-breakpoint
 
 CREATE TABLE ops_users (
   id TEXT PRIMARY KEY NOT NULL,
@@ -20,8 +23,10 @@ CREATE TABLE ops_users (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+--> statement-breakpoint
 
 CREATE UNIQUE INDEX ops_users_email_unique ON ops_users (email);
+--> statement-breakpoint
 
 CREATE TABLE ops_memberships (
   id TEXT PRIMARY KEY NOT NULL,
@@ -34,8 +39,10 @@ CREATE TABLE ops_memberships (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (organization_id, user_id)
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_memberships_role_idx ON ops_memberships (organization_id, role, status);
+--> statement-breakpoint
 
 CREATE TABLE ops_services (
   id TEXT PRIMARY KEY NOT NULL,
@@ -55,8 +62,10 @@ CREATE TABLE ops_services (
   UNIQUE (organization_id, slug),
   UNIQUE (id, organization_id)
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_services_status_idx ON ops_services (organization_id, status, tier);
+--> statement-breakpoint
 
 CREATE TABLE ops_incidents (
   id TEXT PRIMARY KEY NOT NULL,
@@ -88,9 +97,12 @@ CREATE TABLE ops_incidents (
   UNIQUE (id, organization_id),
   FOREIGN KEY (service_id, organization_id) REFERENCES ops_services(id, organization_id) ON DELETE RESTRICT
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_incidents_active_idx ON ops_incidents (organization_id, status, severity, updated_at);
+--> statement-breakpoint
 CREATE INDEX ops_incidents_service_idx ON ops_incidents (service_id, updated_at);
+--> statement-breakpoint
 
 CREATE TABLE ops_incident_assignments (
   id TEXT PRIMARY KEY NOT NULL,
@@ -109,12 +121,16 @@ CREATE TABLE ops_incident_assignments (
   ),
   FOREIGN KEY (incident_id, organization_id) REFERENCES ops_incidents(id, organization_id) ON DELETE CASCADE
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_assignments_user_idx ON ops_incident_assignments (organization_id, user_id, incident_id);
+--> statement-breakpoint
 CREATE INDEX ops_assignments_incident_status_idx ON ops_incident_assignments (incident_id, status, incident_role);
+--> statement-breakpoint
 CREATE UNIQUE INDEX ops_assignments_active_incident_user_role_unique
   ON ops_incident_assignments (incident_id, user_id, incident_role)
   WHERE status = 'active';
+--> statement-breakpoint
 
 CREATE TABLE ops_incident_timeline (
   id TEXT PRIMARY KEY NOT NULL,
@@ -135,9 +151,12 @@ CREATE TABLE ops_incident_timeline (
   CHECK (observed_from IS NULL OR observed_to IS NULL OR observed_from <= observed_to),
   FOREIGN KEY (incident_id, organization_id) REFERENCES ops_incidents(id, organization_id) ON DELETE CASCADE
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_timeline_incident_idx ON ops_incident_timeline (incident_id, created_at, id);
+--> statement-breakpoint
 CREATE UNIQUE INDEX ops_timeline_request_unique ON ops_incident_timeline (incident_id, request_id, event_type);
+--> statement-breakpoint
 
 CREATE TABLE ops_incident_tasks (
   id TEXT PRIMARY KEY NOT NULL,
@@ -196,9 +215,12 @@ CREATE TABLE ops_incident_tasks (
   ),
   FOREIGN KEY (incident_id, organization_id) REFERENCES ops_incidents(id, organization_id) ON DELETE CASCADE
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_tasks_incident_idx ON ops_incident_tasks (incident_id, status, due_at);
+--> statement-breakpoint
 CREATE INDEX ops_tasks_assignee_idx ON ops_incident_tasks (organization_id, assignee_user_id, status);
+--> statement-breakpoint
 
 CREATE TABLE ops_incident_communications (
   id TEXT PRIMARY KEY NOT NULL,
@@ -252,12 +274,16 @@ CREATE TABLE ops_incident_communications (
   ),
   FOREIGN KEY (incident_id, organization_id) REFERENCES ops_incidents(id, organization_id) ON DELETE CASCADE
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_communications_incident_idx ON ops_incident_communications (incident_id, created_at, id);
+--> statement-breakpoint
 CREATE INDEX ops_communications_status_idx ON ops_incident_communications (organization_id, status, audience, updated_at);
+--> statement-breakpoint
 CREATE INDEX ops_communications_next_update_idx
   ON ops_incident_communications (organization_id, next_update_at, incident_id)
   WHERE status = 'published' AND next_update_at IS NOT NULL;
+--> statement-breakpoint
 
 CREATE TABLE ops_post_incident_reviews (
   id TEXT PRIMARY KEY NOT NULL,
@@ -288,6 +314,7 @@ CREATE TABLE ops_post_incident_reviews (
   ),
   FOREIGN KEY (incident_id, organization_id) REFERENCES ops_incidents(id, organization_id) ON DELETE CASCADE
 );
+--> statement-breakpoint
 
 CREATE TABLE ops_audit_events (
   id TEXT PRIMARY KEY NOT NULL,
@@ -303,10 +330,14 @@ CREATE TABLE ops_audit_events (
   details_json TEXT,
   occurred_at TEXT NOT NULL
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_audit_time_idx ON ops_audit_events (organization_id, occurred_at, id);
+--> statement-breakpoint
 CREATE INDEX ops_audit_resource_idx ON ops_audit_events (resource_type, resource_id, occurred_at);
+--> statement-breakpoint
 CREATE INDEX ops_audit_actor_idx ON ops_audit_events (actor_user_id, occurred_at);
+--> statement-breakpoint
 
 CREATE TABLE ops_idempotency_receipts (
   id TEXT PRIMARY KEY NOT NULL,
@@ -320,14 +351,17 @@ CREATE TABLE ops_idempotency_receipts (
   expires_at TEXT NOT NULL,
   UNIQUE (organization_id, actor_user_id, action_scope, idempotency_key_hash)
 );
+--> statement-breakpoint
 
 CREATE INDEX ops_receipts_expiry_idx ON ops_idempotency_receipts (expires_at);
+--> statement-breakpoint
 
 CREATE TABLE ops_write_guards (
   id TEXT PRIMARY KEY NOT NULL,
   passed INTEGER NOT NULL CHECK (passed = 1),
   created_at TEXT NOT NULL
 );
+--> statement-breakpoint
 
 CREATE TRIGGER ops_membership_version_guard
 BEFORE UPDATE ON ops_memberships
@@ -335,6 +369,7 @@ WHEN NEW.version <> OLD.version + 1
 BEGIN
   SELECT RAISE(ABORT, 'OPS_MEMBERSHIP_VERSION_MUST_INCREMENT');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_service_version_guard
 BEFORE UPDATE ON ops_services
@@ -342,6 +377,7 @@ WHEN NEW.version <> OLD.version + 1
 BEGIN
   SELECT RAISE(ABORT, 'OPS_SERVICE_VERSION_MUST_INCREMENT');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_service_deprecation_guard
 BEFORE UPDATE OF status ON ops_services
@@ -356,6 +392,7 @@ WHEN OLD.status <> 'deprecated'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_SERVICE_HAS_OPEN_INCIDENTS');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_incident_version_guard
 BEFORE UPDATE ON ops_incidents
@@ -363,6 +400,7 @@ WHEN NEW.version <> OLD.version + 1
 BEGIN
   SELECT RAISE(ABORT, 'OPS_INCIDENT_VERSION_MUST_INCREMENT');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_incident_transition_guard
 BEFORE UPDATE OF status ON ops_incidents
@@ -377,6 +415,7 @@ WHEN OLD.status <> NEW.status AND NOT (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_INVALID_INCIDENT_TRANSITION');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_incident_resolution_readiness_guard
 BEFORE UPDATE OF status ON ops_incidents
@@ -402,6 +441,7 @@ BEGIN
       THEN RAISE(ABORT, 'OPS_RESOLUTION_CRITICAL_TASKS_OPEN')
   END;
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_incident_actor_guard
 BEFORE UPDATE ON ops_incidents
@@ -413,6 +453,7 @@ WHEN NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_INCIDENT_ACTOR_MEMBERSHIP_REQUIRED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_incident_status_timeline
 AFTER UPDATE OF status ON ops_incidents
@@ -438,6 +479,7 @@ BEGIN
   WHERE m.organization_id = NEW.organization_id
     AND m.user_id = NEW.updated_by_user_id;
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_task_version_guard
 BEFORE UPDATE ON ops_incident_tasks
@@ -445,6 +487,7 @@ WHEN NEW.version <> OLD.version + 1
 BEGIN
   SELECT RAISE(ABORT, 'OPS_TASK_VERSION_MUST_INCREMENT');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_task_critical_cancellation_guard
 BEFORE UPDATE ON ops_incident_tasks
@@ -458,6 +501,7 @@ WHEN OLD.priority = 'critical'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_TASK_CRITICAL_CANCELLATION_REASON_REQUIRED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_task_cancellation_reason_immutable
 BEFORE UPDATE OF cancellation_reason ON ops_incident_tasks
@@ -467,6 +511,7 @@ WHEN OLD.status = 'cancelled'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_TASK_CANCELLATION_REASON_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_insert_draft_guard
 BEFORE INSERT ON ops_incident_communications
@@ -474,6 +519,7 @@ WHEN NEW.status <> 'draft'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_MUST_START_DRAFT');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_version_guard
 BEFORE UPDATE ON ops_incident_communications
@@ -481,6 +527,7 @@ WHEN NEW.version <> OLD.version + 1
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_VERSION_MUST_INCREMENT');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_transition_guard
 BEFORE UPDATE ON ops_incident_communications
@@ -491,6 +538,7 @@ WHEN OLD.status <> 'published' AND NOT (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_INVALID_TRANSITION');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_identity_immutable
 BEFORE UPDATE OF id, organization_id, incident_id, created_by_user_id, created_at
@@ -498,6 +546,7 @@ ON ops_incident_communications
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_IDENTITY_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_reviewed_content_immutable
 BEFORE UPDATE OF audience, message, affected_components, next_update_at
@@ -511,6 +560,7 @@ WHEN OLD.status = 'reviewed' AND (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_REVIEWED_CONTENT_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_publish_incident_guard
 BEFORE UPDATE OF status ON ops_incident_communications
@@ -523,6 +573,7 @@ WHEN OLD.status = 'reviewed' AND NEW.status = 'published' AND EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_INCIDENT_TERMINAL');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_external_schedule_guard
 BEFORE UPDATE OF status ON ops_incident_communications
@@ -544,6 +595,7 @@ WHEN (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_NEXT_UPDATE_REQUIRED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_published_update_guard
 BEFORE UPDATE ON ops_incident_communications
@@ -551,6 +603,7 @@ WHEN OLD.status = 'published'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_PUBLISHED_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_communication_published_delete_guard
 BEFORE DELETE ON ops_incident_communications
@@ -558,6 +611,7 @@ WHEN OLD.status = 'published'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMUNICATION_PUBLISHED_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_review_version_guard
 BEFORE UPDATE ON ops_post_incident_reviews
@@ -565,6 +619,7 @@ WHEN NEW.version <> OLD.version + 1
 BEGIN
   SELECT RAISE(ABORT, 'OPS_REVIEW_VERSION_MUST_INCREMENT');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_review_incident_status_insert_guard
 BEFORE INSERT ON ops_post_incident_reviews
@@ -577,6 +632,7 @@ WHEN NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_REVIEW_INCIDENT_NOT_RESOLVED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_review_incident_status_update_guard
 BEFORE UPDATE ON ops_post_incident_reviews
@@ -589,6 +645,7 @@ WHEN NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_REVIEW_INCIDENT_NOT_RESOLVED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_assignment_membership_guard
 BEFORE INSERT ON ops_incident_assignments
@@ -601,6 +658,7 @@ WHEN NEW.status = 'active' AND NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_ASSIGNEE_NOT_ACTIVE_MEMBER');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_assignment_commander_role_guard
 BEFORE INSERT ON ops_incident_assignments
@@ -616,6 +674,7 @@ WHEN NEW.status = 'active' AND NEW.incident_role = 'incident_commander' AND NOT 
 BEGIN
   SELECT RAISE(ABORT, 'OPS_COMMANDER_ROLE_REQUIRED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_assignment_commander_revoke_guard
 BEFORE UPDATE OF status ON ops_incident_assignments
@@ -638,6 +697,7 @@ WHEN OLD.status = 'active'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_INCIDENT_COMMANDER_REQUIRED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_assignment_identity_immutable
 BEFORE UPDATE OF organization_id, incident_id, user_id, incident_role, assigned_by_user_id, created_at
@@ -645,6 +705,7 @@ ON ops_incident_assignments
 BEGIN
   SELECT RAISE(ABORT, 'OPS_ASSIGNMENT_IDENTITY_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_assignment_revoked_immutable
 BEFORE UPDATE ON ops_incident_assignments
@@ -652,6 +713,7 @@ WHEN OLD.status = 'revoked'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_ASSIGNMENT_REVOKED_IMMUTABLE');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_task_assignee_membership_guard
 BEFORE INSERT ON ops_incident_tasks
@@ -664,6 +726,7 @@ WHEN NEW.assignee_user_id IS NOT NULL AND NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_TASK_ASSIGNEE_NOT_ACTIVE_MEMBER');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_last_active_admin_update_guard
 BEFORE UPDATE OF role, status ON ops_memberships
@@ -680,6 +743,7 @@ WHEN OLD.role = 'admin'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_LAST_ADMIN_REQUIRED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_active_incident_commander_membership_update_guard
 BEFORE UPDATE OF role, status ON ops_memberships
@@ -711,6 +775,7 @@ WHEN OLD.status = 'active'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_ACTIVE_INCIDENT_HANDOFF_REQUIRED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_last_active_admin_delete_guard
 BEFORE DELETE ON ops_memberships
@@ -726,6 +791,7 @@ WHEN OLD.role = 'admin'
 BEGIN
   SELECT RAISE(ABORT, 'OPS_LAST_ADMIN_REQUIRED');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_task_assignee_update_guard
 BEFORE UPDATE OF assignee_user_id ON ops_incident_tasks
@@ -738,24 +804,28 @@ WHEN NEW.assignee_user_id IS NOT NULL AND NOT EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_TASK_ASSIGNEE_NOT_ACTIVE_MEMBER');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_audit_append_only_update
 BEFORE UPDATE ON ops_audit_events
 BEGIN
   SELECT RAISE(ABORT, 'OPS_AUDIT_APPEND_ONLY');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_audit_append_only_delete
 BEFORE DELETE ON ops_audit_events
 BEGIN
   SELECT RAISE(ABORT, 'OPS_AUDIT_APPEND_ONLY');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_timeline_append_only_update
 BEFORE UPDATE ON ops_incident_timeline
 BEGIN
   SELECT RAISE(ABORT, 'OPS_TIMELINE_APPEND_ONLY');
 END;
+--> statement-breakpoint
 
 CREATE TRIGGER ops_timeline_append_only_delete
 BEFORE DELETE ON ops_incident_timeline

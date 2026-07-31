@@ -24,7 +24,7 @@
 | AC-015 | UI 日期輸入、組織時區 | `resolveOrganizationTimeZone`、`parseZonedDateTimeInput`、`toZonedDateTimeInput` | `ops_organizations.timezone` | 2.2.0 `operations-time.test.ts`；[本機驗證紀錄](local-verification-record-20260731.md) | 時區與 DST 單元案例已驗證；瀏覽器及 API round-trip 未驗證。 |
 | AC-016 | `GET /api/v1/health`、錯誤畫面 | `health`、route error normalization、UI request error handling | D1 health query | CO-VRF-API-001／FAILURE-RECOVERY-001 | 指定本機 artifact 的正常 health，以及未套 migration 時 503、套用 0001–0004 後恢復 3 個核心讀取已驗證；網路中斷、遠端 D1、rollback 與正式環境未驗證。 |
 | AC-017 | `/operations?view=&incident=&tab=` | `OperationsApp.tsx` 的網址狀態、輪詢、dialog focus；`globals.css` 響應式規則 | 不適用；資料授權仍由 API 執行 | `rendered-html.test.mjs`；CO-VRF-BROWSER-001 | 1280×720 與 320×568 已核對鍵盤 tabs、modal 焦點、手機 drawer、前進後退與兩分頁輪詢；Axe 選定規則為 0 violation、0 incomplete。完整 WCAG、真實螢幕閱讀器、跨瀏覽器、真實裝置、正式獨立 QA 與遠端證據不足。 |
-| AC-018 | 建置及交付流程 | `package.json` scripts、CI workflow、vinext／Worker 設定、manifest、telemetry analyzer 與 restore drill | migration 集合 | CO-VRF-CLEAN-ROOM-001／MANIFEST-001／D1-RESTORE-001 | clean-room 的 92 個來源快照檔、17 個命令與 71/71 API 已在本機隔離環境通過；最終 Worker SHA-256 已固定，本機建置、3/3 整合及 0001→0004 還原也已驗證，manifest 已盤點 14/14 份預期證據。來源仍是未提交工作目錄的複本，也沒有 clean Git checkout、CI run、artifact rollback 或正式部署證據。 |
+| AC-018 | 建置及交付流程 | `package.json` scripts、CI workflow、vinext／Worker 設定、manifest、telemetry analyzer 與 restore drill | migration 集合 | CO-VRF-CLEAN-ROOM-001／MANIFEST-001／D1-RESTORE-001 | clean-room 的 93 個來源快照檔、17 個命令與 71/71 API 已在本機隔離環境通過；最終 Worker SHA-256 已固定，本機建置、3/3 整合及 0001→0004 還原也已驗證，manifest 已盤點 14/14 份預期證據。來源仍是未提交工作目錄的複本，也沒有 clean Git checkout、CI run、artifact rollback 或正式部署證據。 |
 | AC-019 | `GET /api/v1/overview`、服務目錄 | `overview` 的 `unknown`／`unavailable` 回應 | 事件與服務資料只用來呈現影響，不捏造遙測 | CO-VRF-API-001 | 指定 2.2.0 本機 Worker API 已驗證；真實服務遙測未接入。 |
 | AC-020 | 外部專業使用者驗證 | [外部專業使用者驗證程序](external-professional-validation-protocol.md) | 測試結果不得直接寫入正式營運資料；依核准環境保存去識別紀錄 | 尚無結果 | `planned_template`。 |
 
@@ -37,7 +37,7 @@
 | `0001_continuity_ops_v2.sql` | 建立主要組織、使用者、服務、事件、事件協作、稽核、冪等及寫入保護資料結構。 | 外鍵、唯一索引、狀態 check、版本 check、事件轉換、解決條件、append-only。 | 空白資料庫安裝、schema 查詢、正反例 SQL。 | 測試來源存在；當次完整 Log 未納入本套文件。 |
 | `0002_continuity_ops_contract_upgrade.sql` | 將早期 0001 結構向前升級，補會員 version、工作取消理由、通訊時間與狀態保護，並維持歷史可追溯。 | migration guard、資料表重建與複製、舊不合規狀態降為未完成、不得捏造證據或理由、更新後 triggers。 | 空白鏈與 legacy 0001 升級、`foreign_key_check`、約束正反例。 | 測試來源存在；部分結果由本機 API 證據間接觀察。 |
 | `0003_assignment_role_integrity.sql` | 將組織角色與事件角色的相容規則放到資料層。 | 升級前若有不相容 active assignment 就停止；新增不相容指派被拒絕；會員降權或停用不能留下不相容 active assignment。 | 相容／不相容指派、會員角色變更、legacy 資料 fail-loud、`foreign_key_check`。 | 2.2.0 測試來源存在；需保存最終執行結果。 |
-| `0004_service_lifecycle_accountability.sql` | 為之後的服務淘汰與重新啟用保存原因、操作者、request ID、時間與逐次歷史。 | 狀態改變要求 8-1000 字原因、合格 active admin／commander、request ID 與時間；trigger 新增 append-only lifecycle event；狀態未改時 metadata 不可改寫；不替舊淘汰資料補造理由。 | 缺理由、錯誤 actor、改寫 metadata／歷史、淘汰／重新啟用 round-trip、事件列及 legacy 升級。 | 2026-07-31 本機 migration suite 最終 15/15 通過；初次因新增資料表與舊測試預期未同步而為 13/15，修正測試後重跑通過。這不等於正式環境 migration 證據。 |
+| `0004_service_lifecycle_accountability.sql` | 為之後的服務淘汰與重新啟用保存原因、操作者、request ID、時間與逐次歷史。 | 狀態改變要求 8-1000 字原因、合格 active admin／commander、request ID 與時間；trigger 新增 append-only lifecycle event；狀態未改時 metadata 不可改寫；不替舊淘汰資料補造理由。 | 缺理由、錯誤 actor、改寫 metadata／歷史、淘汰／重新啟用 round-trip、事件列及 legacy 升級。 | 2026-07-31 本機 migration suite 最終 16/16 通過；先前資料表查核修正後為 15/15，本次再加入 Sites 單一 SQL statement 分段契約。這不等於正式環境 migration 證據。 |
 
 資料庫實際狀態以已套用 migration 與 D1 schema 查詢為準；`db/operations-schema.ts` 是應用程式端對照，兩者不一致時必須停止發布並找出原因，不能任選一份解釋。
 

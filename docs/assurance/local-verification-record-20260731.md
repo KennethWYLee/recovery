@@ -28,7 +28,7 @@ Git HEAD 只表示目前工作目錄的共同祖先，不代表測試內容已�
 | `npm run test:gherkin` | 8/8 情境、28/28 steps 通過 | 選定的授權、證據、服務狀態、未結案篩選與通訊規則具有可讀且可執行的驗收情境。 | 全部需求、API／D1／瀏覽器整合、獨立測試者或外部使用者結果。 |
 | `npm run test:gherkin:fault-injection` | 6/6 個手工設計規則故障被對應情境抓到；0 survived | Gherkin 情境可辨識六項選定規則被弱化。 | 不是完整 mutation campaign 或 mutation score，不涵蓋所有需求；同一 repository 內執行，不是獨立人類 QA。 |
 | `npm run test:quality` | coverage 門檻通過；line 95.38%、branch 82.47%、function 87.88%；4 個複雜度診斷項目；CRAP 未計算 | 指定五個單元測試套件與五個 library source 的整體 coverage，以及複雜度超過 15 的檢視位置。 | 測試斷言品質、未納入的 Worker／UI／migration、功能正確性、資安或發布準備度。 |
-| `npm run test:migration:sql` | 最終 15/15 通過 | 空白資料庫、legacy 升級、0001→0004、角色相容性、服務生命週期、資料不變條件與重試等現有 migration 案例通過。 | 遠端 D1、真實資料量、正式環境權限、停機時間或 rollback。 |
+| `npm run test:migration:sql` | 最終 16/16 通過 | 空白資料庫、legacy 升級、0001→0004、角色相容性、服務生命週期、資料不變條件與重試均通過；另核對 Sites 的 214 個 SQL 區段可逐一以單一 prepared statement 執行。 | 遠端 D1、真實資料量、正式環境權限、停機時間或 rollback。 |
 | `npm run test:migration:wrangler` | Wrangler 依序套用 0001–0004 | 目前 migration 集可套用到隔離本機 D1。 | 遠端 D1、正式資料、停機或 rollback。 |
 | `npm run test:tools` | 14/14 通過 | telemetry 分析器、隔離 D1 還原工具與 repository secret scanner 的 known-good／known-bad 案例通過。 | 生產 Log、遠端備份、告警、RTO、RPO、未知秘密格式或產品 artifact 可還原。 |
 | `npm run build`、`npm run test:integration` | 建置通過；3/3 整合案例通過 | 最終 Worker artifact 可建置；34 個可部署文字檔不含 prompt、評分、課程、學生文件或舊產品語境。 | 正式部署、遠端標頭、圖像 OCR 或 production 快取。 |
@@ -36,15 +36,15 @@ Git HEAD 只表示目前工作目錄的共同祖先，不代表測試內容已�
 | `npm run test:blackbox:local` | 12/12 通過；`verified_local_agent_designed` | 未參與功能實作的 agent 依事前凍結案例，從公開 HTTP 介面核對選定的正確輸入、錯誤輸入與資料不變條件。 | 正式 G7、外部人員、委託第三方、遠端端對端或外部使用證據。 |
 | `npm run test:load:local` | 590/590 有效回應；最高同時 50；0 個 5xx | 短時、唯讀、本機合成資料負載下，所列路徑維持回應格式與 request ID。 | production 容量、壓力極限、soak、寫入負載、SLO、rate limiting 或遠端網路。 |
 | 內部交互式瀏覽器與 Axe 核對 | 通過；1280×720 與 320×568；Axe 4.12.1 在選定規則中 0 violation、0 incomplete | 同一 Worker 在單一引擎核對鍵盤 tabs、modal 焦點回復、手機 drawer、深層連結、前進後退及兩分頁輪詢由 38 更新為 39。 | 完整 WCAG 2.2 AA、人工可及性、真實螢幕閱讀器、跨瀏覽器、真實裝置、遠端或正式獨立 QA。 |
-| `npm run test:failure-recovery:local` | 通過；未套 migration 時 health 為 503；migration 5,147 ms；恢復後 3 個核心讀取通過 | 同一隔離本機 D1 套用 0001–0004 並重啟相同 artifact 後，health、access、overview 恢復。 | 網路中斷、部分遠端 D1 故障、應用程式或 migration rollback、RTO、RPO 或 production 復原。 |
+| `npm run test:failure-recovery:local` | 通過；未套 migration 時 health 為 503；migration 5,441 ms；恢復後 3 個核心讀取通過 | 同一隔離本機 D1 套用 0001–0004 並重啟相同 artifact 後，health、access、overview 恢復。 | 網路中斷、部分遠端 D1 故障、應用程式或 migration rollback、RTO、RPO 或 production 復原。 |
 | `npm run test:fault-injection` | 18/18 目標故障被偵測；0 survived | 現有測試可辨識 18 個風險導向的領域、授權、輸入、時間與 cursor 規則弱化。 | 完整 mutation testing、所有規則的判別力或真實故障復原。 |
-| `npm run gate:supply-chain` 的 scanner 檢查 | scanner 案例 5/5；88 個文字檔無命中 | 指定範圍的專案文字來源沒有命中 scanner 支援的憑證格式。 | Git history、remote branch、binary、runtime secret、未知格式、SAST、DAST 或獨立資安查核。 |
+| `npm run gate:supply-chain` 的 scanner 檢查 | scanner 案例 5/5；89 個文字檔無命中 | 指定範圍的專案文字來源沒有命中 scanner 支援的憑證格式。 | Git history、remote branch、binary、runtime secret、未知格式、SAST、DAST 或獨立資安查核。 |
 | `npm run audit:production` | production dependencies 0 個已知弱點 | 當次 lockfile 與 npm advisory 資料下，production 相依套件未回報弱點。 | 未來 advisory、SAST、DAST、供應鏈 provenance、授權查核或零時差弱點。 |
-| `npm run test:clean-room` | `verified_local_controlled`；92 個來源快照檔；17 個命令 exit 0；API 71/71；82,848 ms | 來源快照在隔離暫存目錄完成 `npm ci`、關卡、建置、migration 與 API smoke。 | 不是 clean Git checkout、CI、commit-bound release、bit-for-bit 可重現證明、staging／production 或正式獨立人類 QA。 |
+| `npm run test:clean-room` | `verified_local_controlled`；93 個來源快照檔；17 個命令 exit 0；API 71/71 | 來源快照在隔離暫存目錄完成 `npm ci`、關卡、建置、migration 與 API smoke；該次 digest 與耗時保存於證據 JSON。 | 不是 clean Git checkout、CI、commit-bound release、bit-for-bit 可重現證明、staging／production 或正式獨立人類 QA。 |
 
 ## 3. 保留失敗，不改寫歷史
 
-`npm run test:migration:sql` 第一次執行為 13/15。當時新增 `ops_service_lifecycle_events` 後，資料表清單的舊測試預期尚未同步；這不是資料庫 constraint 本身通過的證明。更新測試預期並加入生命週期資料表查核後，以相同指令重跑，最終為 15/15。
+`npm run test:migration:sql` 先前第一次執行為 13/15。當時新增 `ops_service_lifecycle_events` 後，資料表清單的舊測試預期尚未同步；更新測試預期並加入生命週期資料表查核後為 15/15。本次部署又新增 Sites migration 分段契約，確認 214 個頂層 SQL 敘述不會切斷 trigger，最終為 16/16。
 
 這次失敗與修正說明的是測試與 schema 必須一起維護。它不代表正式 migration 已演練，也不應從紀錄中刪除。
 
@@ -52,17 +52,17 @@ Git HEAD 只表示目前工作目錄的共同祖先，不代表測試內容已�
 
 較早的 oversized body 案例曾在本機 proxy 失敗，無法證明應用程式會自行拒絕。修正後改為串流讀取、超限時取消並排空請求，且不信任 `Content-Length`；應用程式限制固定為 32 KiB。同一案例重跑取得 413，最新完整 API smoke 為 71/71。這是本機 Worker preview 的結果，不代表 hosted edge 已驗證。
 
-重新建置時，vinext 會產生新的 build ID 與 draft-mode secret，因此同一工作目錄的 Worker digest 會改變。本紀錄不主張 bit-for-bit reproducible build；最終 API、資安負例、瀏覽器、agent 黑箱、短時負載與資料庫未就緒後恢復都綁定至同一個完整 SHA-256。clean-room 的隔離 Worker SHA-256 為 `5c7b42c71509d43ad896a39e944c94e46947eb156c57a001ec742c4bb0695e67`，不同 digest 是已揭露的 vinext 限制，不是 bit-for-bit 可重現證明。最終 manifest 已盤點 14/14 份預期證據，沒有失敗、缺件或與目前 Worker 不符的綁定。要主張可重現建置，還需在乾淨 commit 與已記錄的 CI 環境控制這些建置輸入。
+重新建置時，vinext 會產生新的 build ID 與 draft-mode secret，因此同一工作目錄的 Worker digest 會改變。本紀錄不主張 bit-for-bit reproducible build；最終 API、資安負例、瀏覽器、agent 黑箱、短時負載與資料庫未就緒後恢復都綁定至同一個完整 SHA-256。clean-room 的隔離 Worker digest 記錄於證據 JSON；它與受驗 Worker 不同是已揭露的 vinext 限制，不是 bit-for-bit 可重現證明。最終 manifest 已盤點 14/14 份預期證據，沒有失敗、缺件或與目前 Worker 不符的綁定。要主張可重現建置，還需在乾淨 commit 與已記錄的 CI 環境控制這些建置輸入。
 
 ## 4. 同次操作證據
 
-- `CO-VRF-D1-RESTORE-001`：`verified_local_controlled`。來源與還原端各 15 個資料表，逐表筆數相同；4/4 migration history、marker 1/1、兩端 foreign key 違反 0；總耗時 25,974 ms。這是合成本機 logical export/import，不是 RTO。
+- `CO-VRF-D1-RESTORE-001`：`verified_local_controlled`。來源與還原端各 15 個資料表，逐表筆數相同；4/4 migration history、marker 1/1、兩端 foreign key 違反 0；總耗時 26,273 ms。這是合成本機 logical export/import，不是 RTO。
 - `CO-VRF-TELEMETRY-001`：`verified_local_controlled`，結果為 `passed`。最終受驗 Log 為 879/879 筆符合欄位契約，其中 51 筆為預期 4xx、5xx 為 0；API、schema 與 deployment version 均一致。正式 ingestion、retention、sampling 與告警仍未驗證。
 - `CO-VRF-BROWSER-001`：`verified_local_controlled`，結果為 `passed_with_documented_limits`。它支持最終 Worker 在單一瀏覽器引擎的桌面與窄螢幕指定流程，以及 Axe 選定規則掃描；不是完整 WCAG、真實螢幕閱讀器、跨瀏覽器、正式獨立 QA 或遠端驗證。
 - `CO-VRF-QA-BLACKBOX-001`：`verified_local_agent_designed`，12/12 通過。它是未參與功能實作的 agent 執行的本機前置黑箱查核，不是正式 G7 或外部第三方證據。
 - `CO-VRF-LOAD-001`：`verified_local_controlled`，590/590 有效、最高同時 50、0 個 5xx。這是短時唯讀 smoke，不是 production 容量或 SLO 結論。
 - `CO-VRF-FAILURE-RECOVERY-001`：`verified_local_controlled`。本機未套 migration 時正確失敗，套用 migration 後恢復 3 個核心讀取；不是 rollback、RTO 或 RPO。
-- `CO-VRF-CLEAN-ROOM-001`：`verified_local_controlled`，結果為 `passed_with_documented_limits`。92 個來源快照檔的 SHA-256 為 `f3a363383c7c369ee3d71c595ebaa922d2dfeec44562866bca327ce3bf8a076f`；17 個命令均 exit 0，API 為 27 正向加 44 負向，共 71/71；隔離 Worker SHA-256 為 `5c7b42c71509d43ad896a39e944c94e46947eb156c57a001ec742c4bb0695e67`，總耗時 82,848 ms。來源是未提交工作目錄的複本，本機合成 D1／身分不含 hosted identity、外部服務或外部使用者；自動內部執行不是正式獨立人類 QA。
+- `CO-VRF-CLEAN-ROOM-001`：`verified_local_controlled`，結果為 `passed_with_documented_limits`。93 個來源快照檔已執行 17 個命令，均 exit 0；API 為 27 正向加 44 負向，共 71/71。該次來源與 Worker SHA-256、耗時保存於證據 JSON。來源是未提交工作目錄的複本，本機合成 D1／身分不含 hosted identity、外部服務或外部使用者；自動內部執行不是正式獨立人類 QA。
 
 完整資料、分母、雜湊與限制以 `evidence/` 內各項對應 JSON 為準；本文只整理主要結果，不取代原始證據。
 

@@ -59,7 +59,7 @@ npm run test:load:local
 npm run test:failure-recovery:local
 ```
 
-工具先以未套 migration 的隔離 D1 啟動相同 Worker，確認 health 回傳 503 與穩定問題代碼；再對同一狀態套用 0001–0004、重啟 Worker，核對 health、access、overview。當次 migration 為 5,147 ms，恢復後 3 個核心讀取通過。這不是網路中斷、部分遠端 D1 故障、rollback、RTO 或 RPO。
+工具先以未套 migration 的隔離 D1 啟動相同 Worker，確認 health 回傳 503 與穩定問題代碼；再對同一狀態套用 0001–0004、重啟 Worker，核對 health、access、overview。當次 migration 為 5,441 ms，恢復後 3 個核心讀取通過。這不是網路中斷、部分遠端 D1 故障、rollback、RTO 或 RPO。
 
 ## Request telemetry 分析
 
@@ -80,7 +80,7 @@ node scripts/analyze-request-telemetry.mjs `
 node scripts/run-local-d1-restore-drill.mjs
 ```
 
-工具建立互相分離的來源與還原狀態，套用 migration、加入受控 marker、匯出 SQL、匯入空白狀態，再比較每個應用資料表、migration history、foreign key 及備份雜湊。目前來源與還原端各 15 個資料表、4/4 migration、兩端 foreign key 違反 0，總耗時 25,974 ms。
+工具建立互相分離的來源與還原狀態，套用 migration、加入受控 marker、匯出 SQL、匯入空白狀態，再比較每個應用資料表、migration history、foreign key 及備份雜湊。目前來源與還原端各 15 個資料表、4/4 migration、兩端 foreign key 違反 0，總耗時 26,273 ms。
 
 工具不接受 `--remote`，也不會讀寫一般本機 D1 狀態。耗時不是 RTO；結果不驗證 D1 Time Travel、hosted retention、remote 權限、staging 或 production。
 
@@ -96,7 +96,7 @@ node scripts/run-local-d1-restore-drill.mjs
 npm run test:clean-room
 ```
 
-`CO-VRF-CLEAN-ROOM-001` 的狀態為 `verified_local_controlled`，結果為 `passed_with_documented_limits`。工具複製 92 個來源快照檔到隔離暫存目錄；來源快照 SHA-256 為 `f3a363383c7c369ee3d71c595ebaa922d2dfeec44562866bca327ce3bf8a076f`。17 個命令均 exit 0，包含 `npm ci`、關卡、建置、migration 與 API 27 正向加 44 負向，共 71/71；隔離 Worker SHA-256 為 `5c7b42c71509d43ad896a39e944c94e46947eb156c57a001ec742c4bb0695e67`，總耗時 82,848 ms。
+`CO-VRF-CLEAN-ROOM-001` 的狀態為 `verified_local_controlled`，結果為 `passed_with_documented_limits`。工具複製 93 個來源快照檔到隔離暫存目錄；17 個命令均 exit 0，包含 `npm ci`、關卡、建置、migration 與 API 27 正向加 44 負向，共 71/71。每次執行的來源快照 SHA-256、隔離 Worker SHA-256 與耗時記錄於證據 JSON，不在說明文件複製容易過期的數值。
 
 來源是目前未提交工作目錄的複本，不是 clean Git checkout、CI 或 commit-bound release。vinext 產生的不同 digest 不證明 bit-for-bit 可重現；本機合成 D1／身分不涵蓋 staging、production、hosted identity、外部服務或外部使用者；自動內部執行也不是正式獨立人類 QA。
 
