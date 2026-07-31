@@ -3,23 +3,23 @@
   "evidenceId": "CO-VRF-CLEAN-ROOM-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T10:32:51.966Z",
+  "generatedAt": "2026-07-31T14:58:00.729Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "isolated_snapshot_install_build_migrate_and_smoke",
   "result": "passed_with_documented_limits",
   "sourceControl": {
     "status": "source_tree_clean",
-    "head": "5231a5785aca59d7bde8f88cf8beee2ecc637d03",
+    "head": "ac67ece1c222c522146ba6dd5c95937590530b8e",
     "beforeCopy": {
       "status": "source_tree_clean",
-      "head": "5231a5785aca59d7bde8f88cf8beee2ecc637d03",
+      "head": "ac67ece1c222c522146ba6dd5c95937590530b8e",
       "sourceDirtyEntryCount": 0,
       "ignoredSourceEntryCount": 0,
       "limitation": "Git reported no tracked or untracked changes and no ignored files under the selected source inputs."
     },
     "afterCopy": {
       "status": "source_tree_clean",
-      "head": "5231a5785aca59d7bde8f88cf8beee2ecc637d03",
+      "head": "ac67ece1c222c522146ba6dd5c95937590530b8e",
       "sourceDirtyEntryCount": 0,
       "ignoredSourceEntryCount": 0,
       "limitation": "Git reported no tracked or untracked changes and no ignored files under the selected source inputs."
@@ -28,11 +28,11 @@
   },
   "sourceSnapshot": {
     "fileCount": 97,
-    "sha256": "eb30707111371243078a044d7b5378794242c30d739d280e9f30943cf323f943"
+    "sha256": "3d4a830deef7b62f91649a838ba4b1606059df336907d7744ee471e6abaf6732"
   },
   "cleanRoom": {
     "copiedFileCount": 97,
-    "copiedSnapshotSha256": "eb30707111371243078a044d7b5378794242c30d739d280e9f30943cf323f943",
+    "copiedSnapshotSha256": "3d4a830deef7b62f91649a838ba4b1606059df336907d7744ee471e6abaf6732",
     "dependencyInstall": "npm ci",
     "node": "v24.15.0",
     "platform": "win32",
@@ -40,98 +40,98 @@
   },
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "882d1e87b596cc7e38b97c3477e3f98d579284a63f719fc8d8c06a7d6c7aab97"
+    "sha256": "1e77205ccee6b75c845f30461e8a43114a893f4b4d6c377dc56a77da10944dad"
   },
   "commands": [
     {
       "label": "temporary Git inventory initialization",
       "exitCode": 0,
-      "durationMs": 62
+      "durationMs": 68
     },
     {
       "label": "temporary Git source inventory",
       "exitCode": 0,
-      "durationMs": 338
+      "durationMs": 327
     },
     {
       "label": "locked dependency installation",
       "exitCode": 0,
-      "durationMs": 25765
+      "durationMs": 25371
     },
     {
       "label": "production dependency audit",
       "exitCode": 0,
-      "durationMs": 1640
+      "durationMs": 1622
     },
     {
       "label": "supply-chain gate",
       "exitCode": 0,
-      "durationMs": 3344
+      "durationMs": 3176
     },
     {
       "label": "static gate",
       "exitCode": 0,
-      "durationMs": 18492
+      "durationMs": 17516
     },
     {
       "label": "unit tests",
       "exitCode": 0,
-      "durationMs": 733
+      "durationMs": 704
     },
     {
       "label": "quality metrics",
       "exitCode": 0,
-      "durationMs": 4085
+      "durationMs": 3868
     },
     {
       "label": "migration tests",
       "exitCode": 0,
-      "durationMs": 7086
+      "durationMs": 7065
     },
     {
       "label": "fault injection",
       "exitCode": 0,
-      "durationMs": 5438
+      "durationMs": 5313
     },
     {
       "label": "operational evidence tool tests",
       "exitCode": 0,
-      "durationMs": 163
+      "durationMs": 162
     },
     {
       "label": "executable Gherkin acceptance",
       "exitCode": 0,
-      "durationMs": 1410
+      "durationMs": 1401
     },
     {
       "label": "Gherkin fault injection",
       "exitCode": 0,
-      "durationMs": 5459
+      "durationMs": 5398
     },
     {
       "label": "production build",
       "exitCode": 0,
-      "durationMs": 6100
+      "durationMs": 5897
     },
     {
       "label": "build integration",
       "exitCode": 0,
-      "durationMs": 566
+      "durationMs": 530
     },
     {
       "label": "fresh hosted-schema runtime bootstrap",
       "exitCode": 0,
-      "durationMs": 15984
+      "durationMs": 27276
     },
     {
       "label": "fresh local D1 migrations",
       "exitCode": 0,
-      "durationMs": 5646
+      "durationMs": 5546
     },
     {
       "label": "clean-room API smoke",
       "exitCode": 0,
-      "durationMs": 2937
+      "durationMs": 3012
     }
   ],
   "apiSmoke": {
@@ -142,9 +142,9 @@
       "negative": 44,
       "total": 71
     },
-    "buildArtifactSha256": "882d1e87b596cc7e38b97c3477e3f98d579284a63f719fc8d8c06a7d6c7aab97"
+    "buildArtifactSha256": "1e77205ccee6b75c845f30461e8a43114a893f4b4d6c377dc56a77da10944dad"
   },
-  "totalDurationMs": 107722,
+  "totalDurationMs": 116408,
   "limitations": [
     "Git reported no changes or ignored files under the selected source inputs before and after the copy. The run did not independently clone the remote repository or compare working-tree bytes directly with Git blobs.",
     "The isolated build may have a different digest because vinext generates nondeterministic build inputs; this run verifies behavior and traceability, not bit-for-bit reproducibility.",

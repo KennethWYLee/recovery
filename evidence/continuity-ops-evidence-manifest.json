@@ -3,16 +3,16 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T14:55:44.430Z",
+  "generatedAt": "2026-07-31T14:58:24.033Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
-    "status": "source_tree_has_uncommitted_changes",
+    "status": "source_tree_clean",
     "repositoryRelativePath": ".",
-    "head": "d8ca2818ecfdd8fb9f162ab5d66647541a9c564e",
-    "shortHead": "d8ca2818ecfd",
-    "sourceDirtyEntryCount": 34,
-    "limitation": "The project contains uncommitted changes, so this manifest does not describe a clean commit rebuild."
+    "head": "ac67ece1c222c522146ba6dd5c95937590530b8e",
+    "shortHead": "ac67ece1c222",
+    "sourceDirtyEntryCount": 0,
+    "limitation": "The project files resolve to this commit; CI and deployment identity remain separate evidence."
   },
   "runtime": {
     "node": "v24.15.0",
@@ -911,15 +911,15 @@
     {
       "path": "evidence/continuity-ops-clean-room-verification.json",
       "bytes": 4592,
-      "sha256": "f63ab00d414246875a437de5f171fb6bfa6bb4eca9d928d7213955e1093eb8b0",
+      "sha256": "54bf5920ab01e2e3ca43d23696dc3c977944ffd31f6e37b3fbeb31ccf12b74ac",
       "present": true,
       "evidenceId": "CO-VRF-CLEAN-ROOM-001",
       "evidenceStatus": "verified_local_controlled",
       "result": "passed_with_documented_limits",
       "verificationType": "isolated_snapshot_install_build_migrate_and_smoke",
-      "generatedAt": "2026-07-31T10:32:51.966Z",
+      "generatedAt": "2026-07-31T14:58:00.729Z",
       "limitationCount": 4,
-      "associatedBuildSha256": "882d1e87b596cc7e38b97c3477e3f98d579284a63f719fc8d8c06a7d6c7aab97",
+      "associatedBuildSha256": "1e77205ccee6b75c845f30461e8a43114a893f4b4d6c377dc56a77da10944dad",
       "matchesCurrentWorkerBuild": false,
       "bindingScope": "isolated_source_snapshot_build",
       "bindingEvaluation": "isolated_build_recorded"
