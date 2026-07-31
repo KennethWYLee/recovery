@@ -24,6 +24,7 @@ const unitSuites = [
   "tests/operations-time.test.ts",
   "tests/service-lifecycle-cursor.test.ts",
   "tests/operations-input.test.ts",
+  "tests/operations-bootstrap.test.mjs",
 ];
 const measuredSources = [
   "lib/operations-domain.ts",
@@ -31,6 +32,7 @@ const measuredSources = [
   "lib/operations-time.ts",
   "lib/service-lifecycle-cursor.ts",
   "lib/operations-input.ts",
+  "db/operations-bootstrap-core.ts",
 ];
 const coverageArgs = [
   "--experimental-strip-types",
@@ -138,7 +140,7 @@ const coverageOutput = commandOutput(coverageRun);
 assert.equal(
   coverageRun.status,
   0,
-  `The five unit suites must pass before quality metrics are accepted.\n${coverageOutput}`,
+  `All ${unitSuites.length} unit suites must pass before quality metrics are accepted.\n${coverageOutput}`,
 );
 
 const coverage = parseCoverage(coverageOutput);
@@ -175,7 +177,7 @@ const report = {
   },
   coverage: {
     provider: "Node.js built-in test coverage",
-    gateScope: "aggregate_of_the_five_unit_suites_and_their_five_measured_lib_sources",
+    gateScope: "aggregate_of_the_named_unit_suites_and_their_measured_domain_and_bootstrap_sources",
     thresholds,
     result: coveragePassed ? "passed" : "failed",
     aggregate: {
@@ -206,7 +208,7 @@ const report = {
     "Complexity findings above 15 identify review and refactoring candidates; they do not by themselves fail a feature or the product.",
   ],
   limitations: [
-    "This report covers only the five named TypeScript unit suites and the five library sources they exercise; it excludes Worker handlers, React UI, migrations, browser paths, and external integrations.",
+    `This report covers only the ${unitSuites.length} named unit suites and ${measuredSources.length} domain or bootstrap sources they exercise; it excludes Worker handlers, React UI, migration execution, browser paths, and external integrations.`,
     "Line, branch, and function percentages do not measure the quality of assertions or the correctness of the test oracle.",
     "CRAP is intentionally not reported without credible function-level coverage joined to the same functions measured for complexity.",
   ],

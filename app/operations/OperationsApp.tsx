@@ -481,7 +481,32 @@ function unwrap<T>(value: unknown): T {
   return value as T;
 }
 
-async function apiRequest<T>(path: string, init?: RequestInit, signal?: AbortSignal): Promise<T> {
+const MAX_SCHEMA_INITIALIZATION_RETRIES = 5;
+
+function waitForApiRetry(delayMs: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason ?? new DOMException("The request was aborted.", "AbortError"));
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, delayMs);
+    const onAbort = () => {
+      window.clearTimeout(timeout);
+      reject(signal?.reason ?? new DOMException("The request was aborted.", "AbortError"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function apiRequest<T>(
+  path: string,
+  init?: RequestInit,
+  signal?: AbortSignal,
+  schemaInitializationAttempt = 0,
+): Promise<T> {
   const response = await fetch(path, {
     ...init,
     signal,
@@ -500,8 +525,21 @@ async function apiRequest<T>(path: string, init?: RequestInit, signal?: AbortSig
     : null;
   if (!response.ok || body?.ok === false) {
     const requestId = body?.requestId ?? body?.meta?.requestId ?? response.headers.get("x-request-id") ?? undefined;
+    const code = body?.error?.code ?? body?.code;
+    const method = (init?.method ?? "GET").toUpperCase();
+    const schemaMayBecomeReady = code === "DATABASE_INITIALIZING"
+      || (path === "/api/v1/health" && code === "DATABASE_NOT_READY");
+    if (
+      response.status === 503
+      && schemaMayBecomeReady
+      && ["GET", "HEAD"].includes(method)
+      && schemaInitializationAttempt < MAX_SCHEMA_INITIALIZATION_RETRIES
+    ) {
+      await waitForApiRetry(Math.min(800, 150 * (2 ** schemaInitializationAttempt)), signal);
+      return apiRequest<T>(path, init, signal, schemaInitializationAttempt + 1);
+    }
     const message = body?.error?.message ?? body?.detail ?? body?.message ?? body?.title ?? `要求未完成（HTTP ${response.status}）。`;
-    throw new ApiError(message, response.status, requestId, body?.error?.code ?? body?.code);
+    throw new ApiError(message, response.status, requestId, code);
   }
   if (response.status === 204) return undefined as T;
   return unwrap<T>(body);

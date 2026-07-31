@@ -12,7 +12,10 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-// Packages Sites metadata and migrations after Vite finishes compiling.
+// Packages only the Sites binding metadata after Vite finishes compiling.
+// The hosted fresh-D1 schema is initialized by the authenticated runtime
+// bootstrap. This avoids relying on deployment-time SQL parsing after two
+// Sites attempts failed while processing these trigger-heavy migrations.
 export function sites(): Plugin {
   let root = process.cwd();
   return {
@@ -23,14 +26,12 @@ export function sites(): Plugin {
     },
     async closeBundle() {
       const outputDirectory = resolve(root, "dist", ".openai");
+      const localVariables = resolve(root, "dist", "server", ".dev.vars");
       const hostingConfig = resolve(root, ".openai", "hosting.json");
-      const drizzleSource = resolve(root, "drizzle");
+      await rm(localVariables, { force: true });
       await rm(outputDirectory, { recursive: true, force: true });
       await mkdir(outputDirectory, { recursive: true });
       if (await exists(hostingConfig)) await cp(hostingConfig, resolve(outputDirectory, "hosting.json"));
-      if (await exists(drizzleSource)) {
-        await cp(drizzleSource, resolve(outputDirectory, "drizzle"), { recursive: true });
-      }
     },
   };
 }

@@ -5,6 +5,10 @@ import {
   operationsEnvironment,
 } from "@/db/operations";
 import {
+  ensureOperationsSchema,
+  type OperationsSchemaBootstrapResult,
+} from "@/db/operations-bootstrap";
+import {
   actorHasPermission,
   requestIsSameOrigin,
   resolveExternalOperationsIdentity,
@@ -44,13 +48,68 @@ export async function authenticatedContext(request: Request, requestId: string):
   if (!requestIsSameOrigin(request)) {
     throw new ApiProblem(403, "CROSS_ORIGIN_REQUEST_REJECTED", "State-changing requests must originate from this application.");
   }
-  const identity = resolveExternalOperationsIdentity(request, operationsEnvironment());
+  const environment = operationsEnvironment();
+  const identity = resolveExternalOperationsIdentity(request, environment);
   if (!identity) throw new ApiProblem(401, "AUTHENTICATION_REQUIRED", "A verified operator identity is required.", "Authentication required");
+  const db = operationsDb();
+  let schema: OperationsSchemaBootstrapResult;
+  try {
+    schema = await ensureOperationsSchema({
+      db,
+      caller: { verified: true, email: identity.email },
+      configuredBootstrapEmail: environment.CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL,
+    });
+  } catch {
+    emitOperationsSchemaBootstrapFailure("unexpected_error");
+    throw new ApiProblem(503, "DATABASE_NOT_READY", "The operations database is not ready.", "Service unavailable");
+  }
+  emitOperationsSchemaBootstrapResult(schema);
+  if (!schema.ready) {
+    if (schema.status === "initializing") {
+      throw new ApiProblem(503, "DATABASE_INITIALIZING", "The operations database is being initialized. Retry shortly.", "Service initializing");
+    }
+    if (schema.status === "mismatch") {
+      throw new ApiProblem(503, "DATABASE_SCHEMA_MISMATCH", "The operations database schema does not match the deployed application.", "Service unavailable");
+    }
+    if (schema.status === "phase_failed") {
+      throw new ApiProblem(503, "DATABASE_INITIALIZATION_FAILED", "The operations database could not complete initialization.", "Service unavailable");
+    }
+    throw new ApiProblem(503, "DATABASE_NOT_READY", "The operations database is not ready.", "Service unavailable");
+  }
   const actor = await loadOrProvisionOperationsActor(identity);
   if (!actor) {
     throw new ApiProblem(403, "ACTIVE_MEMBERSHIP_REQUIRED", "The authenticated identity does not have an active Continuity Ops membership.", "Access denied");
   }
-  return { request, requestId, db: operationsDb(), actor };
+  return { request, requestId, db, actor };
+}
+
+function emitOperationsSchemaBootstrapResult(result: OperationsSchemaBootstrapResult): void {
+  if (result.ready && result.queryCount === 0) return;
+  const payload = JSON.stringify({
+    event: "continuity_ops.schema_bootstrap",
+    status: result.status,
+    phase: result.phase,
+    schemaVersion: result.schemaVersion,
+    planDigest: result.planDigest,
+    queryCount: result.queryCount,
+    reason: result.reason ?? null,
+    deploymentVersion: deploymentVersion(),
+  });
+  if (result.status === "mismatch" || result.status === "phase_failed") console.error(payload);
+  else console.info(payload);
+}
+
+function emitOperationsSchemaBootstrapFailure(reason: string): void {
+  console.error(JSON.stringify({
+    event: "continuity_ops.schema_bootstrap",
+    status: "failed",
+    phase: null,
+    schemaVersion: OPERATIONS_SCHEMA_VERSION,
+    planDigest: null,
+    queryCount: null,
+    reason,
+    deploymentVersion: deploymentVersion(),
+  }));
 }
 
 export function requirePermission(context: OperationsRequestContext, permission: OperationsPermission): void {
@@ -147,6 +206,12 @@ export function problemResponse(error: unknown, requestIdValue: string): Respons
   const problem = error instanceof ApiProblem
     ? error
     : new ApiProblem(500, "INTERNAL_ERROR", "The operation could not be completed.", "Internal server error");
+  const responseHeaders: Record<string, string> = {
+    "content-type": "application/problem+json; charset=utf-8",
+    "cache-control": "no-store",
+    "x-request-id": requestIdValue,
+  };
+  if (problem.code === "DATABASE_INITIALIZING") responseHeaders["retry-after"] = "1";
   return new Response(JSON.stringify({
     type: `https://continuity-ops.invalid/problems/${problem.code.toLowerCase()}`,
     title: problem.title,
@@ -156,11 +221,7 @@ export function problemResponse(error: unknown, requestIdValue: string): Respons
     requestId: requestIdValue,
   }), {
     status: problem.status,
-    headers: {
-      "content-type": "application/problem+json; charset=utf-8",
-      "cache-control": "no-store",
-      "x-request-id": requestIdValue,
-    },
+    headers: responseHeaders,
   });
 }
 

@@ -8,7 +8,6 @@ const SOURCE_DIRECTORIES = new Set([
   "build",
   "db",
   "docs",
-  "drizzle",
   "lib",
   "public",
   "scripts",
@@ -276,4 +275,3 @@ export async function scanRepository(rootDirectory) {
 
   return { filesScanned: files.length, findings };
 }
-

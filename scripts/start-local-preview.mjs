@@ -1,20 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import {
-  chmodSync,
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  rmSync,
-} from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = process.cwd();
 const sourceVariables = resolve(root, ".dev.vars");
 const generatedConfig = resolve(root, "dist/server/wrangler.json");
-const temporaryVariables = resolve(root, "dist/server/.dev.vars");
 const wrangler = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js", import.meta.url));
 const forwardedArguments = process.argv.slice(2);
 const reservedArguments = new Set(["--config", "--cwd", "--env-file", "--local", "--persist-to", "--var"]);
@@ -25,27 +18,13 @@ for (const argument of forwardedArguments) {
   assert.ok(!reservedArguments.has(argument), `${argument} is managed by the local preview launcher.`);
 }
 
-mkdirSync(dirname(temporaryVariables), { recursive: true });
-rmSync(temporaryVariables, { force: true });
-copyFileSync(sourceVariables, temporaryVariables);
-try {
-  chmodSync(temporaryVariables, 0o600);
-} catch {
-  // Windows ACLs remain authoritative when POSIX mode bits are unavailable.
-}
-
-let cleaned = false;
-function cleanup() {
-  if (cleaned) return;
-  cleaned = true;
-  rmSync(temporaryVariables, { force: true });
-}
-
 const child = spawn(process.execPath, [
   wrangler,
   "dev",
   "--config",
   generatedConfig,
+  "--env-file",
+  sourceVariables,
   "--local",
   "--persist-to",
   resolve(root, ".wrangler/state"),
@@ -68,11 +47,8 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 }
 
 const [code, signal] = await once(child, "exit");
-cleanup();
 if (signal) {
   process.kill(process.pid, signal);
 } else {
   process.exitCode = code ?? 1;
 }
-
-process.once("exit", cleanup);

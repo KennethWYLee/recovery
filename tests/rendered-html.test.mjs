@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -73,4 +73,26 @@ test("every textual deployment artifact excludes prompts, grading language, and 
     const contents = await readFile(file, "utf8");
     assert.doesNotMatch(contents, forbiddenProductCopy, `non-product copy leaked into ${path.relative(distDirectory, file)}`);
   }
+});
+
+test("Sites artifact binds D1 without deployment-time SQL migrations", async () => {
+  const hosting = JSON.parse(await readFile(new URL("../dist/.openai/hosting.json", import.meta.url), "utf8"));
+  assert.equal(hosting.d1, "DB");
+  assert.equal(hosting.r2, null);
+  assert.deepEqual(Object.keys(hosting).sort(), ["d1", "project_id", "r2"]);
+
+  await assert.rejects(
+    access(new URL("../dist/.openai/drizzle", import.meta.url)),
+    (error) => error && typeof error === "object" && error.code === "ENOENT",
+    "The Sites artifact must use the verified runtime schema path instead of deployment-time SQL migrations",
+  );
+  await assert.rejects(
+    access(new URL("../dist/server/.dev.vars", import.meta.url)),
+    (error) => error && typeof error === "object" && error.code === "ENOENT",
+    "Local runtime credentials must not be present in the deployable artifact",
+  );
+
+  const worker = await readFile(new URL("../dist/server/index.js", import.meta.url), "utf8");
+  assert.match(worker, /ops_runtime_schema_state/);
+  assert.match(worker, /DATABASE_INITIALIZING/);
 });

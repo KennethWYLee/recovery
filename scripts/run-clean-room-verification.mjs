@@ -46,7 +46,6 @@ const sourceInputs = [
   "build",
   "db",
   "docs",
-  "drizzle",
   "lib",
   "public",
   "scripts",
@@ -241,6 +240,7 @@ try {
   );
   runNpm("production build", ["run", "build"], environment);
   runNpm("build integration", ["run", "test:integration"], environment);
+  runNpm("fresh hosted-schema runtime bootstrap", ["run", "test:runtime-bootstrap:local"], environment);
   runNpm("fresh local D1 migrations", ["run", "db:migrate:local"], environment);
 
   const artifactPath = resolve(cleanRoot, "dist/server/index.js");

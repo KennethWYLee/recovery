@@ -3,12 +3,12 @@ import { readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
-const SITES_STATEMENT_BREAKPOINT = "--> statement-breakpoint";
-const sitesMigrationStatementCounts = new Map([
-  ["../drizzle/0001_continuity_ops_v2.sql", 71],
-  ["../drizzle/0002_continuity_ops_contract_upgrade.sql", 125],
-  ["../drizzle/0003_assignment_role_integrity.sql", 5],
-  ["../drizzle/0004_service_lifecycle_accountability.sql", 13],
+const MIGRATION_STATEMENT_BREAKPOINT = "--> statement-breakpoint";
+const migrationStatementCounts = new Map([
+  ["../db/migrations/0001_continuity_ops_v2.sql", 71],
+  ["../db/migrations/0002_continuity_ops_contract_upgrade.sql", 125],
+  ["../db/migrations/0003_assignment_role_integrity.sql", 5],
+  ["../db/migrations/0004_service_lifecycle_accountability.sql", 13],
 ]);
 
 function countTopLevelSqlStatements(migration) {
@@ -42,21 +42,21 @@ function countTopLevelSqlStatements(migration) {
   return count;
 }
 
-test("Sites receives one complete SQL statement per migration batch item", async () => {
+test("each recorded migration boundary contains one complete SQL statement", async () => {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
 
-  for (const [file, expectedStatementCount] of sitesMigrationStatementCounts) {
+  for (const [file, expectedStatementCount] of migrationStatementCounts) {
     const migration = await readFile(new URL(file, import.meta.url), "utf8");
     const statements = migration
-      .split(SITES_STATEMENT_BREAKPOINT)
+      .split(MIGRATION_STATEMENT_BREAKPOINT)
       .map((statement) => statement.trim())
       .filter(Boolean);
 
     assert.equal(
       statements.length,
       countTopLevelSqlStatements(migration),
-      `${file} must place a Sites statement breakpoint between every top-level SQL statement`,
+      `${file} must place a statement breakpoint between every top-level SQL statement`,
     );
     assert.equal(
       statements.length,
@@ -92,10 +92,10 @@ async function migratedDatabase() {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
   for (const file of [
-    "../drizzle/0001_continuity_ops_v2.sql",
-    "../drizzle/0002_continuity_ops_contract_upgrade.sql",
-    "../drizzle/0003_assignment_role_integrity.sql",
-    "../drizzle/0004_service_lifecycle_accountability.sql",
+    "../db/migrations/0001_continuity_ops_v2.sql",
+    "../db/migrations/0002_continuity_ops_contract_upgrade.sql",
+    "../db/migrations/0003_assignment_role_integrity.sql",
+    "../db/migrations/0004_service_lifecycle_accountability.sql",
   ]) {
     const migration = await readFile(new URL(file, import.meta.url), "utf8");
     db.exec(`BEGIN;\n${migration}\nCOMMIT;`);
@@ -107,8 +107,8 @@ async function databaseThrough0002() {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
   for (const file of [
-    "../drizzle/0001_continuity_ops_v2.sql",
-    "../drizzle/0002_continuity_ops_contract_upgrade.sql",
+    "../db/migrations/0001_continuity_ops_v2.sql",
+    "../db/migrations/0002_continuity_ops_contract_upgrade.sql",
   ]) {
     const migration = await readFile(new URL(file, import.meta.url), "utf8");
     db.exec(`BEGIN;\n${migration}\nCOMMIT;`);
@@ -1134,7 +1134,7 @@ test("0003 stops when existing active assignments violate the role matrix", asyn
     "assign-incompatible-upgrade",
   );
   const migration = await readFile(
-    new URL("../drizzle/0003_assignment_role_integrity.sql", import.meta.url),
+    new URL("../db/migrations/0003_assignment_role_integrity.sql", import.meta.url),
     "utf8",
   );
   assert.throws(
@@ -1156,7 +1156,7 @@ test("0003 stops when existing active assignments violate the role matrix", asyn
 test("0004 preserves legacy lifecycle history without inventing a missing reason", async () => {
   const db = await databaseThrough0002();
   const assignmentMigration = await readFile(
-    new URL("../drizzle/0003_assignment_role_integrity.sql", import.meta.url),
+    new URL("../db/migrations/0003_assignment_role_integrity.sql", import.meta.url),
     "utf8",
   );
   db.exec(`BEGIN;\n${assignmentMigration}\nCOMMIT;`);
@@ -1167,7 +1167,7 @@ test("0004 preserves legacy lifecycle history without inventing a missing reason
     "UPDATE ops_services SET status = 'deprecated', version = version + 1, updated_at = ? WHERE id = 'svc-1'",
   ).run(legacyAt);
   const lifecycleMigration = await readFile(
-    new URL("../drizzle/0004_service_lifecycle_accountability.sql", import.meta.url),
+    new URL("../db/migrations/0004_service_lifecycle_accountability.sql", import.meta.url),
     "utf8",
   );
   db.exec(`BEGIN;\n${lifecycleMigration}\nCOMMIT;`);
@@ -1483,7 +1483,7 @@ test("0002 upgrades the recorded legacy 0001 contract without inventing evidence
             'usr-1', 'usr-1', '${now}', '${now}');
   `);
   const migration = await readFile(
-    new URL("../drizzle/0002_continuity_ops_contract_upgrade.sql", import.meta.url),
+    new URL("../db/migrations/0002_continuity_ops_contract_upgrade.sql", import.meta.url),
     "utf8",
   );
   db.exec(`BEGIN;\n${migration}\nCOMMIT;`);

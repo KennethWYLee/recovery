@@ -2,7 +2,7 @@
 
 Continuity Ops 是單一組織部署的服務事件指揮與復原工作區。它讓 IT 維運、SRE、資安應變與服務負責人在同一件共享事件中協作，保留調查、處置、驗證、決策與事後改善的可追溯記錄。
 
-目前版本為 `2.2.0`。這個 repository 仍是本機開發中的發布候選來源；尚未建立公開生產部署、外部使用結果、獨立資安查核或 WCAG 符合性聲明。
+目前版本為 `2.2.0`。這個 repository 是可部署的發布來源；repository 內容本身不證明任何特定遠端版本仍在線。正式狀態必須另以 source commit、deployment ID、正式網址與遠端查核結果確認。本版不主張公開部署、外部使用結果、獨立資安查核或 WCAG 符合性。
 
 ## 產品邊界
 
@@ -65,9 +65,19 @@ Open Graph、Twitter 與 canonical metadata 會依目前請求的 HTTPS host 產
 
 `CONTINUITY_OPS_CURSOR_HMAC_SECRET` 用於簽署生命週期分頁 cursor，至少 32 字元。正式環境應以平台 secret 管理，不得寫入 repository、Log、遙測或證據檔；各環境使用不同值。輪替後，輪替前取得的 cursor 會失效，使用者必須重新載入第一頁。
 
-`db:migrate:local` 使用 Wrangler 的 migration 紀錄，只套用尚未套用的 [`drizzle`](drizzle) 檔案。它不會對已完成的資料庫盲目重跑 SQL；如果 migration 失敗，開發伺服器不會啟動。可以使用 `npm run db:migrations:list:local` 查看本機狀態。
+`db:migrate:local` 使用 Wrangler 的 migration 紀錄，只套用尚未套用的 [`db/migrations`](db/migrations) 檔案。它不會對已完成的資料庫盲目重跑 SQL；如果 migration 失敗，開發伺服器不會啟動。可以使用 `npm run db:migrations:list:local` 查看本機狀態。
 
 資料契約版本目前為 `0004`。`0002_continuity_ops_contract_upgrade.sql` 補齊時區、成員版本、指派歷程、證據欄位、通訊與約束；`0003_assignment_role_integrity.sql` 加入組織角色與事件角色的相容性限制；`0004_service_lifecycle_accountability.sql` 保存並限制未來服務生命週期變更的原因、操作者與時間。`0003` 發現既有不相容指派時會停止；`0004` 不會替既有淘汰狀態捏造歷史理由。
+
+### 全新託管 D1 初始化
+
+本機開發、既有資料庫升級、還原演練與回歸測試仍使用 0001–0004 migration。全新空白的 Sites D1 則由 Worker 內的受控 runtime bootstrap 建立最終 `0004` 結構；兩條路徑有不同用途，runtime bootstrap 不可用來升級已有正式資料的資料庫。
+
+Runtime bootstrap 固定分成三個可重試階段。三階段分別建立 29、33、23 個 schema statements；含狀態查核、guard 與最終 fingerprint 驗證後，本機實測各請求使用 39、39、33 個 D1 queries，均低於 50。只有平台已驗證，且正規化 Email 與 `CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL` 完全相同的身分可以推進；一般請求在完成前收到 503，讀取介面只對明確的初始化狀態做有限次重試。每階段以 D1 batch 交易執行，失敗不保留該階段的部分結果。
+
+系統只在 14 個產品資料表、20 個 index、46 個 trigger 與 canonical fingerprint 全部相符後標記 ready。若資料庫已有部分或不相符的 `ops_` 結構，初始化會停止，不會自動刪表或補寫。由 Wrangler 完整套用的既有資料庫，必須同時具有完全相符的最終結構與 0001–0004 migration 紀錄才可採用。完成第一位管理員建置後，可移除 bootstrap Email 設定；既有啟用會員仍可登入。
+
+兩次先前的 Sites 發布嘗試都在平台處理 SQL migration 時失敗，錯誤為 `incomplete input`。本機整檔、逐 statement 與 Wrangler 驗證均通過；因此部署端 SQL 切割相容性是目前最符合證據的原因推論，但沒有平台 trace 可把它寫成已確認的 Sites 缺陷。部署 artifact 仍保留 `DB` binding，但不交付 deployment-time SQL migrations。
 
 Vite 開發伺服器、migration 指令與建置後 Worker preview 均明確使用 `.wrangler/state` 作為本機持久化路徑，並共用 `continuity-ops-local-d1` binding。不要混用 Wrangler 的其他預設狀態目錄。
 
@@ -102,6 +112,7 @@ npm run test:load:local
 
 ```powershell
 npm run test:failure-recovery:local
+npm run test:runtime-bootstrap:local
 npm run test:clean-room
 node scripts/run-local-d1-restore-drill.mjs
 ```
@@ -116,14 +127,15 @@ node scripts/run-local-d1-restore-drill.mjs
 
 1. 以不可變的 source commit 執行 CI。
 2. 從正式網址查核 canonical 與社群預覽 metadata 使用正確的 HTTPS host。
-3. 在 staging 套用 migration，再執行 API、授權負例與主要流程測試。
-4. 完成平台已驗證身分轉送的信任設定，並將 bootstrap administrator email 視為受控的部署設定。
-5. 設定不可變的 `CONTINUITY_OPS_DEPLOYMENT_VERSION`，並從結構化 request telemetry 確認不再出現 `unversioned`。
-6. 以平台 secret 設定至少 32 字元的 `CONTINUITY_OPS_CURSOR_HMAC_SECRET`，並確認未出現在 Log、遙測或 evidence artifact。
-7. 記錄 artifact digest、deployment ID、migration 版本與具名的 go/no-go 決定。
-8. 執行並記錄 rollback 及 D1 備份還原演練。
+3. 對全新託管 D1 核對 ready 前 503、三個 bootstrap 階段、每次少於 50 queries、最終 inventory／fingerprint，以及不相符身分不能初始化；既有資料庫則走 0001–0004 migration 與還原程序。
+4. 完成平台已驗證身分轉送的信任設定，將 bootstrap administrator email 視為受控部署設定，並在第一位管理員建立後移除。
+5. 在 ready 後執行 health、API、授權負例與主要流程測試。
+6. 設定不可變的 `CONTINUITY_OPS_DEPLOYMENT_VERSION`，並從結構化 request telemetry 確認不再出現 `unversioned`。
+7. 以平台 secret 設定至少 32 字元的 `CONTINUITY_OPS_CURSOR_HMAC_SECRET`，並確認未出現在 Log、遙測或 evidence artifact。
+8. 記錄 artifact digest、deployment ID、schema 版本與具名的 go/no-go 決定。
+9. 執行並記錄 rollback 及 D1 備份還原演練。
 
-本 repository 目前沒有可支持上述項目已完成的證據。詳細步驟與停止條件見 [作業手冊](docs/operations-runbook.md)。
+本機證據不能代替上述遠端查核。詳細步驟與停止條件見 [作業手冊](docs/operations-runbook.md)。
 
 尚未完成的 production 能力包括邊緣 rate limiting、生命週期歷程以外清單的 cursor pagination、附件與匯出、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、高風險確認流程的遠端瀏覽器驗證、遠端身分邊緣負例、CSP nonce／hash 收斂、production 備份還原演練、外部目標使用者驗證及獨立安全與可及性查核。固定筆數上限與目前的 CSP `unsafe-inline` 相容設定不能替代這些工作。
 
