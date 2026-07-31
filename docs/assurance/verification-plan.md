@@ -37,7 +37,7 @@
 
 CI 僅產生待審的建置產物，不自動部署生產環境。
 
-需要執行中的 Worker 或隔離狀態的 `test:blackbox:local`、`test:load:local`、`test:failure-recovery:local` 與 `test:clean-room` 應另外保存環境、artifact digest、完整分母與限制。4 項均已有本機結果；clean-room 的 93 個來源快照檔、17 個命令及 71/71 API 已通過，但來源是未提交工作目錄的複本，不能改寫成 clean Git checkout、CI 或 commit-bound release。
+需要執行中的 Worker 或隔離狀態的 `test:blackbox:local`、`test:load:local`、`test:failure-recovery:local` 與 `test:clean-room` 應另外保存環境、artifact digest、完整分母與限制。四項均有本機結果；clean-room 對 Git 判定無變更且不含 ignored input 的 97 個來源檔執行 18 個命令，均 exit 0，API 71/71。這仍是本機複本，不能改寫成獨立 remote clone、CI、bit-for-bit 可重現或正式發布證據。
 
 目前 6/6 個手工設計的 Gherkin 規則故障被對應情境抓到，0 survived。這只檢查目前 8 個情境中的六項風險，不是完整 mutation campaign 或 mutation score，也不代表所有需求或正式獨立人類 QA。
 
@@ -90,11 +90,11 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 - 驗證 Worker 安全標頭在遠端回應生效，並追蹤目前 inline script/style 相容設定改為 CSP nonce／hash 的剩餘工作。
 - 以 WCAG 2.2 AA 為目標，執行鍵盤、焦點、語意、狀態非單靠顏色、對比與螢幕閱讀器人工檢查。
 
-目前本機單一瀏覽器引擎已核對鍵盤 tabs、modal 焦點回復、手機 drawer、深層連結、前進後退及兩分頁輪詢；Axe 4.12.1 對選定規則回報 0 violation、0 incomplete。這是自動前置檢查，不等於完整 WCAG 2.2 AA。尚未完成全頁、全流程、人工判斷、真實螢幕閱讀器與跨瀏覽器檢查前，不宣稱 WCAG 2.2 AA 符合性。
+目前本機單一瀏覽器引擎已在 1265×513 與 360×844 應用程式視窗核對深層連結、End／Home／方向鍵分頁切換、瀏覽器前進後退，以及 dialog／手機 drawer 焦點；Axe 4.12.1 對選定規則回報 0 violation、0 incomplete。本輪未重跑兩分頁輪詢。這是自動前置檢查，不等於完整 WCAG 2.2 AA。尚未完成全頁、全流程、人工判斷、真實螢幕閱讀器與跨瀏覽器檢查前，不宣稱 WCAG 2.2 AA 符合性。
 
 ## 6. 復原與回復演練
 
-本機前置結果已確認兩件事：未套 migration 的隔離 D1 會讓 health 明確回傳 503，套用 0001–0004 並重啟後 3 個核心讀取恢復；另有 15 個資料表、4/4 migration 的 logical export/import 查核。5,441 ms 的 migration 與 26,273 ms 的本機還原耗時只是觀察值，不是 RTO 或 RPO。
+本機前置結果已確認兩件事：未套 migration 的隔離 D1 會讓 health 明確回傳 503，套用 0001–0004 並重啟後 3/3 個核心讀取恢復；另有 15 個資料表、4/4 migration 的 logical export/import 查核。5,277 ms 的 migration 與 25,751 ms 的本機還原耗時只是觀察值，不是 RTO 或 RPO。
 
 - 定義並核准 RTO、RPO 及可接受的資料遺失範圍。
 - 取得 D1 備份，在隔離環境完成還原與資料一致性查核。
@@ -124,6 +124,6 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 
 ## 9. 尚未完成且不得誤報的項目
 
-目前已有 1280×720 與 320×568 的內部本機瀏覽器核對，以及 Axe 選定規則掃描；沒有證據支持真實裝置、跨瀏覽器、真實螢幕閱讀器、遠端或正式獨立 QA 已完成。本機 590 次唯讀請求也不能支持 production 容量、壓力極限、soak、寫入負載或 SLO。clean-room 已驗證未提交工作目錄複本可在隔離暫存目錄完成 17 個命令與 71/71 API，但不支持 clean Git checkout、CI、commit-bound release 或 bit-for-bit 可重現建置。仍沒有證據支持邊緣 rate limiting、服務生命週期歷程以外清單的 cursor pagination、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、production private identity edge 負例、CSP nonce／hash 收斂、遠端備份還原與 rollback 演練、外部目標使用者驗證、資料匯出 API、正式 SAST／DAST／滲透測試、獨立安全查核或完整 WCAG 2.2 AA 查核已完成。
+目前已有 1265×513 與 360×844 應用程式視窗的內部本機瀏覽器核對，以及 Axe 選定規則掃描；本輪未重跑兩分頁輪詢，也沒有證據支持真實裝置、跨瀏覽器、真實螢幕閱讀器、遠端或正式獨立 QA 已完成。本機 590 次唯讀請求不能支持 production 容量、壓力極限、soak、寫入負載或 SLO。clean-room 的 97 個來源檔／18 個命令與 manifest 15/15 已通過，但仍不支持獨立 remote clone、CI、bit-for-bit 可重現或正式發布。仍沒有證據支持邊緣 rate limiting、服務生命週期歷程以外清單的 cursor pagination、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、production private identity edge 負例、CSP nonce／hash 收斂、遠端備份還原與 rollback 演練、外部目標使用者驗證、資料匯出 API、正式 SAST／DAST／滲透測試、獨立安全查核或完整 WCAG 2.2 AA 查核已完成。
 
 服務生命週期歷程已有簽章 keyset cursor；其他清單的固定查詢上限不是 cursor pagination。8 秒與 30 秒輪詢不是即時推播；系統內 published 不是外部送達；source 中的 CSP 與其他安全標頭不是遠端瀏覽器證據；冪等回執的 24 小時有界清理不是一般資料保存工作；內部 smoke、合成資料與自動測試也不能代替外部使用者或獨立查核。若候選版要進入 production，必須依風險完成相應控制與證據，或由具名決定人記錄不可接受而停止發布。

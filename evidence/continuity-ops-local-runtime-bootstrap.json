@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
+  "product": "Continuity Ops",
+  "productVersion": "2.2.0",
+  "generatedAt": "2026-07-31T10:00:08.580Z",
+  "evidenceStatus": "verified_local_controlled",
+  "verificationType": "authenticated_fresh_d1_runtime_bootstrap",
+  "result": "passed_with_documented_limits",
+  "buildArtifact": {
+    "path": "dist/server/index.js",
+    "sha256": "e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd"
+  },
+  "environment": {
+    "runtime": "v24.15.0",
+    "platform": "win32",
+    "database": "isolated synthetic local D1"
+  },
+  "unauthorizedIdentity": {
+    "healthStatus": 503,
+    "accessStatus": 503,
+    "problemCode": "DATABASE_NOT_READY",
+    "schemaMutationAllowed": false
+  },
+  "phases": [
+    {
+      "phase": 1,
+      "status": "initializing",
+      "queryCount": 39,
+      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+    },
+    {
+      "phase": 2,
+      "status": "initializing",
+      "queryCount": 39,
+      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+    },
+    {
+      "phase": 3,
+      "status": "ready",
+      "queryCount": 33,
+      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+    }
+  ],
+  "finalState": {
+    "schemaVersion": "0004",
+    "phase": 3,
+    "status": "ready",
+    "schemaDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3",
+    "inventory": {
+      "tables": 14,
+      "indexes": 20,
+      "triggers": 46
+    },
+    "fingerprint": "415323881a3ddc7d27764c2b51b5ce6101bde9ef6b6b5460383e37453635bfc9",
+    "foreignKeyViolations": 0,
+    "activeAdministratorCount": 1,
+    "wranglerMigrationTablePresent": false
+  },
+  "readyChecks": {
+    "accessStatus": 200,
+    "healthStatus": 200,
+    "overviewStatus": 200,
+    "checksPassed": 3
+  },
+  "totalDurationMs": 14586,
+  "temporaryStateCleanup": "scheduled_after_runner_exit",
+  "limitations": [
+    "This is a local Wrangler and synthetic D1 exercise; it is not evidence that Sites production identity forwarding or hosted D1 initialization succeeded.",
+    "The exercise verifies one unauthorized identity and one configured administrator; it is not a complete identity-provider or access-policy audit.",
+    "The per-request query counts cover bootstrap statements only; Cloudflare plan enforcement and production capacity were not measured."
+  ]
+}

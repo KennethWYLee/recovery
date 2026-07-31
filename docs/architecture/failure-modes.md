@@ -19,8 +19,8 @@
 | FM-10 | 操作人員把內部 `published` 當成外部送達 | 利害關係人實際未收到訊息 | 比對外部送達回執；檢查產品是否有 connector | 產品文件與 API 僅承諾內部狀態 | UI 仍需持續使用不誤導文字；任何外部整合須新增明確契約與測試。 |
 | FM-11 | D1 不可用、schema 未套用或 binding 錯誤 | 所有讀寫中斷 | `/api/v1/health`、API 5xx、平台錯誤、migration list | health fail-loud、統一 problem response、migration 版本常數 | 正常本機 health 已驗證；遠端 D1 故障、降級與復原演練未驗證。 |
 | FM-12 | 拒絕請求後稽核寫入失敗 | 安全事件缺少應用程式稽核列 | `continuity_ops.rejected_mutation_audit_write_failed` telemetry | 保留原拒絕回應，另發不含 payload 的 error telemetry | 正式 Log 收集、告警、值班與保留未驗證。 |
-| FM-13 | request telemetry 管線失效 | MTTA／錯誤分析缺資料 | 比對請求數與實際 Log 分母，監測 ingestion lag／drop | 應用程式以結構化 JSON 發出；分析器拒絕未知／敏感欄位並保留明確分母；失敗不影響 API | CO-VRF-TELEMETRY-001 對最終 2.2.0 本機 Log 為 879/879 筆有效：828 筆成功、51 筆預期 4xx、0 筆 5xx；API、schema 與 deployment mismatch 均為 0。目前未接入或驗證託管 collector、ingestion、retention、SLO 與告警，不能外推至正式環境。 |
-| FM-14 | Log 或稽核紀錄洩漏秘密／個資 | 憑證或個資暴露 | 搜尋 token、cookie、Authorization、body 與自由文字 | route template、欄位白名單、拒絕 audit 不含 payload | 專案文字來源秘密掃描案例 5/5、88 個檔案無命中；正式 Log 查核、Git history／binary／runtime secret 與保存政策未驗證，時間軸自由文字仍可能含敏感資訊。 |
+| FM-13 | request telemetry 管線失效 | MTTA／錯誤分析缺資料 | 比對請求數與實際 Log 分母，監測 ingestion lag／drop | 應用程式以結構化 JSON 發出；分析器拒絕未知／敏感欄位並保留明確分母；失敗不影響 API | CO-VRF-TELEMETRY-001 對最終 2.2.0 本機 Log 為 815/815 筆有效：761 筆成功、54 筆受控 4xx、0 筆 5xx；安全負向檢查的 request ID 對應為 44/44，API、schema 與 deployment mismatch 均為 0。目前未接入或驗證託管 collector、ingestion、retention、SLO 與告警，不能外推至正式環境。 |
+| FM-14 | Log 或稽核紀錄洩漏秘密／個資 | 憑證或個資暴露 | 搜尋 token、cookie、Authorization、body 與自由文字 | route template、欄位白名單、拒絕 audit 不含 payload | 專案文字來源秘密掃描案例 5/5、93 個檔案無命中；正式 Log 查核、Git history／binary／runtime secret 與保存政策未驗證，時間軸自由文字仍可能含敏感資訊。 |
 | FM-15 | HTTPS 證據連結格式正確但內容錯誤、失效或被替換 | 錯誤證據支撐完成／解決 | 獨立開啟、核對來源、觀測窗、digest 與權限 | 保存 URL、來源、時間窗及可選 SHA-256 | 系統不擷取外部內容；必須由 QA 或查核者驗證，並記錄存取限制。 |
 | FM-16 | 本地時間位於 DST 不存在或重複區間 | 排程落在錯誤 UTC 時刻 | 使用已知 DST 邊界輸入並 round-trip | IANA 時區、UTC 保存、拒絕不存在／重複地方時間 | 單元測試定義存在；跨時區瀏覽器與正式 D1 round-trip 尚缺持久證據。 |
 | FM-17 | UI 深層連結或前端權限顯示被利用繞過授權 | 無權資料被讀取或修改 | 直接呼叫 API、修改 query、使用觀察者角色 | 伺服器每次查身分、會員、組織權限與事件存取 | 本機權限負例已驗證；完整瀏覽器與正式 edge 仍待查核。 |

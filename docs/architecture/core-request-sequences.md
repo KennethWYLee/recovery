@@ -77,7 +77,7 @@ sequenceDiagram
     end
 ```
 
-2.2.0 的 migration 正反例與指定 Worker 的 71/71 項 API smoke 已在隔離本機 D1 通過；本機 API 證據綁定 Worker SHA-256 `1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158`。這只能支持 smoke 明列的本機 API→D1 流程；同一 digest 另有內部受控瀏覽器與 axe-core 本機核對，但這不是正式獨立人員 QA 或外部使用者證據，也不能主張完整 WCAG 符合、自動 E2E、遠端環境或外部服務真的恢復。verification 內容的真實性仍由操作者、獨立 QA 與外部證據查核。
+2.2.0 的 migration 正反例與指定 Worker 的 71/71 項 API smoke 已在隔離本機 D1 通過；本機 API 證據綁定 Worker SHA-256 `e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd`。同一 digest 的內部受控瀏覽器查核涵蓋桌面與手機尺寸、深層連結、鍵盤分頁切換、瀏覽器前進後退，以及 dialog／drawer 焦點；axe-core 選定規則為 0 violation、0 incomplete。本輪未重跑兩分頁輪詢。這些結果只支持明列的本機 API→D1 與瀏覽器流程，不是正式獨立人員 QA、外部使用者證據、完整 WCAG 符合性、自動 E2E、遠端環境或外部服務恢復證據。verification 內容的真實性仍由操作者、獨立 QA 與外部證據查核。
 
 ## 3. 通訊審核與標記發布
 

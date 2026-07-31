@@ -74,7 +74,7 @@ flowchart LR
 
 兩次先前部署都在 Sites 處理 SQL migration 時回傳 `incomplete input`。現有本機結果排除 migration 整體語法與已標示 statement boundary 的錯誤；「部署端 SQL 切割方式不相容」仍是沒有平台 trace 的原因推論，不是已確認的平台實作事實。
 
-每份本機驗證只說明其明確綁定的 artifact、Log 或 migration 與本機 D1 行為。現有本機 API／安全 smoke 綁定 2.2.0 Worker SHA-256 `1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158`；71/71 項 API 檢查在隔離本機 D1 通過，同一 digest 也有桌面及手機尺寸的內部瀏覽器核對。正式部署還必須另行確認：identity edge、HTTPS domain、環境變數、deployment version、遠端 migration、Log 收集、告警、備份、容量與 rollback owner。
+每份本機驗證只說明其明確綁定的 artifact、Log 或 migration 與本機 D1 行為。現有本機 API／安全 smoke 綁定 2.2.0 Worker SHA-256 `e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd`；71/71 項 API 檢查在隔離本機 D1 通過，同一 digest 也有 1265×513 與 360×844 應用程式視窗的內部瀏覽器核對。本輪瀏覽器查核未重跑兩分頁輪詢。正式部署還必須另行確認：identity edge、HTTPS domain、環境變數、deployment version、遠端 migration、Log 收集、告警、備份、容量與 rollback owner。
 
 ## 4. 信任與資料邊界
 

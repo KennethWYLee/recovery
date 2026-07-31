@@ -3,13 +3,13 @@
   "evidenceId": "CO-VRF-SEC-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:23:30.814Z",
+  "generatedAt": "2026-07-31T10:01:12.815Z",
   "evidenceStatus": "verified_local",
   "verificationType": "local_api_security_and_invariant_negative_checks",
   "result": "passed_with_documented_limits",
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158"
+    "sha256": "e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd"
   },
   "checkSummary": {
     "negative": 44
@@ -19,308 +19,308 @@
       "name": "state-changing request without Origin",
       "expectedStatus": 403,
       "expectedCode": "CROSS_ORIGIN_REQUEST_REJECTED",
-      "requestId": "req-8639c689-f20e-4a5c-a8e3-b5f6f487d450",
+      "requestId": "req-a41d7b34-f352-45c6-94d8-734167fa89e0",
       "result": "passed"
     },
     {
       "name": "non-JSON mutation content type",
       "expectedStatus": 415,
       "expectedCode": "JSON_CONTENT_TYPE_REQUIRED",
-      "requestId": "req-5ad20bae-95d5-4b2b-b160-2637f6a12f12",
+      "requestId": "req-bc3338bf-1f12-4b64-84ca-62b7fed14ba5",
       "result": "passed"
     },
     {
       "name": "JSON token embedded in a non-JSON media type",
       "expectedStatus": 415,
       "expectedCode": "JSON_CONTENT_TYPE_REQUIRED",
-      "requestId": "req-4b54cffa-347d-4850-bffb-c3603fec7530",
+      "requestId": "req-b39a39c0-3798-4294-b10f-bc01305d46a7",
       "result": "passed"
     },
     {
       "name": "request body over 32 KiB",
       "expectedStatus": 413,
       "expectedCode": "REQUEST_TOO_LARGE",
-      "requestId": "req-98f3d438-a802-45dd-ab6f-3b3d643f10bd",
+      "requestId": "req-47b21daa-075f-4f89-9858-4bafcb192683",
       "result": "passed"
     },
     {
       "name": "scalar JSON mutation body",
       "expectedStatus": 400,
       "expectedCode": "INVALID_JSON",
-      "requestId": "req-aaa17c9f-609f-4e53-8578-04276191cfc6",
+      "requestId": "req-8ca3616c-2ae3-4f2e-a95e-b28f7dd09c3c",
       "result": "passed"
     },
     {
       "name": "array JSON mutation body",
       "expectedStatus": 400,
       "expectedCode": "INVALID_JSON",
-      "requestId": "req-8fcfc8b7-d1d7-4fb0-b35e-30307e0f5928",
+      "requestId": "req-e80922c0-974c-4fdd-9825-5ca8a3effe29",
       "result": "passed"
     },
     {
       "name": "null JSON mutation body",
       "expectedStatus": 400,
       "expectedCode": "INVALID_JSON",
-      "requestId": "req-ef63c6f9-990a-4609-a8c2-5a440f759c8d",
+      "requestId": "req-c972345d-a41b-4513-846c-79b7312053d2",
       "result": "passed"
     },
     {
       "name": "malformed UTF-8 JSON mutation body",
       "expectedStatus": 400,
       "expectedCode": "INVALID_UTF8",
-      "requestId": "req-387c2535-ebf5-465b-95da-43581eec20b0",
+      "requestId": "req-f4a32fb9-7e4c-4fc6-89c3-386066ac2d97",
       "result": "passed"
     },
     {
       "name": "suspending the final active administrator",
       "expectedStatus": 409,
       "expectedCode": "LAST_ADMIN_REQUIRED",
-      "requestId": "req-69e389a5-c755-4b75-ba68-01c06292a4d8",
+      "requestId": "req-4dbf34ae-4704-49d0-961c-558e3bf7c6fb",
       "result": "passed"
     },
     {
       "name": "simultaneous service updates using the same expected version",
       "expectedStatus": 409,
       "expectedCode": "VERSION_CONFLICT",
-      "requestId": "req-06b10239-3c6e-4988-be54-974df4385dd5",
+      "requestId": "req-5a4e03df-c2bc-4f23-86e4-1a7f589c2b0f",
       "result": "passed"
     },
     {
       "name": "idempotency key reused with different service content",
       "expectedStatus": 409,
       "expectedCode": "IDEMPOTENCY_KEY_REUSED",
-      "requestId": "req-95ea9c7c-abf7-4459-bab1-e06ad8241349",
+      "requestId": "req-ee1a9e38-b632-4440-bb7c-92376840fda0",
       "result": "passed"
     },
     {
       "name": "duplicate service slug",
       "expectedStatus": 409,
       "expectedCode": "RESOURCE_ALREADY_EXISTS",
-      "requestId": "req-4d504f91-72d6-4159-a6bc-078ce989ae80",
+      "requestId": "req-ac63621b-2225-436c-a7ef-98e871870870",
       "result": "passed"
     },
     {
       "name": "oversized service description rejected instead of truncated",
       "expectedStatus": 400,
       "expectedCode": "INVALID_FIELD",
-      "requestId": "req-2039b336-0202-4acd-ab65-61efa45dbd8a",
+      "requestId": "req-6af37ebd-9a9b-415d-a46e-c1631f1df7e0",
       "result": "passed"
     },
     {
       "name": "stale service version",
       "expectedStatus": 409,
       "expectedCode": "VERSION_CONFLICT",
-      "requestId": "req-864ff091-1735-4de6-b1a2-5d71abfdedf7",
+      "requestId": "req-88d05bdd-61da-4bcc-ac4d-31989991966e",
       "result": "passed"
     },
     {
       "name": "attempt to change immutable service slug",
       "expectedStatus": 400,
       "expectedCode": "SERVICE_SLUG_IMMUTABLE",
-      "requestId": "req-e8d8cfe6-1df1-421d-8afb-a61f113d28fb",
+      "requestId": "req-70a5a197-fa22-4022-a111-4ae1caa6b692",
       "result": "passed"
     },
     {
       "name": "deprecating a service with an open incident",
       "expectedStatus": 409,
       "expectedCode": "SERVICE_HAS_OPEN_INCIDENTS",
-      "requestId": "req-017a4f12-9943-4216-bc7c-0bb7ab8ddc35",
+      "requestId": "req-aab8b1bc-5912-4622-abce-abedf17dcfb6",
       "result": "passed"
     },
     {
       "name": "review before incident resolution",
       "expectedStatus": 409,
       "expectedCode": "INCIDENT_NOT_RESOLVED",
-      "requestId": "req-87c9ae32-f9b0-47b1-a28d-07a8dafd6449",
+      "requestId": "req-52d9234e-3bcd-4d5c-9b4d-859a619c62cb",
       "result": "passed"
     },
     {
       "name": "unknown post-incident review status",
       "expectedStatus": 400,
       "expectedCode": "INVALID_REVIEW_STATUS",
-      "requestId": "req-2f5f06d6-a611-435b-9667-2f22db164a80",
+      "requestId": "req-6d725950-85c3-4975-9d15-22bf599b99f5",
       "result": "passed"
     },
     {
       "name": "invalid declared-to-resolved transition",
       "expectedStatus": 403,
       "expectedCode": "TRANSITION_NOT_ALLOWED",
-      "requestId": "req-37787c73-eddd-45a3-8bae-5f7a13e813cd",
+      "requestId": "req-509b8f56-2eef-45a9-87c0-51fd0eff4e8c",
       "result": "passed"
     },
     {
       "name": "observer assigned as incident commander",
       "expectedStatus": 400,
       "expectedCode": "INCIDENT_ROLE_INCOMPATIBLE",
-      "requestId": "req-8bc76071-d738-4d9a-aeac-10c9d012c5c4",
+      "requestId": "req-63c59d95-0298-4796-9b18-f85f568fdc47",
       "result": "passed"
     },
     {
       "name": "task completion without HTTPS evidence",
       "expectedStatus": 409,
       "expectedCode": "TASK_EVIDENCE_REQUIRED",
-      "requestId": "req-396e23dc-0e20-465b-86fe-333d0d2462de",
+      "requestId": "req-48dd68b4-33f9-42f5-8f1d-e493d4ccb985",
       "result": "passed"
     },
     {
       "name": "task completion with non-HTTPS evidence",
       "expectedStatus": 400,
       "expectedCode": "INVALID_URL",
-      "requestId": "req-65d8a520-1978-4bf0-8058-9bf0935a4463",
+      "requestId": "req-32a738e4-3cb8-4351-8971-93a34b9814d4",
       "result": "passed"
     },
     {
       "name": "publishing an unreviewed communication",
       "expectedStatus": 409,
       "expectedCode": "COMMUNICATION_STATUS_CONFLICT",
-      "requestId": "req-f45c8278-5e9d-42a9-bab4-ac45fccedd6b",
+      "requestId": "req-5729ea52-bd9f-4161-8a8d-ec95066226e4",
       "result": "passed"
     },
     {
       "name": "reviewing an external communication without a future next update or explicit final marker",
       "expectedStatus": 409,
       "expectedCode": "COMMUNICATION_NEXT_UPDATE_REQUIRED",
-      "requestId": "req-6a86d1e4-bfe3-49c3-9622-a5c9acb4e955",
+      "requestId": "req-c6007103-c601-47d0-a7ac-ae453c7b1045",
       "result": "passed"
     },
     {
       "name": "stale communication draft update",
       "expectedStatus": 409,
       "expectedCode": "VERSION_CONFLICT",
-      "requestId": "req-eb23b854-194d-42a7-8708-4f511e49d05e",
+      "requestId": "req-8218718d-cc5f-4f30-a1b4-a7792baacf57",
       "result": "passed"
     },
     {
       "name": "resolution without verification criteria",
       "expectedStatus": 409,
       "expectedCode": "RESOLUTION_CRITERIA_REQUIRED",
-      "requestId": "req-1184eee0-ff8f-413d-b567-f1844d80d12b",
+      "requestId": "req-0559b5fd-c529-44d3-91ac-aa1bcf24c94e",
       "result": "passed"
     },
     {
       "name": "resolution without current monitoring-cycle verification evidence",
       "expectedStatus": 409,
       "expectedCode": "RESOLUTION_VERIFICATION_REQUIRED",
-      "requestId": "req-f5f16878-99b7-4ddd-8eed-625be441d0e3",
+      "requestId": "req-8706e86c-164c-4e48-8fe3-828709abf6af",
       "result": "passed"
     },
     {
       "name": "non-HTTPS timeline evidence URL",
       "expectedStatus": 400,
       "expectedCode": "INVALID_URL",
-      "requestId": "req-4c4e48b9-5efe-4c2b-8442-97691460d725",
+      "requestId": "req-10540623-f3c0-4682-9e3c-09f2a35e05a6",
       "result": "passed"
     },
     {
       "name": "reversed evidence observation window",
       "expectedStatus": 400,
       "expectedCode": "INVALID_OBSERVATION_WINDOW",
-      "requestId": "req-69e9609a-9b01-41a0-b327-1582da738353",
+      "requestId": "req-f240596f-0823-44e9-b74e-4ec94c8df9dd",
       "result": "passed"
     },
     {
       "name": "invalid evidence SHA-256 digest",
       "expectedStatus": 400,
       "expectedCode": "INVALID_SHA256_DIGEST",
-      "requestId": "req-549bf91c-a248-4f10-a7b1-82c69a5bfb9c",
+      "requestId": "req-cc6d14f6-d6c0-4e7c-b7d3-c55ce4ad2f0f",
       "result": "passed"
     },
     {
       "name": "resolution with an open critical task",
       "expectedStatus": 409,
       "expectedCode": "RESOLUTION_CRITICAL_TASKS_OPEN",
-      "requestId": "req-d618e6d7-aad0-4ca7-9199-996ceb1f7a17",
+      "requestId": "req-1d26f236-5605-46d9-ab73-65651ba0f718",
       "result": "passed"
     },
     {
       "name": "critical task cancellation without a reason",
       "expectedStatus": 409,
       "expectedCode": "TASK_CANCELLATION_REASON_REQUIRED",
-      "requestId": "req-d81eb801-3134-45f0-92ed-2161129fcf1e",
+      "requestId": "req-01f49ce7-ce7c-4be7-8fcc-f2bf083d75b8",
       "result": "passed"
     },
     {
       "name": "critical task downgrade and cancellation without a reason",
       "expectedStatus": 409,
       "expectedCode": "TASK_CANCELLATION_REASON_REQUIRED",
-      "requestId": "req-d9b53007-4b10-4336-95dd-9b6f343c190a",
+      "requestId": "req-6aa6b9da-0f22-4213-8c11-ee0dc58ddc6c",
       "result": "passed"
     },
     {
       "name": "completed review with incomplete sections",
       "expectedStatus": 400,
       "expectedCode": "REVIEW_SECTIONS_INCOMPLETE",
-      "requestId": "req-1219abbe-627d-49b6-ba26-366a845e8768",
+      "requestId": "req-2ad93f84-9465-4915-88be-21f28defa42e",
       "result": "passed"
     },
     {
       "name": "resolution using only prior monitoring-cycle verification evidence",
       "expectedStatus": 409,
       "expectedCode": "RESOLUTION_VERIFICATION_REQUIRED",
-      "requestId": "req-471d5cb0-5d19-4852-b9ff-64c854e91eda",
+      "requestId": "req-9e28abd3-578f-4e5a-b09a-34b1e4024723",
       "result": "passed"
     },
     {
       "name": "publishing a communication after incident closure",
       "expectedStatus": 409,
       "expectedCode": "INCIDENT_COMMUNICATION_PUBLISH_BLOCKED",
-      "requestId": "req-11f62fbc-01bc-4fa4-8aaa-ce5d7184d221",
+      "requestId": "req-bcfc65f0-ccc3-462e-8005-805570a88609",
       "result": "passed"
     },
     {
       "name": "revoking the final commander without replacement",
       "expectedStatus": 409,
       "expectedCode": "INCIDENT_COMMANDER_REQUIRED",
-      "requestId": "req-be5ca96c-4cb2-4811-af64-48b532c59e7b",
+      "requestId": "req-9e95d7f5-0e84-4fc6-b5c0-550a61a47901",
       "result": "passed"
     },
     {
       "name": "service lifecycle change without an operational reason",
       "expectedStatus": 400,
       "expectedCode": "SERVICE_STATUS_CHANGE_REASON_REQUIRED",
-      "requestId": "req-6c78cb0e-ef3c-419b-bde5-e69993045892",
+      "requestId": "req-4b2f5f63-4d2c-4f81-9c4a-5c7f28e97f2d",
       "result": "passed"
     },
     {
       "name": "service lifecycle change without explicit impact confirmation",
       "expectedStatus": 400,
       "expectedCode": "SERVICE_STATUS_CHANGE_CONFIRMATION_REQUIRED",
-      "requestId": "req-cec8f631-0dc0-4ac4-93e8-7dc9302c2994",
+      "requestId": "req-8c670f1c-830e-4330-8b06-82fbc112efc4",
       "result": "passed"
     },
     {
       "name": "service lifecycle change with an oversized reason",
       "expectedStatus": 400,
       "expectedCode": "SERVICE_STATUS_CHANGE_REASON_REQUIRED",
-      "requestId": "req-0da7e64d-d69a-458b-8f90-a3b416eafb6f",
+      "requestId": "req-dc964b95-62ca-4aa1-9312-78a68c33b8ba",
       "result": "passed"
     },
     {
       "name": "incident declaration for a deprecated service",
       "expectedStatus": 400,
       "expectedCode": "SERVICE_NOT_ACTIVE",
-      "requestId": "req-608935ed-7003-446a-8907-9d07f4768df7",
+      "requestId": "req-a3d02c70-af97-4c94-aa0a-6a0a583d1554",
       "result": "passed"
     },
     {
       "name": "stale service lifecycle request before state-dependent validation",
       "expectedStatus": 409,
       "expectedCode": "VERSION_CONFLICT",
-      "requestId": "req-e0b093b6-93aa-4015-be9f-04bebbc3394f",
+      "requestId": "req-0e4978b2-22a9-43e1-944f-1a29cbaddc80",
       "result": "passed"
     },
     {
       "name": "malformed service lifecycle cursor",
       "expectedStatus": 400,
       "expectedCode": "INVALID_LIFECYCLE_CURSOR",
-      "requestId": "req-ba4ed24e-5548-4d50-9b89-70c554e310ec",
+      "requestId": "req-583d3e72-47b3-4d67-98c1-7c4893b92318",
       "result": "passed"
     },
     {
       "name": "duplicate service lifecycle cursor parameters",
       "expectedStatus": 400,
       "expectedCode": "INVALID_LIFECYCLE_CURSOR",
-      "requestId": "req-fe76deed-e639-40dd-a8b7-a9f260592eea",
+      "requestId": "req-64738ad5-a2ff-4830-b21f-8bc27f9f8f7d",
       "result": "passed"
     }
   ],

@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-QUALITY-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:45:28.558Z",
+  "generatedAt": "2026-07-31T09:59:46.947Z",
   "evidenceStatus": "verified_local",
   "verificationType": "unit_coverage_and_static_complexity_diagnostics",
   "result": "coverage_passed_with_complexity_findings",
@@ -13,22 +13,23 @@
     "architecture": "x64"
   },
   "unitTestRun": {
-    "command": "node --experimental-strip-types --experimental-test-coverage --test tests/operations-domain.test.ts tests/operations-authorization.test.ts tests/operations-time.test.ts tests/service-lifecycle-cursor.test.ts tests/operations-input.test.ts",
+    "command": "node --experimental-strip-types --experimental-test-coverage --test tests/operations-domain.test.ts tests/operations-authorization.test.ts tests/operations-time.test.ts tests/service-lifecycle-cursor.test.ts tests/operations-input.test.ts tests/operations-bootstrap.test.mjs",
     "suites": [
       "tests/operations-domain.test.ts",
       "tests/operations-authorization.test.ts",
       "tests/operations-time.test.ts",
       "tests/service-lifecycle-cursor.test.ts",
-      "tests/operations-input.test.ts"
+      "tests/operations-input.test.ts",
+      "tests/operations-bootstrap.test.mjs"
     ],
-    "tests": 29,
-    "passed": 29,
+    "tests": 37,
+    "passed": 37,
     "failed": 0,
     "exitCode": 0
   },
   "coverage": {
     "provider": "Node.js built-in test coverage",
-    "gateScope": "aggregate_of_the_five_unit_suites_and_their_five_measured_lib_sources",
+    "gateScope": "aggregate_of_the_named_unit_suites_and_their_measured_domain_and_bootstrap_sources",
     "thresholds": {
       "linePercent": 90,
       "branchPercent": 80,
@@ -36,28 +37,66 @@
     },
     "result": "passed",
     "aggregate": {
-      "linePercent": 95.38,
-      "branchPercent": 82.47,
-      "functionPercent": 87.88,
+      "linePercent": 91.72,
+      "branchPercent": 84,
+      "functionPercent": 92.66,
       "gate": {
         "line": {
-          "actual": 95.38,
+          "actual": 91.72,
           "minimum": 90,
           "passed": true
         },
         "branch": {
-          "actual": 82.47,
+          "actual": 84,
           "minimum": 80,
           "passed": true
         },
         "function": {
-          "actual": 87.88,
+          "actual": 92.66,
           "minimum": 80,
           "passed": true
         }
       }
     },
     "perFile": [
+      {
+        "path": "db/operations-bootstrap-core.ts",
+        "linePercent": 86.36,
+        "branchPercent": 87.31,
+        "functionPercent": 100,
+        "uncoveredLineRanges": [
+          "123-126",
+          "159-162",
+          "172-173",
+          "426-436",
+          "454-464",
+          "468-469",
+          "475-476",
+          "478-479",
+          "482-483",
+          "486-506",
+          "542-550",
+          "554-568"
+        ],
+        "comparisonToAggregateThresholds": {
+          "line": {
+            "actual": 86.36,
+            "minimum": 90,
+            "passed": false
+          },
+          "branch": {
+            "actual": 87.31,
+            "minimum": 80,
+            "passed": true
+          },
+          "function": {
+            "actual": 100,
+            "minimum": 80,
+            "passed": true
+          }
+        },
+        "thresholdRole": "diagnostic_only"
+      },
       {
         "path": "lib/operations-auth.ts",
         "linePercent": 95.13,
@@ -214,8 +253,16 @@
     "threshold": 15,
     "role": "diagnostic_only_not_a_functional_acceptance_gate",
     "result": "findings_present",
-    "findingCount": 4,
+    "findingCount": 5,
     "findings": [
+      {
+        "path": "db/operations-bootstrap-core.ts",
+        "line": 390,
+        "column": 8,
+        "measuredComplexity": 40,
+        "threshold": 15,
+        "message": "Async function 'ensureOperationsSchemaCore' has a complexity of 40. Maximum allowed is 15."
+      },
       {
         "path": "lib/operations-auth.ts",
         "line": 99,
@@ -274,6 +321,10 @@
     {
       "path": "lib/operations-input.ts",
       "sha256": "c9721d36d74aa31dcce6983b8f14a8fef8253922901e743a88fd3f6dc4d0426a"
+    },
+    {
+      "path": "db/operations-bootstrap-core.ts",
+      "sha256": "e90f80c10d8a5f6e44a288987a72c7e8d959e0f835ea8ce9d612095801523cf4"
     }
   ],
   "interpretation": [
@@ -282,7 +333,7 @@
     "Complexity findings above 15 identify review and refactoring candidates; they do not by themselves fail a feature or the product."
   ],
   "limitations": [
-    "This report covers only the five named TypeScript unit suites and the five library sources they exercise; it excludes Worker handlers, React UI, migrations, browser paths, and external integrations.",
+    "This report covers only the 6 named unit suites and 6 domain or bootstrap sources they exercise; it excludes Worker handlers, React UI, migration execution, browser paths, and external integrations.",
     "Line, branch, and function percentages do not measure the quality of assertions or the correctness of the test oracle.",
     "CRAP is intentionally not reported without credible function-level coverage joined to the same functions measured for complexity."
   ]

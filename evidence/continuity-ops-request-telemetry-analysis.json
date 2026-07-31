@@ -2,7 +2,7 @@
   "schemaVersion": "1.0",
   "evidenceId": "CO-VRF-TELEMETRY-001",
   "product": "Continuity Ops",
-  "generatedAt": "2026-07-31T08:26:55.557Z",
+  "generatedAt": "2026-07-31T10:01:36.673Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "local_controlled_wrangler_request_telemetry_analysis",
   "sourceClassification": {
@@ -12,19 +12,19 @@
   },
   "result": "passed",
   "input": {
-    "totalInputLines": 1836,
-    "nonBlankLineCount": 1833,
+    "totalInputLines": 1698,
+    "nonBlankLineCount": 1695,
     "blankLineCount": 3,
-    "parsedJsonLineCount": 880,
-    "nonJsonLineCount": 953,
-    "telemetryRecordCount": 879,
+    "parsedJsonLineCount": 817,
+    "nonJsonLineCount": 878,
+    "telemetryRecordCount": 815,
     "unparseableTelemetryCandidateCount": 0,
-    "telemetryCandidateCount": 879
+    "telemetryCandidateCount": 815
   },
   "validation": {
     "validRecords": {
-      "numerator": 879,
-      "denominator": 879,
+      "numerator": 815,
+      "denominator": 815,
       "percentage": 100
     },
     "violationCount": 0,
@@ -45,376 +45,376 @@
     "rawRequestIdsIncluded": false
   },
   "requestOutcomes": {
-    "allValidRecords": 879,
+    "allValidRecords": 815,
     "successful": {
-      "numerator": 828,
-      "denominator": 879,
-      "percentage": 94.2
+      "numerator": 761,
+      "denominator": 815,
+      "percentage": 93.37
     },
     "errors": {
-      "numerator": 51,
-      "denominator": 879,
-      "percentage": 5.8
+      "numerator": 54,
+      "denominator": 815,
+      "percentage": 6.63
     },
     "clientErrors": {
-      "numerator": 51,
-      "denominator": 879,
-      "percentage": 5.8
+      "numerator": 54,
+      "denominator": 815,
+      "percentage": 6.63
     },
     "serverErrors": {
       "numerator": 0,
-      "denominator": 879,
+      "denominator": 815,
       "percentage": 0
     },
     "byStatus": [
       {
         "status": 200,
-        "count": 809,
-        "denominator": 879,
-        "percentage": 92.04
+        "count": 742,
+        "denominator": 815,
+        "percentage": 91.04
       },
       {
         "status": 201,
         "count": 19,
-        "denominator": 879,
-        "percentage": 2.16
+        "denominator": 815,
+        "percentage": 2.33
       },
       {
         "status": 400,
         "count": 20,
-        "denominator": 879,
-        "percentage": 2.28
+        "denominator": 815,
+        "percentage": 2.45
       },
       {
         "status": 403,
         "count": 3,
-        "denominator": 879,
-        "percentage": 0.34
+        "denominator": 815,
+        "percentage": 0.37
       },
       {
         "status": 404,
-        "count": 2,
-        "denominator": 879,
-        "percentage": 0.23
+        "count": 5,
+        "denominator": 815,
+        "percentage": 0.61
       },
       {
         "status": 409,
         "count": 21,
-        "denominator": 879,
-        "percentage": 2.39
+        "denominator": 815,
+        "percentage": 2.58
       },
       {
         "status": 413,
         "count": 2,
-        "denominator": 879,
-        "percentage": 0.23
+        "denominator": 815,
+        "percentage": 0.25
       },
       {
         "status": 415,
         "count": 3,
-        "denominator": 879,
-        "percentage": 0.34
+        "denominator": 815,
+        "percentage": 0.37
       }
     ],
     "byMethod": [
       {
         "method": "DELETE",
         "count": 4,
-        "denominator": 879,
-        "percentage": 0.46
+        "denominator": 815,
+        "percentage": 0.49
       },
       {
         "method": "GET",
-        "count": 746,
-        "denominator": 879,
-        "percentage": 84.87
+        "count": 682,
+        "denominator": 815,
+        "percentage": 83.68
       },
       {
         "method": "PATCH",
         "count": 65,
-        "denominator": 879,
-        "percentage": 7.39
+        "denominator": 815,
+        "percentage": 7.98
       },
       {
         "method": "POST",
         "count": 55,
-        "denominator": 879,
-        "percentage": 6.26
+        "denominator": 815,
+        "percentage": 6.75
       },
       {
         "method": "PUT",
         "count": 9,
-        "denominator": 879,
-        "percentage": 1.02
+        "denominator": 815,
+        "percentage": 1.1
       }
     ]
   },
   "problemCodes": {
-    "denominator": 51,
+    "denominator": 54,
     "records": [
       {
         "problemCode": "COMMUNICATION_NEXT_UPDATE_REQUIRED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "COMMUNICATION_STATUS_CONFLICT",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "CROSS_ORIGIN_REQUEST_REJECTED",
         "count": 2,
-        "denominator": 51,
-        "percentage": 3.92
+        "denominator": 54,
+        "percentage": 3.7
       },
       {
         "problemCode": "IDEMPOTENCY_KEY_REUSED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INCIDENT_COMMANDER_REQUIRED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INCIDENT_COMMUNICATION_PUBLISH_BLOCKED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INCIDENT_NOT_FOUND",
-        "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "count": 4,
+        "denominator": 54,
+        "percentage": 7.41
       },
       {
         "problemCode": "INCIDENT_NOT_RESOLVED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INCIDENT_ROLE_INCOMPATIBLE",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INVALID_FIELD",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INVALID_JSON",
         "count": 3,
-        "denominator": 51,
-        "percentage": 5.88
+        "denominator": 54,
+        "percentage": 5.56
       },
       {
         "problemCode": "INVALID_LIFECYCLE_CURSOR",
         "count": 3,
-        "denominator": 51,
-        "percentage": 5.88
+        "denominator": 54,
+        "percentage": 5.56
       },
       {
         "problemCode": "INVALID_OBSERVATION_WINDOW",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INVALID_REVIEW_STATUS",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INVALID_SHA256_DIGEST",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "INVALID_URL",
         "count": 2,
-        "denominator": 51,
-        "percentage": 3.92
+        "denominator": 54,
+        "percentage": 3.7
       },
       {
         "problemCode": "INVALID_UTF8",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "JSON_CONTENT_TYPE_REQUIRED",
         "count": 3,
-        "denominator": 51,
-        "percentage": 5.88
+        "denominator": 54,
+        "percentage": 5.56
       },
       {
         "problemCode": "LAST_ADMIN_REQUIRED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "REQUEST_TOO_LARGE",
         "count": 2,
-        "denominator": 51,
-        "percentage": 3.92
+        "denominator": 54,
+        "percentage": 3.7
       },
       {
         "problemCode": "RESOLUTION_CRITERIA_REQUIRED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "RESOLUTION_CRITICAL_TASKS_OPEN",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "RESOLUTION_VERIFICATION_REQUIRED",
         "count": 2,
-        "denominator": 51,
-        "percentage": 3.92
+        "denominator": 54,
+        "percentage": 3.7
       },
       {
         "problemCode": "RESOURCE_ALREADY_EXISTS",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "REVIEW_SECTIONS_INCOMPLETE",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "ROUTE_NOT_FOUND",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "SERVICE_HAS_OPEN_INCIDENTS",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "SERVICE_NOT_ACTIVE",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "SERVICE_SLUG_IMMUTABLE",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "SERVICE_STATUS_CHANGE_CONFIRMATION_REQUIRED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "SERVICE_STATUS_CHANGE_REASON_REQUIRED",
         "count": 2,
-        "denominator": 51,
-        "percentage": 3.92
+        "denominator": 54,
+        "percentage": 3.7
       },
       {
         "problemCode": "TASK_CANCELLATION_REASON_REQUIRED",
         "count": 2,
-        "denominator": 51,
-        "percentage": 3.92
+        "denominator": 54,
+        "percentage": 3.7
       },
       {
         "problemCode": "TASK_EVIDENCE_REQUIRED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "TRANSITION_NOT_ALLOWED",
         "count": 1,
-        "denominator": 51,
-        "percentage": 1.96
+        "denominator": 54,
+        "percentage": 1.85
       },
       {
         "problemCode": "VERSION_CONFLICT",
         "count": 5,
-        "denominator": 51,
-        "percentage": 9.8
+        "denominator": 54,
+        "percentage": 9.26
       }
     ]
   },
   "latencyMs": {
-    "sampleCount": 879,
-    "denominator": 879,
+    "sampleCount": 815,
+    "denominator": 815,
     "percentileMethod": "nearest_rank",
     "minimum": 0,
-    "maximum": 30,
-    "mean": 6.85,
+    "maximum": 47,
+    "mean": 7.04,
     "p50": 6,
-    "p95": 13,
-    "p99": 16
+    "p95": 14,
+    "p99": 17
   },
   "versions": {
     "api": [
       {
         "version": "2.2.0",
-        "count": 879
+        "count": 815
       }
     ],
     "schema": [
       {
         "version": "0004",
-        "count": 879
+        "count": 815
       }
     ],
     "deployment": [
       {
-        "version": "local-final-predeployment",
-        "count": 879
+        "version": "local-predeployment-verification",
+        "count": 815
       }
     ],
     "expectedApiVersion": "2.2.0",
     "expectedSchemaVersion": "0004",
-    "expectedDeploymentVersion": "local-final-predeployment",
+    "expectedDeploymentVersion": "local-predeployment-verification",
     "apiMismatch": {
       "numerator": 0,
-      "denominator": 879,
+      "denominator": 815,
       "percentage": 0
     },
     "schemaMismatch": {
       "numerator": 0,
-      "denominator": 879,
+      "denominator": 815,
       "percentage": 0
     },
     "deploymentMismatch": {
       "numerator": 0,
-      "denominator": 879,
+      "denominator": 815,
       "percentage": 0
     },
     "unversioned": {
       "numerator": 0,
-      "denominator": 879,
+      "denominator": 815,
       "percentage": 0
     },
     "releaseBlockerCount": 0
@@ -422,7 +422,7 @@
   "smokeCorrelation": {
     "method": "exact_request_id_match_with_digest_only_output",
     "smokeEvidenceRequestIds": 44,
-    "validTelemetryRequestIds": 879,
+    "validTelemetryRequestIds": 815,
     "coverage": {
       "numerator": 44,
       "denominator": 44,
@@ -430,7 +430,7 @@
     },
     "matchedRequestCount": 44,
     "missingRequestCount": 0,
-    "telemetryOnlyRequestCount": 835,
+    "telemetryOnlyRequestCount": 771,
     "missingRequestFingerprints": [],
     "rawRequestIdsIncluded": false
   },
@@ -443,19 +443,19 @@
   "productVersion": "2.2.0",
   "artifacts": {
     "telemetry": {
-      "path": ".wrangler/deploy-final-20260731c.stdout.log",
-      "bytes": 616910,
-      "sha256": "900a2d085fa3e551fdc55f5ddeb9046eb207eb27832d3de900c686e7ea9cbd93",
+      "path": ".wrangler/release-final.stdout.log",
+      "bytes": 290521,
+      "sha256": "caa5f5a88b60db1111c0ba330f7f4738dd65794b8ae52df96ff0d4ce55821666",
       "rawContentRetained": false
     },
     "smokeEvidence": {
       "path": "evidence/continuity-ops-security-negative-tests.json",
       "bytes": 14470,
-      "sha256": "bc2d864ef01cc0ef7c576be412d521689fcd2d0ae557a50d541ec77e3de72155",
+      "sha256": "5afc262abc1fd6fadde6b35987b62f00620ae0ae3fbbc124ccb3ccef20f7a334",
       "evidenceId": "CO-VRF-SEC-001",
       "associatedBuildArtifact": {
         "path": "dist/server/index.js",
-        "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158"
+        "sha256": "e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd"
       },
       "rawRequestIdsRetained": false
     }

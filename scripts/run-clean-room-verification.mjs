@@ -84,6 +84,66 @@ function snapshotDigest(root, inputs) {
   return { fileCount: records.length, sha256: sha256(records.join("\n")) };
 }
 
+function sourceControlSnapshot() {
+  const options = { cwd: projectRoot, encoding: "utf8", windowsHide: true };
+  const head = spawnSync("git", ["rev-parse", "HEAD"], options);
+  const status = spawnSync("git", ["status", "--porcelain=v1", "--untracked-files=all", "--", ...sourceInputs], options);
+  const ignored = spawnSync("git", ["ls-files", "--others", "--ignored", "--exclude-standard", "--", ...sourceInputs], options);
+  if (head.status !== 0 || status.status !== 0 || ignored.status !== 0) {
+    return {
+      status: "git_identity_unavailable",
+      head: null,
+      limitation: "Git identity or source status could not be verified for this snapshot.",
+    };
+  }
+  const dirtyEntries = status.stdout.trim() ? status.stdout.trim().split(/\r?\n/u) : [];
+  const ignoredEntries = ignored.stdout.trim() ? ignored.stdout.trim().split(/\r?\n/u) : [];
+  const sourceStatus = ignoredEntries.length > 0
+    ? "source_tree_contains_ignored_inputs"
+    : dirtyEntries.length === 0
+      ? "source_tree_clean"
+      : "source_tree_has_uncommitted_changes";
+  return {
+    status: sourceStatus,
+    head: head.stdout.trim(),
+    sourceDirtyEntryCount: dirtyEntries.length,
+    ignoredSourceEntryCount: ignoredEntries.length,
+    limitation: sourceStatus === "source_tree_clean"
+      ? "Git reported no tracked or untracked changes and no ignored files under the selected source inputs."
+      : sourceStatus === "source_tree_contains_ignored_inputs"
+        ? "Ignored files were present under the selected source inputs and could be copied into the clean-room snapshot."
+        : "Git reported tracked or untracked changes under the selected source inputs.",
+  };
+}
+
+function combineSourceControl(beforeCopy, afterCopy) {
+  if (beforeCopy.status === "git_identity_unavailable" || afterCopy.status === "git_identity_unavailable") {
+    return {
+      status: "git_identity_unavailable",
+      head: afterCopy.head ?? beforeCopy.head,
+      beforeCopy,
+      afterCopy,
+      limitation: "Git identity or source status was unavailable before or after the source copy.",
+    };
+  }
+  if (beforeCopy.head !== afterCopy.head || beforeCopy.status !== afterCopy.status) {
+    return {
+      status: "source_changed_during_copy",
+      head: afterCopy.head,
+      beforeCopy,
+      afterCopy,
+      limitation: "Git HEAD or the selected source status changed while the clean-room snapshot was copied.",
+    };
+  }
+  return {
+    status: afterCopy.status,
+    head: afterCopy.head,
+    beforeCopy,
+    afterCopy,
+    limitation: afterCopy.limitation,
+  };
+}
+
 function sanitizeOutput(value) {
   return String(value ?? "")
     .replaceAll(projectRoot, "<PROJECT_ROOT>")
@@ -179,6 +239,10 @@ async function stopServer() {
 }
 
 const startedAt = performance.now();
+const sourceControlBeforeCopy = sourceControlSnapshot();
+const sourceSnapshotBeforeCopy = snapshotDigest(projectRoot, sourceInputs);
+let sourceControl = sourceControlBeforeCopy;
+let sourceSnapshot = sourceSnapshotBeforeCopy;
 let report;
 
 try {
@@ -190,9 +254,14 @@ try {
     cpSync(source, destination, { recursive: true, errorOnExist: true });
   }
 
-  const sourceSnapshot = snapshotDigest(projectRoot, sourceInputs);
+  const sourceSnapshotAfterCopy = snapshotDigest(projectRoot, sourceInputs);
   const copiedSnapshot = snapshotDigest(cleanRoot, sourceInputs);
-  assert.deepEqual(copiedSnapshot, sourceSnapshot, "The clean-room copy differs from the selected source snapshot.");
+  const sourceControlAfterCopy = sourceControlSnapshot();
+  sourceControl = combineSourceControl(sourceControlBeforeCopy, sourceControlAfterCopy);
+  assert.deepEqual(sourceSnapshotAfterCopy, sourceSnapshotBeforeCopy, "The selected source changed while the clean-room snapshot was copied.");
+  assert.deepEqual(copiedSnapshot, sourceSnapshotBeforeCopy, "The clean-room copy differs from the selected source snapshot.");
+  assert.equal(sourceControl.status, "source_tree_clean", sourceControl.limitation);
+  sourceSnapshot = sourceSnapshotBeforeCopy;
 
   const port = await availablePort();
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -313,6 +382,7 @@ try {
     evidenceStatus: "verified_local_controlled",
     verificationType: "isolated_snapshot_install_build_migrate_and_smoke",
     result: "passed_with_documented_limits",
+    sourceControl,
     sourceSnapshot,
     cleanRoom: {
       copiedFileCount: copiedSnapshot.fileCount,
@@ -335,7 +405,11 @@ try {
     },
     totalDurationMs: Math.round(performance.now() - startedAt),
     limitations: [
-      "The clean room used a copied snapshot of the current uncommitted working tree; this is not a clean Git checkout, CI run, or commit-bound release.",
+      sourceControl.status === "source_tree_clean"
+        ? "Git reported no changes or ignored files under the selected source inputs before and after the copy. The run did not independently clone the remote repository or compare working-tree bytes directly with Git blobs."
+        : sourceControl.status === "git_identity_unavailable"
+          ? "Git identity was unavailable for the copied source snapshot."
+          : "The copied source snapshot was not verified as clean before and after the copy.",
       "The isolated build may have a different digest because vinext generates nondeterministic build inputs; this run verifies behavior and traceability, not bit-for-bit reproducibility.",
       "The run used a local synthetic D1 database and local identity variables; it does not verify staging, production, hosted identity, external services, or external users.",
       "The test executor is automated and internal; this is not independent human QA or third-party verification.",
@@ -352,6 +426,8 @@ try {
     evidenceStatus: "failed_local_controlled",
     verificationType: "isolated_snapshot_install_build_migrate_and_smoke",
     result: "failed",
+    sourceControl,
+    sourceSnapshot,
     commands: commandResults,
     failure: error instanceof Error ? error.message : String(error),
     workerOutputExcerpt: sanitizeOutput(currentServerOutput()),

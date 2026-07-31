@@ -37,7 +37,7 @@
 7. [設計決策紀錄](../architecture/decision-records.md)：說明重要取捨、替代方案與後果。
 8. [證據狀態登錄](evidence-status-register.md)：集中列出已驗證、僅確認設計及尚未驗證的項目。
 9. [本機驗證與營運證據工具](operational-evidence-tools.md)：Gherkin、品質指標、故障注入、黑箱、短時負載、故障恢復、telemetry、D1 還原及 clean-room 的指令與限制。
-10. [2026-07-31 本機驗證紀錄](local-verification-record-20260731.md)：保存實際執行指令、結果、失敗與重跑，以及 clean-room 的有界限本機結果。
+10. [2026-07-31 本機驗證紀錄](local-verification-record-20260731.md)：保存實際執行指令、結果、失敗與重跑，以及 clean-room／manifest 的有界限結果。
 11. [獨立 QA 程序](independent-qa-protocol.md)：G7 的事前計畫與空白執行紀錄。
 12. [外部專業使用者驗證程序](external-professional-validation-protocol.md)：G8 的招募、任務、結果分析、修正與相同任務重測格式。
 13. [四位組員個人證據格式](personal-evidence-templates.md)：P1-P4 的個別證據、實質版本區間與現場診斷演練格式。
@@ -48,7 +48,7 @@
 |---|---|---|
 | G1 目標對象、問題與驗收條件 | [驗收契約](acceptance-contracts.md)、[需求追溯矩陣](requirement-traceability.md) | 需求、範圍、負向條件與完成定義已編號；執行證據仍依各契約狀態判斷。 |
 | G3 架構、資料流與責任邊界 | [系統環境與元件](../architecture/system-context-and-components.md)、[資料模型](../architecture/data-model.md)、[核心請求與資料流程](../architecture/core-request-sequences.md)、[設計決策紀錄](../architecture/decision-records.md) | 已能從圖與決策對回 source／migration；正式部署邊界仍未驗證。 |
-| G7 整合、端對端與受控 QA | [本機驗證紀錄](local-verification-record-20260731.md)、[獨立 QA 程序](independent-qa-protocol.md) | 已有 71/71 API、12/12 agent 設計黑箱、590/590 短時唯讀負載、內部瀏覽器及 clean-room 隔離快照結果；正式獨立人類 QA 仍為 `planned_template`。 |
+| G7 整合、端對端與受控 QA | [本機驗證紀錄](local-verification-record-20260731.md)、[獨立 QA 程序](independent-qa-protocol.md) | 已有 71/71 API、12/12 agent 設計黑箱、590/590 短時唯讀負載、同一 Worker 的內部瀏覽器結果，以及 97 個來源檔／18 個命令的 clean-room 結果；本輪未重跑兩分頁輪詢。正式獨立人類 QA 仍為 `planned_template`。 |
 | G8 外部使用情境下的系統可靠性 | [外部專業使用者驗證程序](external-professional-validation-protocol.md) | `planned_template`；沒有外部專業使用結果。 |
 | P1–P4 個人能力 | [四位組員個人證據格式](personal-evidence-templates.md) | `planned_template`；必須逐人填寫並現場查核。 |
 

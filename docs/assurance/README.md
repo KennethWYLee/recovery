@@ -31,9 +31,9 @@
 - 子專案已有本機建置與測試指令；`demo-recovery-lab/.github/workflows/ci.yml` 只是未來拆成獨立 repository 時可採用的 workflow 定義。
 - 本系統以獨立 repository 發布，workflow 位於 Git root；只有能對回 source commit 的成功 run ID 與 artifact digest，才構成 `verified_ci` 證據。
 - 是否通過必須以當次的 commit、CI run、artifact digest 與實際輸出判定，不可使用舊報告代替。
-- 最終受驗 Worker SHA-256 為 `1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158`。本機已有 71/71 API、12/12 agent 設計黑箱、590/590 短時唯讀負載、879/879 telemetry、瀏覽器／Axe 選定規則、資料庫未就緒後恢復及 D1 logical export/import 的限定結果。
+- 最終受驗 Worker SHA-256 為 `e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd`。本機已有 71/71 API、12/12 agent 設計黑箱、590/590 短時唯讀負載、815/815 telemetry（54 筆受控 4xx、0 筆 5xx；安全負向檢查對應 44/44）、瀏覽器／Axe 選定規則、資料庫未就緒後恢復及 D1 logical export/import 的限定結果。
 - Gherkin 的 8 個情境、28/28 steps 已通過；另有 6/6 個手工設計規則故障被對應情境抓到。後者只涵蓋六項選定風險，不是完整 mutation campaign、所有需求或獨立人類 QA。
-- clean-room 隔離快照驗證已在本機完成：93 個來源快照檔、17 個命令 exit 0、API 71/71。來源是目前未提交工作目錄的複本，vinext digest 不證明 bit-for-bit 可重現；本機合成 D1／身分也不涵蓋 hosted identity、外部服務或外部使用者。
+- clean-room 已對 Git 判定無變更且不含 ignored input 的 97 個來源檔執行 18 個命令，均 exit 0，API 71/71；manifest 已盤點 15/15 份預期證據。這仍是本機複本，不是獨立 remote clone 或 CI；vinext digest 也不能證明 bit-for-bit 可重現。本機合成 D1／身分不涵蓋 hosted identity、外部服務或外部使用者。
 - 目前不宣稱已部署、已完成正式獨立人類 QA、獨立資安查核、完整 WCAG 2.2 AA、遠端還原、RTO／RPO、production 容量或外部使用驗證。
 
 ## 目前實作事實

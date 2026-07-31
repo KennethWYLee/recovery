@@ -66,6 +66,7 @@ jobs:
             evidence/continuity-ops-fault-injection.json
             evidence/continuity-ops-gherkin-acceptance.json
             evidence/continuity-ops-gherkin-fault-injection.json
+            evidence/continuity-ops-local-runtime-bootstrap.json
             evidence/continuity-ops-quality-metrics.json
             evidence/continuity-ops-evidence-manifest.json
             evidence/continuity-ops-sbom.cdx.json

@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-D1-RESTORE-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:46:08.016Z",
+  "generatedAt": "2026-07-31T10:02:15.771Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "isolated_local_d1_logical_export_restore_drill",
   "environment": {
@@ -24,17 +24,17 @@
     ]
   },
   "run": {
-    "runId": "local-20260731084541-66525ee9",
-    "retainedStateDirectory": ".wrangler/backup-restore-drills/local-20260731084541-66525ee9",
+    "runId": "local-20260731100150-f426a9fe",
+    "retainedStateDirectory": ".wrangler/backup-restore-drills/local-20260731100150-f426a9fe",
     "statesRetainedForInspection": true,
     "preExistingStateReadOrChanged": false
   },
   "backup": {
     "method": "Wrangler local logical SQL export",
     "format": "sql",
-    "path": ".wrangler/backup-restore-drills/local-20260731084541-66525ee9/continuity-ops-local-logical-backup.sql",
+    "path": ".wrangler/backup-restore-drills/local-20260731100150-f426a9fe/continuity-ops-local-logical-backup.sql",
     "bytes": 37468,
-    "sha256": "fef4e73d2608837265585b6123a2c0095e062dd586e5382d02333815b8c15041",
+    "sha256": "5d9ebdd511bede125aa04a6f0fd4fe95e481979f460d3cb30b039c9887cbb0ba",
     "unchangedAfterRestore": true
   },
   "artifactBinding": {
@@ -66,7 +66,7 @@
       "passed": true,
       "observed": {
         "bytes": 37468,
-        "sha256": "fef4e73d2608837265585b6123a2c0095e062dd586e5382d02333815b8c15041"
+        "sha256": "5d9ebdd511bede125aa04a6f0fd4fe95e481979f460d3cb30b039c9887cbb0ba"
       }
     },
     {
@@ -130,22 +130,22 @@
       {
         "id": 1,
         "name": "0001_continuity_ops_v2.sql",
-        "appliedAt": "2026-07-31 08:45:44"
+        "appliedAt": "2026-07-31 10:01:52"
       },
       {
         "id": 2,
         "name": "0002_continuity_ops_contract_upgrade.sql",
-        "appliedAt": "2026-07-31 08:45:46"
+        "appliedAt": "2026-07-31 10:01:54"
       },
       {
         "id": 3,
         "name": "0003_assignment_role_integrity.sql",
-        "appliedAt": "2026-07-31 08:45:46"
+        "appliedAt": "2026-07-31 10:01:54"
       },
       {
         "id": 4,
         "name": "0004_service_lifecycle_accountability.sql",
-        "appliedAt": "2026-07-31 08:45:47"
+        "appliedAt": "2026-07-31 10:01:55"
       }
     ],
     "foreignKeyViolations": [],
@@ -173,43 +173,43 @@
       {
         "id": 1,
         "name": "0001_continuity_ops_v2.sql",
-        "appliedAt": "2026-07-31 08:45:44"
+        "appliedAt": "2026-07-31 10:01:52"
       },
       {
         "id": 2,
         "name": "0002_continuity_ops_contract_upgrade.sql",
-        "appliedAt": "2026-07-31 08:45:46"
+        "appliedAt": "2026-07-31 10:01:54"
       },
       {
         "id": 3,
         "name": "0003_assignment_role_integrity.sql",
-        "appliedAt": "2026-07-31 08:45:46"
+        "appliedAt": "2026-07-31 10:01:54"
       },
       {
         "id": 4,
         "name": "0004_service_lifecycle_accountability.sql",
-        "appliedAt": "2026-07-31 08:45:47"
+        "appliedAt": "2026-07-31 10:01:55"
       }
     ],
     "foreignKeyViolations": [],
     "controlledMarkerCount": 1
   },
   "elapsedMs": {
-    "source_migrations": 5579,
-    "source_controlled_seed": 1559,
-    "source_table_inventory": 1572,
-    "source_table_counts": 1581,
-    "source_migration_history": 1565,
-    "source_foreign_keys": 1548,
-    "source_controlled_marker": 1564,
-    "logical_export": 1574,
-    "isolated_restore": 1941,
-    "restored_table_inventory": 1561,
-    "restored_table_counts": 1556,
-    "restored_migration_history": 1552,
-    "restored_foreign_keys": 1535,
-    "restored_controlled_marker": 1569,
-    "total": 26273
+    "source_migrations": 5393,
+    "source_controlled_seed": 1505,
+    "source_table_inventory": 1517,
+    "source_table_counts": 1509,
+    "source_migration_history": 1524,
+    "source_foreign_keys": 1542,
+    "source_controlled_marker": 1523,
+    "logical_export": 1521,
+    "isolated_restore": 2000,
+    "restored_table_inventory": 1554,
+    "restored_table_counts": 1527,
+    "restored_migration_history": 1551,
+    "restored_foreign_keys": 1548,
+    "restored_controlled_marker": 1522,
+    "total": 25751
   },
   "limitations": [
     "This is a controlled local D1 drill with synthetic migration data; it is not a staging or production backup test.",

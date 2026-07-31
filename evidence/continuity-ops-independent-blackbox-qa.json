@@ -3,12 +3,12 @@
   "evidenceId": "CO-VRF-QA-BLACKBOX-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:23:31.252Z",
+  "generatedAt": "2026-07-31T10:01:13.279Z",
   "evidenceStatus": "verified_local_agent_designed",
   "verificationType": "independent_agent_designed_blackbox_http_qa",
   "result": "passed_with_documented_limits",
   "protocol": {
-    "runId": "blackbox-20260731082331-68b175e1",
+    "runId": "blackbox-20260731100113-823dc4a7",
     "caseSetVersion": "1.0.1",
     "caseSetFrozenBeforeExecution": true,
     "caseSetSha256": "1c135a8f9a24a12f9de31a60eb0686173cfe71c103d6fe76a0158d5adf272623",
@@ -35,15 +35,15 @@
   },
   "environment": {
     "scope": "loopback_local_worker",
-    "baseUrl": "http://127.0.0.1:3013",
-    "origin": "http://127.0.0.1:3013",
+    "baseUrl": "http://localhost:3001",
+    "origin": "http://localhost:3001",
     "syntheticOrExistingLocalData": true,
     "remoteDeployment": false,
     "expectedDeploymentVersion": null
   },
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158",
+    "sha256": "e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd",
     "expectedSha256": null,
     "matchesExpected": null
   },
@@ -59,13 +59,13 @@
       "objective": "The documented health endpoint returns a structured success response.",
       "expected": "HTTP 200 with a JSON object.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.253Z",
-      "elapsedMs": 39,
+      "startedAt": "2026-07-31T10:01:13.280Z",
+      "elapsedMs": 54,
       "observed": {
         "status": 200,
         "contentType": "application/json; charset=utf-8",
         "problemCode": null,
-        "requestIdSha256": "3a6a0c2a03381a160d7de74bb0d5c4c05c5447244b25ac8dbcf65efe037c6459",
+        "requestIdSha256": "6a56b1e3ec519a52290429343e8d9506547df16247f275165c16e2e214a644a6",
         "bodyBytes": 122,
         "jsonParsed": true
       },
@@ -77,13 +77,13 @@
       "objective": "The harness recognizes a deliberately unknown API resource as a failure response.",
       "expected": "HTTP 404 with a structured problem response.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.292Z",
+      "startedAt": "2026-07-31T10:01:13.335Z",
       "elapsedMs": 9,
       "observed": {
         "status": 404,
         "contentType": "application/problem+json; charset=utf-8",
         "problemCode": "ROUTE_NOT_FOUND",
-        "requestIdSha256": "3faf2c0dd22f161a5966ef49fbf52d9901fb508d726f6323a6ea32dbe409fc48",
+        "requestIdSha256": "504f08899b13b44f622e958a4ad44e0a1cfd734b5bd01c5301554832378bc346",
         "bodyBytes": 230,
         "jsonParsed": true
       },
@@ -95,14 +95,14 @@
       "objective": "A caller-supplied identity header cannot replace the configured local actor.",
       "expected": "The spoof is rejected, or it is ignored without changing the established principal.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.301Z",
+      "startedAt": "2026-07-31T10:01:13.344Z",
       "elapsedMs": 20,
       "observed": {
         "baseline": {
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": null,
-          "requestIdSha256": "170cc3987e2dc84e089b943df07256e16955194f5da5c0ab60bb47508ea91e5e",
+          "requestIdSha256": "d35a45ed156b0457ca8f7d3493d8036e50d587b94c658d38eff5db4fc18d5dac",
           "bodyBytes": 507,
           "jsonParsed": true
         },
@@ -110,7 +110,7 @@
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": null,
-          "requestIdSha256": "05ad8d5bfe52d89a5b420b7267eb98f7781dbcd9654aabdb6c6a6d19315aa296",
+          "requestIdSha256": "48dfb58563126804d7e43e8cedf10e57a8d8a85abc9048bf3a1f338dda127b68",
           "bodyBytes": 507,
           "jsonParsed": true
         },
@@ -126,13 +126,13 @@
       "objective": "A state-changing request without Origin is rejected before any write.",
       "expected": "HTTP 403.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.321Z",
-      "elapsedMs": 6,
+      "startedAt": "2026-07-31T10:01:13.364Z",
+      "elapsedMs": 8,
       "observed": {
         "status": 403,
         "contentType": "application/problem+json; charset=utf-8",
         "problemCode": "CROSS_ORIGIN_REQUEST_REJECTED",
-        "requestIdSha256": "27013a14293eda3a2319f184ffceb7afaa2b21405e5b2556d16a1b00fd1cd3b6",
+        "requestIdSha256": "65a8999cf5d0dbbc57c7f2da0c954812ecf99ce30e57e273802638b55cec2a8c",
         "bodyBytes": 287,
         "jsonParsed": true
       },
@@ -144,13 +144,13 @@
       "objective": "A mutation with a non-JSON media type is rejected.",
       "expected": "HTTP 415.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.328Z",
+      "startedAt": "2026-07-31T10:01:13.372Z",
       "elapsedMs": 9,
       "observed": {
         "status": 415,
         "contentType": "application/problem+json; charset=utf-8",
         "problemCode": "JSON_CONTENT_TYPE_REQUIRED",
-        "requestIdSha256": "d6785a7fed9d46f1833d414680b105bf131d55703584c41041d5d60682b88a64",
+        "requestIdSha256": "ac5b714e3afe980a4ed9013c73c300d93e96afa389f0881affb8e279e452c7b0",
         "bodyBytes": 255,
         "jsonParsed": true
       },
@@ -162,13 +162,13 @@
       "objective": "A JSON request body larger than the documented 32 KiB limit is rejected.",
       "expected": "HTTP 413.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.336Z",
-      "elapsedMs": 9,
+      "startedAt": "2026-07-31T10:01:13.381Z",
+      "elapsedMs": 11,
       "observed": {
         "status": 413,
         "contentType": "application/problem+json; charset=utf-8",
         "problemCode": "REQUEST_TOO_LARGE",
-        "requestIdSha256": "a295e967a3eb95620207e13ddf987f64fe0fb22ceaa946a414de246019fc48c6",
+        "requestIdSha256": "76ce2f331cda91947ad516af6630bc611403703eac0db2c49d27892e0c94e465",
         "bodyBytes": 234,
         "jsonParsed": true
       },
@@ -180,14 +180,14 @@
       "objective": "A service has the same identity, version, lifecycle status, and slug in list and detail projections.",
       "expected": "The list and detail projections agree on all available invariant fields.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.346Z",
-      "elapsedMs": 21,
+      "startedAt": "2026-07-31T10:01:13.392Z",
+      "elapsedMs": 20,
       "observed": {
         "list": {
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": null,
-          "requestIdSha256": "e9813455b26a23d6bcec519e22a5d4262cf709773faaeff8dcf6ff1669c6616f",
+          "requestIdSha256": "b623fe88fdc1dcc8980f2b7b346359627e7e07365854953c42d77f7c46aa88be",
           "bodyBytes": 3724,
           "jsonParsed": true
         },
@@ -195,12 +195,12 @@
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": null,
-          "requestIdSha256": "53602099a113497e296ee08f0e56603ca6d0b96c6c82037c3c3a9e2e43d85f65",
+          "requestIdSha256": "66526ba86f1bb120c4d724148aec1013520cf77ef12c5b7171c57e3c0f7ddb1d",
           "bodyBytes": 1019,
           "jsonParsed": true
         },
         "serviceCount": 4,
-        "serviceIdSha256": "c13c580ae6e8f17bf17856c6e15f73860989eb86e79ae4fbd3f678d4c5f405a7",
+        "serviceIdSha256": "f0f6189a5116b7d40a9c3c46ebe5296c6d711bd4bd876e714b3e0a33d8d6ca2b",
         "comparedFields": [
           "id",
           "version",
@@ -217,14 +217,14 @@
       "objective": "A service update using a deliberately incorrect expectedVersion is rejected without changing observable state.",
       "expected": "HTTP 409, followed by an unchanged service projection.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.366Z",
+      "startedAt": "2026-07-31T10:01:13.412Z",
       "elapsedMs": 23,
       "observed": {
         "rejectedMutation": {
           "status": 409,
           "contentType": "application/problem+json; charset=utf-8",
           "problemCode": "VERSION_CONFLICT",
-          "requestIdSha256": "8a06045bcd1c15f501b11effc60f7ae40bef0a2cb2dbc571d1fc4d8a99b3bf71",
+          "requestIdSha256": "f882a43cf1b0edea989499f702f852378cf4220de74d808ac4b65ef570c16de7",
           "bodyBytes": 258,
           "jsonParsed": true
         },
@@ -232,7 +232,7 @@
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": null,
-          "requestIdSha256": "c3324fa5a90ed7fe490369f62aa4b2c71a08e592055bb32bd99c21f91eb2862b",
+          "requestIdSha256": "0824934d8ac17d51f093d76dac68d4caf80b8730def65b2d3bb580e5b7bfcff7",
           "bodyBytes": 1019,
           "jsonParsed": true
         },
@@ -254,14 +254,14 @@
       "objective": "Incident list and detail projections expose consistent, documented status values.",
       "expected": "Every listed incident has a documented status, and a checked detail reports the same status.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.390Z",
+      "startedAt": "2026-07-31T10:01:13.435Z",
       "elapsedMs": 26,
       "observed": {
         "all": {
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": null,
-          "requestIdSha256": "db3de0278d47c78368dbb7e8e83853a1396b6f1cf2fb7acf80b6875d9ebaab20",
+          "requestIdSha256": "9c4f0ebe8fe4034cf26155f303d7564f587f1f71fe3506e9d79ccaff4a906a1a",
           "bodyBytes": 1448,
           "jsonParsed": true
         },
@@ -276,7 +276,7 @@
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": null,
-          "requestIdSha256": "c7503d943dc515749b2b8aac93162a64e06adc77d51e5a7241bd46d11805cc43",
+          "requestIdSha256": "cdadf9afaa7620bd1594a726c546bc0eeadbcfd1a317a6975929f94450d4cf1f",
           "bodyBytes": 5778,
           "jsonParsed": true
         }
@@ -289,13 +289,13 @@
       "objective": "A malformed service-lifecycle cursor is rejected rather than treated as a valid page.",
       "expected": "HTTP 400.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.416Z",
-      "elapsedMs": 11,
+      "startedAt": "2026-07-31T10:01:13.462Z",
+      "elapsedMs": 9,
       "observed": {
         "status": 400,
         "contentType": "application/problem+json; charset=utf-8",
         "problemCode": "INVALID_LIFECYCLE_CURSOR",
-        "requestIdSha256": "277f02a5f5dc27b082eb82abfc8cc9e361301e040901853cc5920da523547514",
+        "requestIdSha256": "e7ac2fcfec48379f8646449e394d58cdec4c840d1f1ce2633885f88e43c046d8",
         "bodyBytes": 248,
         "jsonParsed": true
       },
@@ -307,14 +307,14 @@
       "objective": "The authenticated organization exposes one syntactically valid IANA time zone across public projections.",
       "expected": "At least one time-zone field is present, all observed values agree, and Intl accepts the value.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.427Z",
+      "startedAt": "2026-07-31T10:01:13.471Z",
       "elapsedMs": 30,
       "observed": {
         "access": {
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": null,
-          "requestIdSha256": "170cc3987e2dc84e089b943df07256e16955194f5da5c0ab60bb47508ea91e5e",
+          "requestIdSha256": "d35a45ed156b0457ca8f7d3493d8036e50d587b94c658d38eff5db4fc18d5dac",
           "bodyBytes": 507,
           "jsonParsed": true
         },
@@ -322,7 +322,7 @@
           "status": 200,
           "contentType": "application/json; charset=utf-8",
           "problemCode": "VERSION_CONFLICT",
-          "requestIdSha256": "30ee4c93ac95e71900b734b3e99b80bd3ab1a1c72acfa4f755255fa0503f938e",
+          "requestIdSha256": "15b3b04bc84815950d7e05c7ec99af784883d0baa8b4a56be68df9bb1ff31f96",
           "bodyBytes": 6080,
           "jsonParsed": true
         },
@@ -338,13 +338,13 @@
       "objective": "A syntactically valid but absent incident identifier returns a structured not-found response.",
       "expected": "HTTP 404 without exposing a stack trace.",
       "result": "passed",
-      "startedAt": "2026-07-31T08:23:31.457Z",
-      "elapsedMs": 10,
+      "startedAt": "2026-07-31T10:01:13.501Z",
+      "elapsedMs": 13,
       "observed": {
         "status": 404,
         "contentType": "application/problem+json; charset=utf-8",
         "problemCode": "INCIDENT_NOT_FOUND",
-        "requestIdSha256": "a24414c5e1b95ae3afe584522923b33c96a91a0dda9d9de5df51919a01e3c1ad",
+        "requestIdSha256": "e7bc5eb3cacdcaa4b0746eb82fcc7b2ebdd5afc457838dc28c47c0649700504d",
         "bodyBytes": 225,
         "jsonParsed": true
       },

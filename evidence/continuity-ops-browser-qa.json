@@ -3,33 +3,34 @@
   "evidenceId": "CO-VRF-BROWSER-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T08:27:20.0580410Z",
+  "generatedAt": "2026-07-31T10:08:01.6717591Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "internal_interactive_browser_and_axe_check",
   "result": "passed_with_documented_limits",
   "environment": {
     "scope": "local_only",
-    "url": "http://127.0.0.1:3014/operations",
-    "deploymentVersion": "local-final-predeployment",
+    "url": "http://127.0.0.1:3001/operations",
+    "deploymentVersion": "local-predeployment-verification",
     "schemaVersion": "0004",
     "browserSurface": "Google Chrome controlled through the installed browser extension",
+    "operatingSystem": "Windows",
     "syntheticData": true,
     "remoteDeployment": false
   },
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "1d8b2d0c99000fb1d6b58b23de97adadba06210f370ddcb03e41c95468cf9158"
+    "sha256": "e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd"
   },
   "observedData": {
-    "apiRunId": "ms8odzgx-77500678",
-    "incidentId": "inc-daa64336-074d-4134-9d37-0f11e82968cc",
+    "apiRunId": "ms8rvmi6-959ce112",
+    "incidentId": "inc-bb8b0709-2ca7-4e84-bfcb-99f859042bb7",
     "timelineEntriesObserved": 38
   },
   "viewports": [
     {
       "name": "desktop",
-      "width": 1265,
-      "height": 569,
+      "applicationWidth": 1265,
+      "applicationHeight": 513,
       "axeVersion": "4.12.1",
       "axeViolations": 0,
       "axeIncomplete": 0,
@@ -37,8 +38,10 @@
     },
     {
       "name": "narrow_mobile",
-      "width": 375,
-      "height": 844,
+      "requestedWindowWidth": 375,
+      "requestedWindowHeight": 844,
+      "applicationWidth": 360,
+      "applicationHeight": 844,
       "axeVersion": "4.12.1",
       "axeViolations": 0,
       "axeIncomplete": 0,
@@ -52,12 +55,12 @@
     {
       "id": "desktop_accessibility_rules",
       "result": "passed",
-      "observed": "axe-core 4.12.1 reported zero WCAG 2 A, AA, 2.1 AA, and 2.2 AA rule violations and zero incomplete checks at a 1265 by 569 application viewport."
+      "observed": "axe-core 4.12.1 reported zero selected WCAG 2 A, AA, 2.1 AA, and 2.2 AA rule violations and zero incomplete checks at a 1265 by 513 application viewport."
     },
     {
       "id": "mobile_accessibility_rules",
       "result": "passed",
-      "observed": "axe-core 4.12.1 reported zero selected-rule violations and zero incomplete checks at a 375 by 844 application viewport."
+      "observed": "axe-core 4.12.1 reported zero selected-rule violations and zero incomplete checks at a 360 by 844 application viewport."
     },
     {
       "id": "narrow_layout",
@@ -67,22 +70,27 @@
     {
       "id": "incident_deep_link",
       "result": "passed",
-      "observed": "A direct URL with view=incidents, the current incident ID, and tab=timeline selected the intended closed incident and its 38-entry timeline without prior in-app navigation."
+      "observed": "A direct URL with view=incidents, the current incident ID, and tab=timeline selected the intended closed incident and exposed its 38-entry timeline without prior in-app navigation."
     },
     {
       "id": "keyboard_workspace_tabs",
       "result": "passed",
-      "observed": "End moved keyboard selection from Timeline to Post-incident review, and Home returned to Summary; aria-selected and the tab query parameter remained synchronized."
+      "observed": "End selected Post-incident review, Home selected Summary, ArrowRight selected Timeline, and ArrowLeft returned to Summary; aria-selected and the tab query parameter remained synchronized."
+    },
+    {
+      "id": "browser_history",
+      "result": "passed",
+      "observed": "Chrome Back restored Timeline and Chrome Forward restored Summary while the selected tab and tab query parameter remained synchronized."
     },
     {
       "id": "dialog_focus_return",
       "result": "passed",
-      "observed": "The declare-incident dialog opened and closed in Chrome, and focus returned to the Declare incident button."
+      "observed": "The declare-incident dialog initially focused its close control; Escape closed the dialog and returned focus to the Declare incident button."
     },
     {
       "id": "mobile_drawer_focus",
       "result": "passed",
-      "observed": "At 390 by 844, opening the navigation drawer focused its close control; pressing Escape closed the drawer and returned focus to the open-navigation control with aria-expanded=false."
+      "observed": "At the requested 375 by 844 window size, opening the navigation drawer focused its close control; Escape closed the drawer and returned focus to the open-navigation control with aria-expanded=false."
     },
     {
       "id": "browser_console",
@@ -92,7 +100,7 @@
   ],
   "limitations": [
     "This is an internal controlled browser check, not formal independent human QA or external-user evidence.",
-    "The accessibility scan covered the selected axe WCAG rules; it does not establish complete WCAG conformance or replace keyboard-only and screen-reader testing by people.",
+    "The accessibility scan covered selected axe WCAG rules; it does not establish complete WCAG conformance or replace keyboard-only and screen-reader testing by people.",
     "Only one browser engine and synthetic local data were exercised; Safari, Firefox, real mobile devices, hosted identity, HTTPS edge behavior, staging, and production were not tested.",
     "The accessibility harness removed frame and content-security-policy restrictions only on its loopback proxy so axe could inspect the document. The actual Worker security headers were tested separately and were not weakened.",
     "The narrow-layout overflow conclusion is a DOM measurement in one emulated viewport, not a cross-device laboratory measurement.",
