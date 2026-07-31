@@ -45,6 +45,7 @@ export const COMMUNICATION_STATUSES = ["draft", "reviewed", "published"] as cons
 export type IncidentCommunicationStatus = (typeof COMMUNICATION_STATUSES)[number];
 
 export const PERMISSIONS = [
+  "access:read",
   "access:manage",
   "service:read",
   "service:write",
@@ -61,6 +62,7 @@ export type OperationsPermission = (typeof PERMISSIONS)[number];
 const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OperationsPermission[]> = {
   admin: PERMISSIONS,
   commander: [
+    "access:read",
     "service:read",
     "service:write",
     "incident:read",
@@ -71,8 +73,8 @@ const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OperationsPermission[]
     "review:write",
   ],
   responder: ["service:read", "incident:read", "incident:respond"],
-  observer: ["service:read", "incident:read"],
-  auditor: ["service:read", "incident:read", "audit:read"],
+  observer: ["access:read", "service:read", "incident:read", "audit:read"],
+  auditor: ["access:read", "service:read", "incident:read", "audit:read"],
 };
 
 /**
@@ -209,8 +211,12 @@ export function canTransitionIncident(
 }
 
 export function canReadIncident(role: OrganizationRole, incidentRoles: readonly IncidentRole[]): boolean {
-  if (role === "admin" || role === "commander" || role === "auditor") return true;
+  if (organizationRoleCanReadAllIncidents(role)) return true;
   return incidentRoles.length > 0;
+}
+
+export function organizationRoleCanReadAllIncidents(role: OrganizationRole): boolean {
+  return role === "admin" || role === "commander" || role === "observer" || role === "auditor";
 }
 
 export function canDraftIncidentCommunication(

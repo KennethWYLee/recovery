@@ -23,6 +23,8 @@ const stateDirectoryPrefix = "continuity-ops-runtime-bootstrap-";
 const statePrefix = join(stateRoot, stateDirectoryPrefix);
 const authorizedEmail = "runtime-bootstrap@example.invalid";
 const unauthorizedEmail = "not-bootstrap@example.invalid";
+const schoolViewerEmail = "runtime-viewer@ntub.edu.tw";
+const nonMemberEmail = "runtime-outsider@example.invalid";
 const node = process.execPath;
 let server;
 let serverOutput = "";
@@ -111,6 +113,44 @@ function startWorker(port, operatorEmail) {
   return child;
 }
 
+function startForwardedIdentityWorker(port) {
+  serverOutput = "";
+  const child = spawn(node, [
+    "node_modules/wrangler/bin/wrangler.js",
+    "dev",
+    "--config",
+    "dist/server/wrangler.json",
+    "--local",
+    "--persist-to",
+    statePath,
+    "--ip",
+    "127.0.0.1",
+    "--port",
+    String(port),
+    "--show-interactive-dev-session=false",
+    "--var",
+    "CONTINUITY_OPS_ENVIRONMENT:production",
+    "--var",
+    "CONTINUITY_OPS_ORGANIZATION_NAME:Continuity Ops Runtime Bootstrap",
+    "--var",
+    "CONTINUITY_OPS_ORGANIZATION_TIMEZONE:Asia/Taipei",
+    "--var",
+    `CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL:${authorizedEmail}`,
+    "--var",
+    "CONTINUITY_OPS_DEPLOYMENT_VERSION:local-runtime-bootstrap-220",
+    "--var",
+    "CONTINUITY_OPS_CURSOR_HMAC_SECRET:runtime-bootstrap-test-only-secret-000000000",
+  ], {
+    cwd: root,
+    env: { ...process.env, WRANGLER_LOG_PATH: resolve(statePath, "wrangler-forwarded.log") },
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+  child.stdout.on("data", (chunk) => { serverOutput = `${serverOutput}${chunk}`.slice(-250_000); });
+  child.stderr.on("data", (chunk) => { serverOutput = `${serverOutput}${chunk}`.slice(-250_000); });
+  return child;
+}
+
 async function stopWorker() {
   const child = server;
   if (!child) return;
@@ -159,13 +199,17 @@ function scheduleStateCleanup() {
   cleanup.unref();
 }
 
-async function request(url, acceptedStatuses, timeoutMs = 60_000) {
+async function request(url, acceptedStatuses, options = {}, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   let lastError = "not started";
   while (Date.now() < deadline) {
     if (server?.exitCode !== null) throw new Error(`Worker exited early. ${safeOutput(serverOutput)}`);
     try {
-      const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(3_000) });
+      const response = await fetch(url, {
+        ...options,
+        cache: "no-store",
+        signal: AbortSignal.timeout(3_000),
+      });
       const text = await response.text();
       if (acceptedStatuses.includes(response.status)) return { response, text };
       lastError = `HTTP ${response.status}`;
@@ -177,14 +221,22 @@ async function request(url, acceptedStatuses, timeoutMs = 60_000) {
   throw new Error(`Timed out waiting for ${url}: ${lastError}. ${safeOutput(serverOutput)}`);
 }
 
-function parseProblem(result, expectedCode) {
+function parseProblem(result, expectedCode, expectedStatus = 503) {
   assert.match(result.response.headers.get("content-type") ?? "", /^application\/problem\+json\b/iu);
   assert.match(result.response.headers.get("x-request-id") ?? "", /^req-[0-9a-f-]{36}$/iu);
   const problem = JSON.parse(result.text);
-  assert.equal(problem.status, 503);
+  assert.equal(problem.status, expectedStatus);
   assert.equal(problem.code, expectedCode);
   assert.equal(problem.requestId, result.response.headers.get("x-request-id"));
   return problem;
+}
+
+function forwardedIdentityHeaders(email, displayName) {
+  return {
+    "oai-authenticated-user-email": email,
+    "oai-authenticated-user-full-name": encodeURIComponent(displayName),
+    "oai-authenticated-user-full-name-encoding": "percent-encoded-utf-8",
+  };
 }
 
 function schemaFingerprint(rows) {
@@ -272,6 +324,97 @@ try {
   assert.ok(bootstrapEvents.every((event) => /^[a-f0-9]{64}$/u.test(event.planDigest)));
   await stopWorker();
 
+  server = startForwardedIdentityWorker(port);
+  const schoolHeaders = forwardedIdentityHeaders(schoolViewerEmail, "Runtime School Viewer");
+  const schoolAccessOptions = { headers: schoolHeaders };
+  const [schoolAccessFirst, schoolAccessSecond] = await Promise.all([
+    request(`${baseUrl}/api/v1/access`, [200], schoolAccessOptions),
+    request(`${baseUrl}/api/v1/access`, [200], schoolAccessOptions),
+  ]);
+  const schoolAccessBodies = [schoolAccessFirst, schoolAccessSecond].map((result) => JSON.parse(result.text).data);
+  const schoolRole = schoolAccessBodies[0].actor.role;
+  const schoolDisplayName = schoolAccessBodies[0].actor.displayName;
+  assert.ok(["observer", "auditor"].includes(schoolRole));
+  assert.equal(schoolAccessBodies[1].actor.role, schoolRole);
+  assert.equal(schoolAccessBodies[1].actor.displayName, schoolDisplayName);
+  assert.match(schoolDisplayName, /^校內訪客 [A-Z0-9]{4}-[A-Z0-9]{4}$/u);
+  assert.deepEqual(
+    schoolAccessBodies[0].permissions,
+    ["access:read", "service:read", "incident:read", "audit:read"],
+  );
+  assert.ok(schoolAccessBodies[0].policies.some((policy) => policy.id === "ntub-read-only-access" && policy.status === "enforced"));
+
+  const forwardedAdmin = await request(`${baseUrl}/api/v1/access`, [200], {
+    headers: forwardedIdentityHeaders(authorizedEmail, "Runtime Bootstrap Owner"),
+  });
+  assert.equal(JSON.parse(forwardedAdmin.text).data.actor.role, "admin");
+
+  const nonMember = await request(`${baseUrl}/api/v1/access`, [403], {
+    headers: forwardedIdentityHeaders(nonMemberEmail, "Runtime Outsider"),
+  });
+  parseProblem(nonMember, "ACTIVE_MEMBERSHIP_REQUIRED", 403);
+
+  const schoolReadPaths = ["access", "overview", "incidents", "services", "audit"];
+  const schoolReadResults = [];
+  for (const path of schoolReadPaths) {
+    schoolReadResults.push(await request(`${baseUrl}/api/v1/${path}`, [200], schoolAccessOptions));
+  }
+  const schoolAuditBody = JSON.parse(schoolReadResults.at(-1).text).data;
+  assert.ok(schoolAuditBody.events.some((event) => event.action === "access.member.auto_provision"));
+  assert.ok(schoolAuditBody.events.every((event) => !("actorEmail" in event)));
+
+  const memberDirectory = await request(`${baseUrl}/api/v1/access/members`, [403], schoolAccessOptions);
+  parseProblem(memberDirectory, "PERMISSION_DENIED", 403);
+
+  const schoolMutationCases = [
+    { method: "POST", path: "services", key: "runtime-readonly-post", body: { name: "Blocked" } },
+    { method: "PUT", path: "incidents/inc-runtime/review", key: "runtime-readonly-put", body: { status: "draft" } },
+    { method: "PATCH", path: "incidents/inc-runtime", key: "runtime-readonly-patch", body: { title: "Blocked" } },
+    { method: "DELETE", path: "incidents/inc-runtime/assignments/assign-runtime", key: "runtime-readonly-delete", body: {} },
+  ];
+  const schoolMutationStatuses = [];
+  for (const mutation of schoolMutationCases) {
+    const result = await request(`${baseUrl}/api/v1/${mutation.path}`, [403], {
+      method: mutation.method,
+      headers: {
+        ...schoolHeaders,
+        "content-type": "application/json",
+        "idempotency-key": mutation.key,
+        origin: baseUrl,
+      },
+      body: JSON.stringify(mutation.body),
+    });
+    parseProblem(result, "READ_ONLY_ACCESS", 403);
+    schoolMutationStatuses.push(result.response.status);
+  }
+  await stopWorker();
+
+  const [schoolMembership] = d1Query(
+    `SELECT u.id AS user_id, u.display_name, m.id AS membership_id, m.role, m.status
+     FROM ops_users u JOIN ops_memberships m ON m.user_id = u.id
+     WHERE u.email = '${schoolViewerEmail}' AND m.organization_id = 'ops-singleton'`,
+  );
+  assert.ok(schoolMembership);
+  assert.equal(schoolMembership.role, schoolRole);
+  assert.equal(schoolMembership.status, "active");
+  assert.equal(schoolMembership.display_name, schoolDisplayName);
+  assert.equal(d1Query(`SELECT COUNT(*) AS count FROM ops_users WHERE email = '${schoolViewerEmail}'`)[0].count, 1);
+  assert.equal(d1Query(`SELECT COUNT(*) AS count FROM ops_memberships WHERE user_id = '${schoolMembership.user_id}'`)[0].count, 1);
+  const schoolAutoProvisionAuditCount = d1Query(
+    `SELECT COUNT(*) AS count FROM ops_audit_events
+     WHERE actor_user_id = '${schoolMembership.user_id}' AND action = 'access.member.auto_provision'`,
+  )[0].count;
+  assert.equal(schoolAutoProvisionAuditCount, 1);
+
+  d1Query(
+    `UPDATE ops_memberships SET status = 'suspended', version = version + 1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = '${schoolMembership.membership_id}'`,
+  );
+  server = startForwardedIdentityWorker(port);
+  const suspendedSchoolAccess = await request(`${baseUrl}/api/v1/access`, [403], schoolAccessOptions);
+  parseProblem(suspendedSchoolAccess, "ACTIVE_MEMBERSHIP_REQUIRED", 403);
+  await stopWorker();
+
   let state;
   let inventory;
   let fingerprint;
@@ -312,7 +455,7 @@ try {
     productVersion: PRODUCT_VERSION,
     generatedAt: new Date().toISOString(),
     evidenceStatus: "verified_local_controlled",
-    verificationType: "authenticated_fresh_d1_runtime_bootstrap",
+    verificationType: "authenticated_fresh_d1_runtime_bootstrap_and_domain_read_only_access",
     result: "passed_with_documented_limits",
     buildArtifact: { path: "dist/server/index.js", sha256: buildSha256 },
     environment: { runtime: process.version, platform: process.platform, database: "isolated synthetic local D1" },
@@ -345,11 +488,33 @@ try {
       overviewStatus: overview.response.status,
       checksPassed: 3,
     },
+    schoolReadOnlyAccess: {
+      exactEmailDomain: "ntub.edu.tw",
+      assignedRole: schoolRole,
+      randomizedDisplayNameFormat: "校內訪客 XXXX-XXXX",
+      concurrentFirstAccessResponses: schoolAccessBodies.length,
+      uniqueUserCount: 1,
+      uniqueMembershipCount: 1,
+      autoProvisionAuditCount: schoolAutoProvisionAuditCount,
+      readableApiModules: schoolReadPaths,
+      readChecksPassed: schoolReadResults.length,
+      stateChangingMethodsRejected: schoolMutationCases.map((item, index) => ({
+        method: item.method,
+        status: schoolMutationStatuses[index],
+        problemCode: "READ_ONLY_ACCESS",
+      })),
+      memberDirectoryStatus: memberDirectory.response.status,
+      auditActorEmailRedacted: true,
+      existingAdministratorRolePreserved: true,
+      nonMemberOtherDomainStatus: nonMember.response.status,
+      suspendedMembershipStatus: suspendedSchoolAccess.response.status,
+    },
     totalDurationMs: Math.round(performance.now() - startedAt),
     temporaryStateCleanup: "scheduled_after_runner_exit",
     limitations: [
       "This is a local Wrangler and synthetic D1 exercise; it is not evidence that Sites production identity forwarding or hosted D1 initialization succeeded.",
-      "The exercise verifies one unauthorized identity and one configured administrator; it is not a complete identity-provider or access-policy audit.",
+      "The exercise covers one configured administrator, one exact-domain school viewer, one other-domain non-member, and one suspended school membership; it is not a complete identity-provider or access-policy audit.",
+      "Forwarded identity headers are supplied directly to the local Worker. This does not prove that the hosted edge strips spoofed headers or forwards only verified identities.",
       "The per-request query counts cover bootstrap statements only; Cloudflare plan enforcement and production capacity were not measured.",
     ],
   };
@@ -362,7 +527,7 @@ try {
     productVersion: PRODUCT_VERSION,
     generatedAt: new Date().toISOString(),
     evidenceStatus: "failed_local_controlled",
-    verificationType: "authenticated_fresh_d1_runtime_bootstrap",
+    verificationType: "authenticated_fresh_d1_runtime_bootstrap_and_domain_read_only_access",
     result: "failed",
     buildArtifact: { path: "dist/server/index.js", sha256: buildSha256 },
     failure: error instanceof Error ? error.message : String(error),

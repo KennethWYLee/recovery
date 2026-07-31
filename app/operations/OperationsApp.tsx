@@ -381,7 +381,7 @@ const NAV_ITEMS: { id: ViewId; label: string; description: string; icon: IconNam
   { id: "incidents", label: "事件指揮", description: "共享事件工作區", icon: "incident" },
   { id: "services", label: "服務目錄", description: "責任、SLO 與操作手冊", icon: "service" },
   { id: "audit", label: "稽核紀錄", description: "操作、結果與請求編號", icon: "audit" },
-  { id: "access", label: "存取管理", description: "角色與政策狀態", icon: "access" },
+  { id: "access", label: "存取與權限", description: "角色與政策狀態", icon: "access" },
 ];
 
 const NAV_PERMISSIONS: Record<ViewId, readonly string[]> = {
@@ -389,7 +389,7 @@ const NAV_PERMISSIONS: Record<ViewId, readonly string[]> = {
   incidents: ["incident:read"],
   services: ["service:read"],
   audit: ["audit:read"],
-  access: ["access:manage", "incident:assign"],
+  access: ["access:read", "access:manage", "incident:assign"],
 };
 const NO_PERMISSIONS: readonly string[] = [];
 
@@ -978,6 +978,7 @@ function incidentRoleLabel(role: string): string {
 
 function auditActionLabel(action: string): string {
   const labels: Record<string, string> = {
+    "access.member.auto_provision": "建立校內唯讀帳號",
     "access.member.create": "新增組織成員",
     "access.member.update": "更新成員存取權",
     "service.create": "建立服務",
@@ -1482,6 +1483,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   const canReviewIncident = Boolean(selectedDetail && actor.permissions?.includes("review:write") && isIncidentCommander);
   const canManageAccess = Boolean(actor.permissions?.includes("access:manage"));
   const actorPermissions = actor.permissions ?? NO_PERMISSIONS;
+  const readOnlyAccess = organizationRole === "observer" || organizationRole === "auditor";
   const visibleNavItems = useMemo(() => NAV_ITEMS.filter((item) => viewAllowed(item.id, actorPermissions)), [actorPermissions]);
   const renderedView = viewAllowed(activeView, actorPermissions) ? activeView : "overview";
   const organizationTimeZone = resolveOrganizationTimeZone(snapshot?.organization.timezone);
@@ -2064,6 +2066,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
         {toast && <div className="toast" role="status"><Icon name="check" /><span>{toast}</span><button type="button" aria-label="關閉提示" onClick={() => setToast(null)}><Icon name="close" size={16} /></button></div>}
 
         <main id="main-content" className="content" tabIndex={-1}>
+          {readOnlyAccess && <div className="read-only-notice" role="status"><Icon name="access" /><div><strong>目前為唯讀存取</strong><span>你可以查閱所有營運頁面；新增、編輯、指派、發布與刪除功能均未開放。</span></div></div>}
           {overviewError && <ErrorBanner
             title={snapshot ? "資料更新失敗，正在顯示最後成功快照" : "無法取得營運資料"}
             error={snapshot && overviewLastUpdatedAt
@@ -2683,7 +2686,10 @@ function AuditView({ records, loading, error, retry, timeZone }: { records: Audi
               <thead><tr><th scope="col">時間</th><th scope="col">操作者</th><th scope="col">操作</th><th scope="col">資源</th><th scope="col">結果</th><th scope="col">Request ID</th><th scope="col">安全細節</th></tr></thead>
               <tbody>{filtered.map((record) => <tr key={record.id}>
                 <td><time dateTime={record.occurredAt}>{formatLongTimestamp(record.occurredAt, timeZone)}</time></td>
-                <td><strong>{record.actor.displayName}</strong><small>{record.actor.email}{record.actorRole ? ` · ${ORGANIZATION_ROLE_LABEL[record.actorRole as OrganizationRole] ?? record.actorRole}` : ""}</small></td>
+                <td><strong>{record.actor.displayName}</strong><small>{[
+                  record.actor.email,
+                  record.actorRole ? ORGANIZATION_ROLE_LABEL[record.actorRole as OrganizationRole] ?? record.actorRole : "",
+                ].filter(Boolean).join(" · ") || "身分資料已隱去"}</small></td>
                 <td><strong>{auditActionLabel(record.action)}</strong><small><code>{record.action}</code></small></td>
                 <td><strong>{auditResourceLabel(record.resourceType)}</strong><small><code>{record.resourceKey}</code></small></td>
                 <td><ResultBadge result={record.result} />{record.reasonCode && <small><code>{record.reasonCode}</code></small>}</td>
@@ -2723,7 +2729,7 @@ function AccessView({ data, identityMode, loading, error, retry, timeZone, canMa
 
   return (
     <div className="view-stack">
-      <PageHeader eyebrow="ACCESS CONTROL" title="存取管理" description="查閱組織成員、事件角色與伺服器端強制執行的存取政策。">
+      <PageHeader eyebrow="ACCESS CONTROL" title={canManage ? "存取管理" : "存取與權限"} description={canManage ? "管理組織成員，並查閱伺服器端強制執行的存取政策。" : "查閱目前身分與伺服器端強制執行的存取政策。"}>
         {canManage && <button className="button primary" type="button" onClick={openCreate}><Icon name="plus" />新增成員</button>}
       </PageHeader>
       {error && <ErrorBanner title={data ? "存取資料更新失敗，正在顯示最後成功快照" : "無法取得存取資料"} error={error} onRetry={retry} />}

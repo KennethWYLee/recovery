@@ -20,6 +20,7 @@ const node = process.execPath;
 const featurePath = "features/core-reliability.feature";
 const stepsPath = "features/step_definitions/core-reliability.steps.mjs";
 const sourcePath = "lib/operations-domain.ts";
+const authorizationSourcePath = "lib/operations-auth.ts";
 const evidencePath = resolve(root, "evidence/continuity-ops-gherkin-fault-injection.json");
 const cucumberPath = resolve(root, "node_modules/@cucumber/cucumber/bin/cucumber.js");
 const temporaryRoot = resolve(root, ".wrangler");
@@ -163,6 +164,11 @@ try {
   );
   const temporarySourcePath = join(temporaryDirectory, sourcePath);
   writeFileSync(temporarySourcePath, source, "utf8");
+  writeFileSync(
+    join(temporaryDirectory, authorizationSourcePath),
+    readFileSync(resolve(root, authorizationSourcePath), "utf8"),
+    "utf8",
+  );
 
   const baseline = runCucumber(temporaryDirectory);
   assert.equal(

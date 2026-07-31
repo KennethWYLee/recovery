@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { Given, Then, When } from "@cucumber/cucumber";
 
 import {
+  canReadIncident,
   canTransitionIncident,
   incidentStatusMatchesFilter,
   isFinalIncidentCommunication,
@@ -9,6 +10,7 @@ import {
   serviceCanAcceptNewIncidents,
   taskStatusHasRequiredEvidence,
 } from "../../lib/operations-domain.ts";
+import { organizationRoleCanUseRequestMethod } from "../../lib/operations-auth.ts";
 
 Given("the organization role is {string}", function (role) {
   this.organizationRole = role;
@@ -45,6 +47,26 @@ When("the actor is considered for the incident assignment {string}", function (i
 
 Then("the incident assignment is rejected", function () {
   assert.equal(this.assignmentAllowed, false);
+});
+
+When("the actor attempts to use the request method {string}", function (method) {
+  this.requestMethodAllowed = organizationRoleCanUseRequestMethod(this.organizationRole, method);
+});
+
+Then("the state-changing request is rejected", function () {
+  assert.equal(this.requestMethodAllowed, false);
+});
+
+Given("there is no active incident assignment", function () {
+  this.incidentRoles = [];
+});
+
+When("incident read access is evaluated", function () {
+  this.incidentReadAllowed = canReadIncident(this.organizationRole, this.incidentRoles ?? []);
+});
+
+Then("the incident can be read", function () {
+  assert.equal(this.incidentReadAllowed, true);
 });
 
 Given("a completed task cites {string}", function (evidenceRef) {

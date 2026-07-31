@@ -3,13 +3,13 @@
   "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T10:00:08.580Z",
+  "generatedAt": "2026-07-31T14:51:49.149Z",
   "evidenceStatus": "verified_local_controlled",
-  "verificationType": "authenticated_fresh_d1_runtime_bootstrap",
+  "verificationType": "authenticated_fresh_d1_runtime_bootstrap_and_domain_read_only_access",
   "result": "passed_with_documented_limits",
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd"
+    "sha256": "9501de5c8af845a428ebff03d5bc9705f22fe6bdab5be814a9987d7bea147f7a"
   },
   "environment": {
     "runtime": "v24.15.0",
@@ -63,11 +63,56 @@
     "overviewStatus": 200,
     "checksPassed": 3
   },
-  "totalDurationMs": 14586,
+  "schoolReadOnlyAccess": {
+    "exactEmailDomain": "ntub.edu.tw",
+    "assignedRole": "observer",
+    "randomizedDisplayNameFormat": "校內訪客 XXXX-XXXX",
+    "concurrentFirstAccessResponses": 2,
+    "uniqueUserCount": 1,
+    "uniqueMembershipCount": 1,
+    "autoProvisionAuditCount": 1,
+    "readableApiModules": [
+      "access",
+      "overview",
+      "incidents",
+      "services",
+      "audit"
+    ],
+    "readChecksPassed": 5,
+    "stateChangingMethodsRejected": [
+      {
+        "method": "POST",
+        "status": 403,
+        "problemCode": "READ_ONLY_ACCESS"
+      },
+      {
+        "method": "PUT",
+        "status": 403,
+        "problemCode": "READ_ONLY_ACCESS"
+      },
+      {
+        "method": "PATCH",
+        "status": 403,
+        "problemCode": "READ_ONLY_ACCESS"
+      },
+      {
+        "method": "DELETE",
+        "status": 403,
+        "problemCode": "READ_ONLY_ACCESS"
+      }
+    ],
+    "memberDirectoryStatus": 403,
+    "auditActorEmailRedacted": true,
+    "existingAdministratorRolePreserved": true,
+    "nonMemberOtherDomainStatus": 403,
+    "suspendedMembershipStatus": 403
+  },
+  "totalDurationMs": 26800,
   "temporaryStateCleanup": "scheduled_after_runner_exit",
   "limitations": [
     "This is a local Wrangler and synthetic D1 exercise; it is not evidence that Sites production identity forwarding or hosted D1 initialization succeeded.",
-    "The exercise verifies one unauthorized identity and one configured administrator; it is not a complete identity-provider or access-policy audit.",
+    "The exercise covers one configured administrator, one exact-domain school viewer, one other-domain non-member, and one suspended school membership; it is not a complete identity-provider or access-policy audit.",
+    "Forwarded identity headers are supplied directly to the local Worker. This does not prove that the hosted edge strips spoofed headers or forwards only verified identities.",
     "The per-request query counts cover bootstrap statements only; Cloudflare plan enforcement and production capacity were not measured."
   ]
 }

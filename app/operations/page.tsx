@@ -64,7 +64,7 @@ export default async function OperationsPage() {
           <p className="eyebrow">CONTINUITY OPS</p>
           <h1 id="auth-title">使用組織身分進入事件指揮中心</h1>
           <p>
-            此系統包含服務狀態、事件處置與稽核紀錄。只有經組織驗證並獲授權的人員可以存取。
+            @ntub.edu.tw 校內信箱可使用唯讀模式查閱系統；另行授權的人員依其職責使用相應功能。
           </p>
           {local ? (
             <div className="auth-guidance" role="status">
@@ -75,7 +75,7 @@ export default async function OperationsPage() {
           ) : (
             <Link className="button primary wide" href={chatGPTSignInPath("/operations")}>以組織身分登入</Link>
           )}
-          <small>所有高風險操作會在伺服器端重新驗證權限並留下稽核紀錄。</small>
+          <small>所有寫入操作都會在伺服器端重新驗證權限並留下稽核紀錄。</small>
         </section>
       </main>
     );

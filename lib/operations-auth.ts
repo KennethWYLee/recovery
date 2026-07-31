@@ -50,6 +50,7 @@ export type RejectedMutationAudit = {
 
 const DENIED_MUTATION_CODES = new Set([
   "PERMISSION_DENIED",
+  "READ_ONLY_ACCESS",
   "INCIDENT_ACCESS_DENIED",
   "INCIDENT_RESPONSE_ACCESS_DENIED",
   "INCIDENT_COMMAND_ACCESS_DENIED",
@@ -90,6 +91,11 @@ const FAILED_MUTATION_CODES = new Set([
 const EMAIL_HEADER = "oai-authenticated-user-email";
 const NAME_HEADER = "oai-authenticated-user-full-name";
 const NAME_ENCODING_HEADER = "oai-authenticated-user-full-name-encoding";
+export const NTUB_EMAIL_DOMAIN = "ntub.edu.tw";
+export const READ_ONLY_ORGANIZATION_ROLES = ["observer", "auditor"] as const;
+export type ReadOnlyOrganizationRole = (typeof READ_ONLY_ORGANIZATION_ROLES)[number];
+
+const MUTATING_HTTP_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export function isLocalOperationsRequest(request: Request): boolean {
   const hostname = new URL(request.url).hostname.toLowerCase();
@@ -149,10 +155,37 @@ export function requestIsSameOrigin(request: Request): boolean {
 export function provisioningRoleForIdentity(
   identity: ExternalOperationsIdentity,
   configuredBootstrapEmail: unknown,
+  chooseReadOnlyRole: () => ReadOnlyOrganizationRole = randomReadOnlyOrganizationRole,
 ): OrganizationRole | null {
   if (identity.isLocal && identity.localRole) return identity.localRole;
   const bootstrapEmail = normalizeEmail(configuredBootstrapEmail);
-  return bootstrapEmail && bootstrapEmail === normalizeEmail(identity.email) ? "admin" : null;
+  if (bootstrapEmail && bootstrapEmail === normalizeEmail(identity.email)) return "admin";
+  if (identity.source === "forwarded_identity" && isNtubEmail(identity.email)) return chooseReadOnlyRole();
+  return null;
+}
+
+export function isNtubEmail(value: unknown): boolean {
+  const email = normalizeEmail(value);
+  if (!email) return false;
+  return email.slice(email.lastIndexOf("@") + 1) === NTUB_EMAIL_DOMAIN;
+}
+
+export function randomReadOnlyOrganizationRole(randomValue?: number): ReadOnlyOrganizationRole {
+  const value = randomValue ?? crypto.getRandomValues(new Uint32Array(1))[0];
+  return (Math.trunc(value) & 1) === 0 ? "observer" : "auditor";
+}
+
+export function randomSchoolViewerDisplayName(randomToken = crypto.randomUUID()): string {
+  const code = randomToken.replace(/[^A-Za-z0-9]/gu, "").slice(0, 8).toUpperCase().padEnd(8, "0");
+  return `校內訪客 ${code.slice(0, 4)}-${code.slice(4, 8)}`;
+}
+
+export function isReadOnlyOrganizationRole(role: OrganizationRole | null | undefined): role is ReadOnlyOrganizationRole {
+  return role === "observer" || role === "auditor";
+}
+
+export function organizationRoleCanUseRequestMethod(role: OrganizationRole, method: string): boolean {
+  return !MUTATING_HTTP_METHODS.has(method.toUpperCase()) || !isReadOnlyOrganizationRole(role);
 }
 
 export function actorHasPermission(actor: Pick<OperationsActor, "role">, permission: OperationsPermission): boolean {

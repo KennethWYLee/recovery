@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const forbiddenProductCopy = /Recovery Lab|ACE Next|活動協作|classroom beta|system prompt|\bprompt\b|\brubric\b|vibe coding|AI agent|AGENTS\.md|課堂|課程|教學|老師|教師|學生|專題|初審|複審|評分|配分|滿分|委員|評審|作業|系統手冊|NTUB|北商|資管專題評分/i;
+const forbiddenProductCopy = /Recovery Lab|ACE Next|活動協作|classroom beta|system prompt|\bprompt\b|\brubric\b|vibe coding|AI agent|AGENTS\.md|課堂|課程|教學|老師|教師|學生|專題|初審|複審|評分|配分|滿分|委員|評審|作業|系統手冊|北商|資管專題評分/i;
 const publicTextExtensions = new Set([".css", ".html", ".js", ".json", ".sql", ".txt", ".xml"]);
 
 async function collectPublicTextFiles(directory) {
@@ -32,6 +32,7 @@ test("production bundle exposes the professional operations product and security
   assert.match(worker, /content-security-policy/);
   assert.match(worker, /frame-ancestors 'none'/);
   assert.match(worker, /strict-transport-security/);
+  assert.match(worker, /ntub\.edu\.tw/i);
   assert.doesNotMatch(worker, /FACILITATOR_KEY_NOT_CONFIGURED|trust-competence-draft/);
   assert.doesNotMatch(worker, /Building your site|react-loading-skeleton/);
   assert.doesNotMatch(worker, forbiddenProductCopy);

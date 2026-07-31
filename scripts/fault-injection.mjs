@@ -118,10 +118,10 @@ const mutants = [
     id: "any-verified-identity-bootstraps-admin",
     source: "lib/operations-auth.ts",
     target: "bootstrap administrator identity matching",
-    original: '  return bootstrapEmail && bootstrapEmail === normalizeEmail(identity.email) ? "admin" : null;',
-    replacement: '  return bootstrapEmail ? "admin" : null;',
+    original: '  if (bootstrapEmail && bootstrapEmail === normalizeEmail(identity.email)) return "admin";',
+    replacement: '  if (bootstrapEmail) return "admin";',
     change: "Grant administrator provisioning to any verified identity when a bootstrap email exists.",
-    expectedFailure: /verified identity alone does not authorize account provisioning/,
+    expectedFailure: /only the bootstrap identity or exact NTUB domain can be provisioned/,
   },
   {
     id: "cross-origin-mutation-accepted",

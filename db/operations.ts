@@ -1,6 +1,14 @@
 import { env } from "cloudflare:workers";
 import { canonicalJson, cleanOperationsText, isOrganizationRole, normalizeEmail, type OrganizationRole } from "@/lib/operations-domain";
-import { provisioningRoleForIdentity, type ExternalOperationsIdentity, type OperationsActor, type OperationsEnvironment } from "@/lib/operations-auth";
+import {
+  isNtubEmail,
+  isReadOnlyOrganizationRole,
+  provisioningRoleForIdentity,
+  randomSchoolViewerDisplayName,
+  type ExternalOperationsIdentity,
+  type OperationsActor,
+  type OperationsEnvironment,
+} from "@/lib/operations-auth";
 
 export const OPERATIONS_ORGANIZATION_ID = "ops-singleton";
 
@@ -36,6 +44,7 @@ export async function operationsSha256(value: string): Promise<string> {
 
 export async function loadOrProvisionOperationsActor(
   identity: ExternalOperationsIdentity,
+  requestId: string,
 ): Promise<OperationsActor | null> {
   const db = operationsDb();
   const bindings = operationsEnvironment();
@@ -44,7 +53,7 @@ export async function loadOrProvisionOperationsActor(
   const userId = `usr-${(await operationsSha256(email)).slice(0, 24)}`;
   const membershipId = `mem-${(await operationsSha256(`${OPERATIONS_ORGANIZATION_ID}|${userId}`)).slice(0, 24)}`;
   const now = operationsNow();
-  const bootstrapRole: OrganizationRole | null = provisioningRoleForIdentity(
+  const provisioningRole: OrganizationRole | null = provisioningRoleForIdentity(
     identity,
     bindings.CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL,
   );
@@ -61,32 +70,65 @@ export async function loadOrProvisionOperationsActor(
   })();
 
   const existingMembership = await db.prepare(
-    `SELECT m.id FROM ops_users u
+    `SELECT m.id, m.role, m.status AS membership_status, u.status AS user_status,
+            u.display_name
+     FROM ops_users u
      JOIN ops_memberships m ON m.user_id = u.id
-     WHERE u.id = ? AND u.email = ? AND u.status = 'active'
-       AND m.organization_id = ? AND m.status = 'active'`,
-  ).bind(userId, email, OPERATIONS_ORGANIZATION_ID).first<{ id: string }>();
+     WHERE u.id = ? AND u.email = ? AND m.organization_id = ?`,
+  ).bind(userId, email, OPERATIONS_ORGANIZATION_ID).first<{
+    id: string;
+    role: string;
+    membership_status: string;
+    user_status: string;
+    display_name: string;
+  }>();
 
-  // A verified external identity is authentication evidence, not an invitation.
-  // Only an existing active member or the explicitly configured bootstrap/local
-  // operator may cause user or membership rows to be written.
-  if (!existingMembership && !bootstrapRole) return null;
+  // Suspension is an explicit administrative decision. Domain-based
+  // provisioning must never reactivate either the user or the membership.
+  if (existingMembership && (
+    existingMembership.user_status !== "active" ||
+    existingMembership.membership_status !== "active" ||
+    !isOrganizationRole(existingMembership.role)
+  )) return null;
 
-  const statements: D1PreparedStatement[] = [
-    db.prepare(
-      `UPDATE ops_users SET display_name = ?, last_seen_at = ?
-       WHERE id = ? AND email = ? AND status = 'active'`,
-    ).bind(identity.displayName, now, userId, email),
-  ];
-  if (bootstrapRole) {
-    statements.unshift(
+  // A verified external identity is not generally an invitation. The only
+  // automatic exceptions are the configured bootstrap/local operator and an
+  // exact @ntub.edu.tw identity, which receives a read-only role.
+  if (!existingMembership && !provisioningRole) return null;
+
+  const existingRole = existingMembership && isOrganizationRole(existingMembership.role)
+    ? existingMembership.role
+    : null;
+  const newNtubReadOnlyMember = !existingMembership && isNtubEmail(email) &&
+    isReadOnlyOrganizationRole(provisioningRole) && identity.source === "forwarded_identity";
+  const preserveSchoolViewerName = Boolean(
+    existingMembership && isNtubEmail(email) && isReadOnlyOrganizationRole(existingRole),
+  );
+  const displayName = newNtubReadOnlyMember
+    ? randomSchoolViewerDisplayName()
+    : preserveSchoolViewerName
+      ? existingMembership?.display_name ?? identity.displayName
+      : identity.displayName;
+
+  const statements: D1PreparedStatement[] = [];
+  if (!existingMembership && provisioningRole) {
+    statements.push(
       db.prepare(
         `INSERT OR IGNORE INTO ops_users
           (id, email, display_name, identity_source, status, created_at, last_seen_at)
          VALUES (?, ?, ?, ?, 'active', ?, ?)`,
-      ).bind(userId, email, identity.displayName, identity.source, now, now),
+      ).bind(userId, email, displayName, identity.source, now, now),
     );
   }
+  statements.push(preserveSchoolViewerName || newNtubReadOnlyMember
+    ? db.prepare(
+      `UPDATE ops_users SET last_seen_at = ?
+       WHERE id = ? AND email = ? AND status = 'active'`,
+    ).bind(now, userId, email)
+    : db.prepare(
+      `UPDATE ops_users SET display_name = ?, last_seen_at = ?
+       WHERE id = ? AND email = ? AND status = 'active'`,
+    ).bind(displayName, now, userId, email));
   if (configuredOrganizationName.length >= 2) {
     statements.push(
       db.prepare("UPDATE ops_organizations SET name = ? WHERE id = ? AND name <> ?")
@@ -99,13 +141,43 @@ export async function loadOrProvisionOperationsActor(
         .bind(configuredOrganizationTimeZone, OPERATIONS_ORGANIZATION_ID, configuredOrganizationTimeZone),
     );
   }
-  if (bootstrapRole) {
+  if (!existingMembership && provisioningRole) {
     statements.push(
       db.prepare(
         `INSERT OR IGNORE INTO ops_memberships
           (id, organization_id, user_id, role, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 'active', ?, ?)`,
-      ).bind(membershipId, OPERATIONS_ORGANIZATION_ID, userId, bootstrapRole, now, now),
+         SELECT ?, ?, u.id, ?, 'active', ?, ?
+         FROM ops_users u WHERE u.id = ? AND u.email = ? AND u.status = 'active'`,
+      ).bind(
+        membershipId,
+        OPERATIONS_ORGANIZATION_ID,
+        provisioningRole,
+        now,
+        now,
+        userId,
+        email,
+      ),
+    );
+  }
+  if (newNtubReadOnlyMember) {
+    statements.push(
+      db.prepare(
+        `INSERT OR IGNORE INTO ops_audit_events
+          (id, organization_id, actor_user_id, actor_role, action, resource_type,
+           resource_id, outcome, reason_code, request_id, details_json, occurred_at)
+         SELECT ?, m.organization_id, m.user_id, m.role, 'access.member.auto_provision',
+                'membership', m.id, 'success', NULL, ?, ?, ?
+         FROM ops_memberships m JOIN ops_users u ON u.id = m.user_id
+         WHERE m.id = ? AND m.organization_id = ? AND m.status = 'active'
+           AND m.role IN ('observer', 'auditor') AND u.status = 'active'`,
+      ).bind(
+        `audit-auto-${membershipId.slice(4)}`,
+        requestId,
+        canonicalJson({ accessMode: "read_only", emailDomain: "ntub.edu.tw" }),
+        now,
+        membershipId,
+        OPERATIONS_ORGANIZATION_ID,
+      ),
     );
   }
   await db.batch(statements);

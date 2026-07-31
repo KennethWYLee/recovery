@@ -76,7 +76,7 @@ export async function authenticatedContext(request: Request, requestId: string):
     }
     throw new ApiProblem(503, "DATABASE_NOT_READY", "The operations database is not ready.", "Service unavailable");
   }
-  const actor = await loadOrProvisionOperationsActor(identity);
+  const actor = await loadOrProvisionOperationsActor(identity, requestId);
   if (!actor) {
     throw new ApiProblem(403, "ACTIVE_MEMBERSHIP_REQUIRED", "The authenticated identity does not have an active Continuity Ops membership.", "Access denied");
   }

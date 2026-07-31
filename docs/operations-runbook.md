@@ -135,10 +135,12 @@ RTO／RPO 只能根據已核准目標與實際演練結果報告；本手冊不�
 ## 9. 身分與 bootstrap 設定變更
 
 - Production 來源只信任由平台已驗證並阻擋外部偽造的身分 header。
-- `CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL` 只允許符合平台已驗證 email 的身分建立初始管理員。其他未知身分即使通過平台驗證，也不會自動建立成員資格。
-- 初始管理員成員資格建立並驗證後，應移除 bootstrap 設定；既有啟用中成員仍可登入。系統會拒絕停用或降級最後一位啟用中的管理員。
+- `CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL` 只允許符合平台已驗證 email 的身分建立初始管理員。初始管理員成員資格建立並驗證後，應移除 bootstrap 設定。
+- Ready 狀態下先查既有會員資格。既有角色（包含 `admin`）維持不變；既有 `suspended` 會員維持停用，不得因符合校內網域而重新啟用。
+- 只有正規化後精確屬於 `@ntub.edu.tw`，而且尚無會員資格的已驗證帳號，才在首次登入建立啟用中會員，並隨機指派 `observer` 或 `auditor`。相似網域、子網域及其他網域的未受邀帳號均回傳 403。
+- `observer` 與 `auditor` 只能讀取營運總覽、全部事件、服務、稽核及自己的存取政策。其所有 `POST`、`PUT`、`PATCH` 與 `DELETE` 必須由伺服器拒絕；存取政策不得包含成員目錄，稽核回應不得包含 actor email。`admin` 仍可查看 actor email。
 - 變更 bootstrap email 前，由 security owner 與 release owner 雙人核對目標、變更單、環境與生效時間。
-- 變更後使用已驗證身分執行受控登入及權限負例，並查核稽核記錄。
+- 變更後以既有管理員、既有一般會員、`suspended` 會員、首次登入校內帳號及其他網域未受邀帳號執行受控登入；逐一查核可見資料、所有 HTTP method 負例、角色是否被保留、成員目錄與 actor email 是否被省略，並查核稽核記錄。
 - 本機身分變數不得存在 staging 或 production。
 
 ## 10. 產品營運控制
@@ -197,7 +199,7 @@ RTO／RPO 只能根據已核准目標與實際演練結果報告；本手冊不�
 - 成員資料更新必須使用最新 `expectedVersion`。收到版本衝突時重新讀取成員資料、核對另一位管理者的變更，再決定是否提出新的更新；不得直接增加版本值重送以覆蓋他人決定。
 - 回執有效 24 小時。同組織建立新回執時會有界清除最多 100 筆過期回執，也會清除與本次 key 相符的過期回執。這不是一般事件或稽核資料的保存排程。
 - 平台 request telemetry 為單行 JSON，不含 request body 或原始 URL 資源 ID。應以 request ID 關聯 API 問題回應、平台 Log 與 D1 稽核；不得將 telemetry 當成原始事件證據。
-- 已驗證但沒有啟用中成員資格的未知身分會被拒絕，不會自動受邀。認證失敗不建立不可信 actor 稽核，但 request telemetry 仍應記錄有界 route 與結果。
+- 已驗證且尚無會員資格的身分，只有精確 `@ntub.edu.tw` 網域會建立唯讀會員；其他網域未受邀者回傳 403。既有 `suspended` 會員不走自動建立流程。認證失敗不建立不可信 actor 稽核，但 request telemetry 仍應記錄有界 route 與結果。
 
 ### 10.7 畫面更新與深層連結
 
@@ -220,7 +222,7 @@ RTO／RPO 只能根據已核准目標與實際演練結果報告；本手冊不�
 
 ## 12. 尚未完成的 production 前置工作
 
-服務生命週期歷程已有本機簽章 keyset cursor、API 測試及內部瀏覽器證據。受控本機檢查也已涵蓋 1265×513 桌面與 360×844 手機應用程式視窗、鍵盤與焦點操作、故障後重新套用 migration，以及隔離 D1 邏輯備份與還原；本輪未重跑兩分頁輪詢。這些結果不是遠端或獨立 QA 證據。目前尚無遠端證據支持邊緣 rate limiting、production identity edge 對偽造 header 的阻擋、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、CSP nonce／hash 收斂、遠端備份還原與 rollback 演練、外部目標使用者驗證、獨立安全查核及完整 WCAG 2.2 AA 查核。本機結果不得替代這些證據。
+服務生命週期歷程已有本機簽章 keyset cursor、API 測試及內部瀏覽器證據。受控本機檢查也已涵蓋 1265×513 桌面與 360×844 手機應用程式視窗、鍵盤與焦點操作、故障後重新套用 migration，以及隔離 D1 邏輯備份與還原；本輪未重跑兩分頁輪詢。這些結果不是遠端或獨立 QA 證據。目前尚無遠端證據支持邊緣 rate limiting、production identity edge 對偽造 header 的阻擋、校內帳號首次登入建立、既有會員優先、唯讀 method 限制與欄位最小化政策、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、CSP nonce／hash 收斂、遠端備份還原與 rollback 演練、外部目標使用者驗證、獨立安全查核及完整 WCAG 2.2 AA 查核。本機結果不得替代這些證據。
 
 沒有相應控制、核准的殘餘風險及具名 go/no-go 決定時，不得把本手冊狀態從 `proposed / not exercised` 改為已驗證。
 

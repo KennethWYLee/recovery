@@ -8,7 +8,7 @@
 npm run test:gherkin
 ```
 
-目前結果為 8 個情境、28/28 steps 通過。情境涵蓋選定的授權、證據、服務狀態、未結案篩選與通訊規則。步驟定義與產品原始碼位於同一 repository，因此不是獨立的正確性判準，也不取代 API、D1、瀏覽器、安全或外部使用測試。
+目前結果為 10 個情境、35/35 steps 通過。情境涵蓋選定的授權、校內寫入拒絕、observer 無指派讀取、證據、服務狀態、未結案篩選與通訊規則。步驟定義與產品原始碼位於同一 repository，因此不是獨立的正確性判準，也不取代 API、D1、瀏覽器、安全或外部使用測試。
 
 ### Gherkin 規則故障注入
 
@@ -24,7 +24,7 @@ npm run test:gherkin:fault-injection
 npm run test:quality
 ```
 
-目前 37/37 單元測試通過；整體 line、branch、function coverage 分別為 91.72%、84%、92.66%。複雜度門檻 15 目前有 5 個診斷項目；這些項目用來安排檢視，不是單獨的功能失敗。現有 coverage 輸出無法可靠對回相同函式的複雜度，因此不計算 CRAP，避免產生不可重現的數字。
+目前 39/39 單元測試通過；整體 line、branch、function coverage 分別為 92.05%、85.43%、93.91%。複雜度門檻 15 目前有 5 個診斷項目；這些項目用來安排檢視，不是單獨的功能失敗。現有 coverage 輸出無法可靠對回相同函式的複雜度，因此不計算 CRAP，避免產生不可重現的數字。
 
 ## 風險導向故障注入
 
@@ -60,6 +60,18 @@ npm run test:failure-recovery:local
 ```
 
 工具先以未套 migration 的隔離 D1 啟動相同 Worker，確認 health 回傳 503 與穩定問題代碼；再對同一狀態套用 0001–0004、重啟 Worker，核對 health、access、overview。當次 migration 為 5,277 ms，恢復後 3/3 個核心讀取通過。這不是網路中斷、部分遠端 D1 故障、rollback、RTO 或 RPO。
+
+## Fresh-D1 bootstrap 與校內唯讀存取
+
+```powershell
+npm run test:runtime-bootstrap:local
+```
+
+`CO-VRF-RUNTIME-BOOTSTRAP-001` 綁定 Worker SHA-256 `930199c06dc8297377b5ab937cd5ad4105ff6d17ff6a6c94cd118a874199ac32`。隔離本機 Worker 與合成 D1 完成 3 個 bootstrap 階段，query 數為 39／39／33；最終為 schema `0004`、14 tables／20 indexes／46 triggers、指定 fingerprint、foreign key 違反 0，ready 後 3/3 核心讀取通過。
+
+同次查核以兩個同時的精確校內網域首次請求建立 1 位使用者、1 筆會員與 1 筆自動建立稽核；當次隨機角色為 `auditor`。Access、總覽、事件、服務與稽核 5/5 可讀；`POST`、`PUT`、`PATCH`、`DELETE` 4/4 回傳 403／`READ_ONLY_ACCESS`；成員目錄回傳 403，稽核回應未含 actor email。既有 admin 角色維持不變；其他網域未受邀者與一筆 suspended 會員均回傳 403。
+
+這是直接向本機 Worker 提供 forwarded identity header 的受控檢查，不證明 hosted edge 會阻擋偽造 header，也不證明 Sites／production、所有身分與角色組合、admin actor email 顯示或完整存取政策已驗證。
 
 ## Request telemetry 分析
 

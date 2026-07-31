@@ -289,6 +289,11 @@ label > span:first-child { color: #344054; font-size: 14px; font-weight: 650; }
 .system-health.unavailable > span, .live-dot.idle { background: #98a2b3; box-shadow: none; }
 
 .content { width: 100%; max-width: 1920px; margin: 0 auto; padding: 22px 20px 40px; }
+.read-only-notice { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; padding: 11px 13px; color: #1849a9; background: #eff8ff; border: 1px solid #b2ddff; border-radius: 9px; }
+.read-only-notice > .icon { flex: none; margin-top: 1px; }
+.read-only-notice > div { display: grid; gap: 2px; }
+.read-only-notice strong { color: #175cd3; font-size: 13px; }
+.read-only-notice span { color: #344054; font-size: 12px; line-height: 1.55; }
 .view-stack { display: grid; gap: 16px; }
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; min-height: 62px; }
 .page-header h1 { margin: 0; color: var(--text-strong); font-size: 27px; line-height: 1.18; letter-spacing: -.025em; }

@@ -22,7 +22,7 @@
 - 正式環境的身分來自部署平台已驗證並且無法被公開用戶端偽造的 header。若邊緣層不能保證這項條件，身分模型不成立，不得上線。
 - 本機身分只在 hostname 為 localhost／127.0.0.1，且 `CONTINUITY_OPS_ENVIRONMENT=development` 時允許。
 - `CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL` 是初始管理員識別設定，不是密碼。必須比對平台已驗證 email，不接受請求內容或一般用戶端自報 email。
-- 已驗證但沒有啟用中成員資格、且不符合 bootstrap 設定的身分會被拒絕，系統不會自動為未知身分建立使用者或成員資格。身分無效時不使用不可信 header 建立稽核 actor。
+- 正式環境先查既有會員資格。既有角色（包含 `admin`）優先且不會因登入被改寫；既有使用者或會員若為 `suspended`，維持停用且不走自動建立流程。正規化後的 Email 網域精確為 `ntub.edu.tw` 且尚無會員資格的已驗證帳號，首次登入時建立啟用中會員，並隨機指派 `observer` 或 `auditor`。其他網域未受邀帳號回傳 403。身分無效時不使用不可信 header 建立稽核 actor。
 - D1、Worker 與 identity proxy 均需有明確 owner。組織的外部狀態頁、Email 與訊息平台目前未連接 Continuity Ops，屬於系統外部的營運管道，不納入已實作控制。
 
 ## 3. 主要資產與分級
@@ -38,7 +38,7 @@
 
 ## 4. 行為者與權限意圖
 
-授權分為兩層。組織存取角色為 `admin`、`commander`、`responder`、`observer` 與 `auditor`；單一事件的任務指派為 `incident_commander`、`responder`、`communications_lead`、`service_owner` 與 `observer`。`admin` 是唯一不需要事件指派的全域寫入例外。其他事件寫入必須同時通過組織角色、該事件啟用中指派及兩者相容性的查核；事件角色本身不會擴張組織權限。
+授權分為兩層。組織存取角色為 `admin`、`commander`、`responder`、`observer` 與 `auditor`；單一事件的任務指派為 `incident_commander`、`responder`、`communications_lead`、`service_owner` 與 `observer`。`admin` 是唯一不需要事件指派的全域寫入例外。其他事件寫入必須同時通過組織角色、該事件啟用中指派及兩者相容性的查核；事件角色本身不會擴張組織權限。`observer` 與 `auditor` 可讀營運總覽、全部事件、服務、稽核及自己的存取政策，但不能取得成員目錄；所有 `POST`、`PUT`、`PATCH` 與 `DELETE` 均須由伺服器拒絕。
 
 相容矩陣為：`admin` 可承擔所有事件角色；`commander` 可承擔 `incident_commander`、`communications_lead` 或 `observer`；`responder` 可承擔 `responder`、`communications_lead`、`service_owner` 或 `observer`；`observer` 與 `auditor` 只能承擔 `observer`。通訊草稿允許具合格指派的 `commander` 或 `responder` 編輯；`responder` 只有在具有 `communications_lead` 指派時才能核准及標記發布。即使資料中出現不相容指派，`observer` 與 `auditor` 仍不得寫入。
 
@@ -49,7 +49,7 @@
 | Communications lead | 在組織角色與事件指派同時允許時建立及編輯通訊草稿；有效的溝通負責人指派也可核准及標記發布 | 把系統內 `published` 當成外部送達、改變技術處置、事件狀態或授權 |
 | Service owner | 在組織角色為 `responder` 且被指派至事件時參與調查與處置 | 因事件角色而取得服務目錄寫入權限 |
 | Service catalog maintainer | `admin` 或 `commander` 依 `service:write` 維護服務、SLO、owner、Runbook 連結與生命週期 | 淘汰仍有未結案事件的服務或變更既有 slug |
-| Auditor | 只讀查看服務、事件與稽核紀錄 | 執行營運寫入、變更權限、清除證據或使用尚不存在的匯出 API |
+| Observer／Auditor | 只讀查看營運總覽、全部事件、服務、稽核紀錄及自己的存取政策 | 執行營運寫入、查看成員目錄、查看 actor email、變更權限、清除證據或使用尚不存在的匯出 API |
 | Platform administrator | 管理部署、身分整合與資料庫 | 未留下變更紀錄的臨時擴權 |
 
 介面上隱藏或停用控制不是授權。API 必須依已驗證使用者、組織、資源、事件角色、目前狀態與請求版本重新判斷。
@@ -78,7 +78,9 @@ flowchart LR
 |---|---|---|
 | 偽造身分 header | 邊緣層剝除外部同名 header；Worker 只信任核准來源 | 需遠端設定與負例證據；目前不宣稱已部署 |
 | 本機身分誤用於遠端 | 同時檢查 environment 與 localhost；staging／production 不定義 local operator | 需單元、API 與部署設定負例 |
-| 水平／垂直越權 | 每個資源伺服器端查核組織角色、啟用中成員資格與事件指派；`admin`、`commander`、`auditor` 的事件讀取範圍依既定角色政策較廣 | 已有授權負例，但仍需遠端完整權限矩陣與全組合查核；服務目錄寫入目前不是 owner-scoped |
+| 水平／垂直越權 | 每個資源伺服器端查核組織角色、啟用中成員資格與事件指派；`observer` 與 `auditor` 可讀全部事件，但伺服器拒絕其所有非 `GET` 請求 | 單元、Gherkin 與隔離本機 Worker／D1 的受控驗證已通過；仍需在正式身分邊界以實際第二個 NTUB 帳號查核。服務目錄寫入目前不是 owner-scoped |
+| Email 網域判定錯誤或自動建立覆蓋既有會員 | 僅接受正規化後網域精確為 `ntub.edu.tw` 的有效 Email；先查既有會員，既有使用者或會員的 `suspended` 狀態不自動恢復，其他網域未受邀者回傳 403 | 單元與隔離本機 Worker／D1 已核對精確網域、並行首次登入、既有 admin、其他網域及一筆 suspended 會員；正式 edge、實際第二個 NTUB 帳號、suspended 使用者與其餘身分組合仍待查核 |
+| 唯讀帳號取得不必要個資 | 校內唯讀帳號的存取政策只回傳本人資料，不回傳成員目錄；稽核頁不顯示 actor email，`admin` 才保留該欄位 | 隔離本機 Worker／D1 已核對成員目錄 403 與唯讀稽核省略 actor email；正式 edge 的實際第二個 NTUB 帳號、admin actor email 與瀏覽器畫面仍待查核 |
 | 重送或競態造成雙重寫入 | Idempotency-Key、request hash、24 小時回執、資料庫唯一性、optimistic version 與同批次寫入 | 已實作相同 payload replay、不同 payload 拒絕及有界過期清理；仍需遠端並行、重送與中途失敗測試 |
 | 分頁 cursor 被竄改或跨服務重用 | 生命週期 cursor 採 HMAC-SHA256 簽章，並將服務 ID 與組織 ID 納入簽章內容；拒絕非正規編碼、錯誤簽章、錯誤範圍及過長輸入 | secret 至少 32 字元且缺漏時 fail closed；真實值只能放在平台 secret，不得進入 repository、Log、遙測或 evidence artifact；輪替會使既有 cursor 失效 |
 | 稽核記錄被修改或與業務結果不一致 | 成功寫入將回執、業務變更、時間軸與稽核納入同一 D1 batch；資料庫 trigger 禁止更新或刪除稽核與時間軸 | 被拒絕的 mutation 在原交易失敗後以 best-effort 另寫稽核；若失敗則只發出結構化錯誤 telemetry，因此需告警與故障注入驗證 |
@@ -129,7 +131,9 @@ Worker 目前在 source 中為應用回應設定：
 - success／denied／failure、穩定 reason code 與伺服器時間；
 - 不含 cookie、token、authorization header 或 request body 的有界 details metadata。
 
-每個 API 回應另以單行 JSON 發出 request telemetry，欄位為固定 event name、request ID、無使用者資源識別碼的 route template、HTTP method／status、problem code、latency、API version、schema version 與 deployment version。未知或尚未取得成員資格的身分也只留下這類無 actor 原文的 request telemetry，不使用未驗證 header 建立稽核 actor。若 `CONTINUITY_OPS_DEPLOYMENT_VERSION` 未設定，`deploymentVersion` 會是 `unversioned`；staging 與 production 應將它列為發布停止條件。
+稽核資料在資料層保留可歸責 actor；對 `observer` 與 `auditor` 的稽核回應及畫面不提供 actor email，`admin` 仍可查看。存取政策對唯讀角色只回傳本人政策，不提供成員目錄。這些欄位限制必須在伺服器端投影，不能只靠前端隱藏。
+
+每個 API 回應另以單行 JSON 發出 request telemetry，欄位為固定 event name、request ID、無使用者資源識別碼的 route template、HTTP method／status、problem code、latency、API version、schema version 與 deployment version。無效身分或被政策拒絕的未受邀身分只留下這類無 actor 原文的 request telemetry，不使用未驗證 header 建立稽核 actor。若 `CONTINUITY_OPS_DEPLOYMENT_VERSION` 未設定，`deploymentVersion` 會是 `unversioned`；staging 與 production 應將它列為發布停止條件。
 
 拒絕的越權事件、系統失敗與使用者操作失敗必須分開統計。受控測試、staging 與 production 也必須分開，不得以合併指標掩蓋實際使用者影響。
 

@@ -31,14 +31,14 @@
 - 子專案已有本機建置與測試指令；`demo-recovery-lab/.github/workflows/ci.yml` 只是未來拆成獨立 repository 時可採用的 workflow 定義。
 - 本系統以獨立 repository 發布，workflow 位於 Git root；只有能對回 source commit 的成功 run ID 與 artifact digest，才構成 `verified_ci` 證據。
 - 是否通過必須以當次的 commit、CI run、artifact digest 與實際輸出判定，不可使用舊報告代替。
-- 最終受驗 Worker SHA-256 為 `e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd`。本機已有 71/71 API、12/12 agent 設計黑箱、590/590 短時唯讀負載、815/815 telemetry（54 筆受控 4xx、0 筆 5xx；安全負向檢查對應 44/44）、瀏覽器／Axe 選定規則、資料庫未就緒後恢復及 D1 logical export/import 的限定結果。
-- Gherkin 的 8 個情境、28/28 steps 已通過；另有 6/6 個手工設計規則故障被對應情境抓到。後者只涵蓋六項選定風險，不是完整 mutation campaign、所有需求或獨立人類 QA。
+- 既有完整 API、agent 黑箱、短時負載、telemetry、瀏覽器與資料庫復原證據綁定 Worker SHA-256 `e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd`。新的校內唯讀 runtime-bootstrap 證據另綁定 SHA-256 `930199c06dc8297377b5ab937cd5ad4105ff6d17ff6a6c94cd118a874199ac32`；兩組 artifact 證據不得混用。
+- Gherkin 的 10 個情境、35/35 steps 已通過；另有 6/6 個手工設計規則故障被對應情境抓到。後者只涵蓋六項選定風險，不是完整 mutation campaign、所有需求或獨立人類 QA。
 - clean-room 已對 Git 判定無變更且不含 ignored input 的 97 個來源檔執行 18 個命令，均 exit 0，API 71/71；manifest 已盤點 15/15 份預期證據。這仍是本機複本，不是獨立 remote clone 或 CI；vinext digest 也不能證明 bit-for-bit 可重現。本機合成 D1／身分不涵蓋 hosted identity、外部服務或外部使用者。
 - 目前不宣稱已部署、已完成正式獨立人類 QA、獨立資安查核、完整 WCAG 2.2 AA、遠端還原、RTO／RPO、production 容量或外部使用驗證。
 
-## 目前實作事實
+## 目前實作事實與新契約
 
-下表只記錄可對回 source 與 migration 的 `implemented` 狀態；是否已通過本機、CI、staging 或外部驗證，仍須依受驗版本另行判定。
+下表記錄可對回 source 與 migration 的行為；每項是否通過本機、CI、staging 或外部驗證，仍須依受驗版本另行判定。新的身分政策已有範圍受限的隔離本機 Worker／D1 結果，但不等於 hosted identity edge 或 production 已驗證。
 
 | 範圍 | 可對回的目前行為 | 不代表什麼 |
 |---|---|---|
@@ -48,7 +48,7 @@
 | 事後檢討 | 僅在 resolved／closed 支援 draft、completed、optimistic version；重新開啟會把 completed 退回 draft 並留下紀錄 | 不代表根因已由獨立人員確認 |
 | 服務生命週期 | active／deprecated、不可變 slug、版本控制；有未結案事件時不得淘汰；2.2.0 介面要求專用確認與 8–1000 字原因，API 要求 `lifecycleConfirmed: true`，D1 保存操作者、request ID、時間及不可更新／刪除的逐次歷程；本機桌面與窄螢幕流程已核對 | 不代表真實裝置、遠端 API 或正式獨立 QA 已驗證，也不代表已接入服務遙測或 owner-scoped authorization；舊淘汰資料不補造理由 |
 | 事件指派 | active／revoked 軟撤銷；最後一位事件指揮官需在同一批次完成合格接任 | 不代表值班排程或外部通知已整合 |
-| 身分與權限 | 未知身分不自動建成員；最後一位啟用中管理員與未完成指揮交接受到 guard 保護 | 不代表 production identity edge 已驗證能阻擋偽造 header |
+| 身分與權限 | `source_confirmed`；`CO-VRF-RUNTIME-BOOTSTRAP-001` 為 `verified_local_controlled`：既有會員優先；一個精確校內網域帳號以兩個同時首次請求建立 1 位使用者、1 筆會員與 1 筆自動建立稽核，隨機角色在當次為 `auditor`；5/5 讀取模組成功，4/4 狀態變更 method 回傳 403／`READ_ONLY_ACCESS`，成員目錄回傳 403，稽核未回傳 actor email；既有 admin 角色保留、其他網域未受邀者與一筆 suspended 會員均回傳 403 | 只驗證直接提供 forwarded header 的隔離本機 Worker 與合成 D1；正式 hosted edge 仍須以實際第二個 NTUB 帳號驗證，admin actor email 亦待查核 |
 | 冪等 | 回執保存 24 小時，相同 payload replay、不同 payload 拒絕，後續寫入執行每批最多 100 筆的過期清理 | 不代表所有遠端競態與中途失敗已驗證 |
 | 遙測 | API 發出有界 route template、request ID、狀態、問題代碼、延遲及 API／schema／deployment version 的 JSON telemetry；服務遙測缺漏時回傳 unknown／unavailable／null | 不代表已接 SIEM、告警或 production 服務健康資料 |
 | 畫面更新與導覽 | 畫面可見且沒有寫入進行時，選取事件明細、時間軸與通訊每 8 秒輪詢，總覽每 30 秒輪詢；`view`、`incident`、`tab` 可還原畫面位置與前進、後退 | 不代表即時推播、外部通訊送達或 URL 可繞過伺服器授權 |
@@ -57,7 +57,7 @@
 
 `CONTINUITY_OPS_DEPLOYMENT_VERSION` 未設定時，結構化 request telemetry 會標示 `unversioned`。本機可使用明確開發標記；staging／production 必須將 `unversioned` 視為發布停止條件。
 
-目前仍未完成邊緣 rate limiting、服務生命週期歷程以外清單的 cursor pagination、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、真實裝置／跨瀏覽器／遠端／正式獨立 QA、遠端備份還原與 rollback 演練、production identity edge 負例、CSP nonce／hash 收斂、資料匯出 API、production 容量／壓力／soak／SLO、外部使用驗證、正式 SAST／DAST／滲透測試及獨立安全／完整可及性查核。其他清單的固定筆數上限、輪詢、source 內已有控制、本機短時負載或本機受控還原不能改寫為上述能力已完成。
+目前仍未完成邊緣 rate limiting、服務生命週期歷程以外清單的 cursor pagination、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、真實裝置／跨瀏覽器／遠端／正式獨立 QA、遠端備份還原與 rollback 演練、production identity edge 防偽及校內唯讀政策的遠端查核、CSP nonce／hash 收斂、資料匯出 API、production 容量／壓力／soak／SLO、外部使用驗證、正式 SAST／DAST／滲透測試及獨立安全／完整可及性查核。其他清單的固定筆數上限、輪詢、source 內已有控制、本機短時負載或本機受控還原不能改寫為上述能力已完成。
 
 ## 設計參考
 

@@ -39,9 +39,9 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 
 需要執行中的 Worker 或隔離狀態的 `test:blackbox:local`、`test:load:local`、`test:failure-recovery:local` 與 `test:clean-room` 應另外保存環境、artifact digest、完整分母與限制。四項均有本機結果；clean-room 對 Git 判定無變更且不含 ignored input 的 97 個來源檔執行 18 個命令，均 exit 0，API 71/71。這仍是本機複本，不能改寫成獨立 remote clone、CI、bit-for-bit 可重現或正式發布證據。
 
-目前 6/6 個手工設計的 Gherkin 規則故障被對應情境抓到，0 survived。這只檢查目前 8 個情境中的六項風險，不是完整 mutation campaign 或 mutation score，也不代表所有需求或正式獨立人類 QA。
+目前 6/6 個手工設計的 Gherkin 規則故障被對應情境抓到，0 survived。這只檢查目前 10 個情境中的六項風險，不是完整 mutation campaign 或 mutation score，也不代表所有需求或正式獨立人類 QA。
 
-## 3. 目前實作契約的必要反例
+## 3. 候選版契約的必要反例
 
 候選版至少要以 API 與資料庫層級檢查下列行為；前端按鈕被停用不能代替伺服器證據：
 
@@ -55,7 +55,8 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 - service slug 不可變；active／deprecated 更新使用 expectedVersion；仍有未結案事件時不得 deprecated；每次淘汰或重新啟用都要有專用確認、8–1000 字非空白原因、合格的啟用中 admin／commander、request ID 與 UTC 時間，並新增不可更新或刪除的生命週期歷程。只有換行、歸位、tab、vertical tab、form feed 或 NBSP 的原因必須被拒絕；重新啟用保留既有歷史，舊淘汰資料不得補造不存在的理由。`service_owner` 事件角色不得因此取得 `service:write`。
 - 指派撤銷保留 revoked row、ended time 與 actor；最後一位事件指揮官沒有接任者時被拒絕；有合格接任者時，新指派、原指派撤銷、timeline 與 audit 必須同批完成。
 - 最後一位啟用中 admin 不得被停用或降級；仍為未結案事件唯一指揮官的成員，不得在交接前失去合格組織角色。成員更新必須使用 `expectedVersion`；兩位管理者並行變更時，過期版本必須得到 409 而非覆寫新狀態。
-- 未知或未受邀的已驗證身分不得自動建立成員資格；無效身分不得使用未驗證 header 建立 actor 稽核。
+- 正式環境必須先採用既有會員，不得改寫既有角色；既有 `suspended` 會員不得自動恢復。只有正規化後精確 `@ntub.edu.tw` 且尚無會員資格的已驗證帳號，才在首次登入建立啟用中會員，並隨機指派 `observer` 或 `auditor`。大小寫、相似網域、子網域、其他網域、重複與並行首次登入都要有正反例；其他網域未受邀者回傳 403。
+- `observer` 與 `auditor` 必須可讀營運總覽、全部事件、服務、稽核及自己的存取政策；所有 `POST`、`PUT`、`PATCH` 與 `DELETE` 均回傳 403。存取政策不得回傳成員目錄，稽核回應不得回傳 actor email；`admin` 應可查看 actor email。無效身分不得使用未驗證 header 建立 actor 稽核。
 - 每個 mutation 都要求有效 Idempotency-Key。相同 scope／actor／key／payload 重播相同回應；不同 payload 使用相同 key 被拒絕；過期回執不重播，且有界清理不得刪除未過期或其他組織資料。
 - request telemetry 必須是可解析 JSON，使用不含資源 ID 的 route template，且有 request ID、method、status、problem code、latency、API／schema／deployment version。不得出現 request body、token、cookie、authorization header 或使用者提供的自由文字。
 - 沒有服務遙測來源時，service health 必須維持 unknown、unavailable、sample size 0 與 null SLO attainment，不得依零事件推論 operational。
@@ -70,8 +71,8 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 本機已有 12/12 的 agent 設計黑箱前置查核、71/71 API smoke、590/590 短時唯讀負載及內部瀏覽器流程。這些結果可在進入 staging 前發現問題，但執行者、環境與目的都不符合本節的正式獨立 QA，因此下列要求不變。
 
 1. 從新建立的 staging 環境套用 migration。
-2. 使用平台已驗證身分，執行服務建立／更新／淘汰、事件建立、角色指派／撤銷／交接、調查、處置、工作與完成證據、通訊草稿／核准／標記發布、具欄位約束的驗證證據、三門檻解決、重新開啟及事後檢討草稿／完成。
-3. 驗證未授權角色、他人資源、stale version、重複或錯誤重用 Idempotency-Key、資源關係不合與過長輸入均被伺服器拒絕。
+2. 使用具寫入權限的平台已驗證既有會員，執行服務建立／更新／淘汰、事件建立、角色指派／撤銷／交接、調查、處置、工作與完成證據、通訊草稿／核准／標記發布、具欄位約束的驗證證據、三門檻解決、重新開啟及事後檢討草稿／完成。
+3. 另以首次登入的精確 `@ntub.edu.tw` 帳號核對隨機唯讀角色、全部讀取頁、本人存取政策及稽核資料最小化；驗證其所有 `POST`、`PUT`、`PATCH`、`DELETE`，以及未授權角色、他人資源、stale version、重複或錯誤重用 Idempotency-Key、資源關係不合與過長輸入，均被伺服器拒絕。
 4. 由非原實作者使用事前凍結案例執行主要流程及失敗情境。
 5. 以 known-good 與 known-bad 輸入檢查測試 harness 本身。
 6. 從平台 request telemetry 確認 deployment version 與 artifact 對應且不是 `unversioned`，並驗證未知服務遙測不被顯示為正常。
@@ -84,7 +85,7 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 - 依 [`../security-model.md`](../security-model.md) 的信任邊界與權限矩陣設計負例。
 - 以 OWASP ASVS 5.0.0 的固定版本 requirement ID 建立適用、不適用、已驗證與待驗證清單。
 - 執行依賴審計、秘密掃描、靜態安全分析、授權負例及相稱的獨立安全查核。
-- 在實際 private identity edge 驗證外部請求不能偽造受信任身分 header，未知身分不會自動受邀，最後一位管理員與事件指揮交接 guard 會 fail closed。
+- 在實際 private identity edge 驗證外部請求不能偽造受信任身分 header；既有會員優先且 `suspended` 不復原；只有精確 `@ntub.edu.tw` 的無會員帳號建立唯讀角色；其他網域未受邀者回傳 403；最後一位管理員與事件指揮交接 guard 會 fail closed。
 - 驗證深層連結的查詢參數不接受秘密或權限資訊，無效 view／incident／tab 不會繞過伺服器身分、組織與資源授權。
 - 查核所有高風險操作的介面確認範圍，但仍以 API 權限、狀態、版本與資料庫負例作為必要安全證據。
 - 驗證 Worker 安全標頭在遠端回應生效，並追蹤目前 inline script/style 相容設定改為 CSP nonce／hash 的剩餘工作。
@@ -124,6 +125,6 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 
 ## 9. 尚未完成且不得誤報的項目
 
-目前已有 1265×513 與 360×844 應用程式視窗的內部本機瀏覽器核對，以及 Axe 選定規則掃描；本輪未重跑兩分頁輪詢，也沒有證據支持真實裝置、跨瀏覽器、真實螢幕閱讀器、遠端或正式獨立 QA 已完成。本機 590 次唯讀請求不能支持 production 容量、壓力極限、soak、寫入負載或 SLO。clean-room 的 97 個來源檔／18 個命令與 manifest 15/15 已通過，但仍不支持獨立 remote clone、CI、bit-for-bit 可重現或正式發布。仍沒有證據支持邊緣 rate limiting、服務生命週期歷程以外清單的 cursor pagination、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、production private identity edge 負例、CSP nonce／hash 收斂、遠端備份還原與 rollback 演練、外部目標使用者驗證、資料匯出 API、正式 SAST／DAST／滲透測試、獨立安全查核或完整 WCAG 2.2 AA 查核已完成。
+目前已有 1265×513 與 360×844 應用程式視窗的內部本機瀏覽器核對，以及 Axe 選定規則掃描；本輪未重跑兩分頁輪詢，也沒有證據支持真實裝置、跨瀏覽器、真實螢幕閱讀器、遠端或正式獨立 QA 已完成。本機 590 次唯讀請求不能支持 production 容量、壓力極限、soak、寫入負載或 SLO。校內帳號建立、HTTP method 限制與欄位最小化已有隔離本機 Worker／D1 的受控結果；正式 private identity edge 仍須以實際第二個 NTUB 帳號驗證。仍沒有證據支持邊緣 rate limiting、服務生命週期歷程以外清單的 cursor pagination、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、production private identity edge 負例、CSP nonce／hash 收斂、遠端備份還原與 rollback 演練、外部目標使用者驗證、資料匯出 API、正式 SAST／DAST／滲透測試、獨立安全查核或完整 WCAG 2.2 AA 查核已完成。
 
 服務生命週期歷程已有簽章 keyset cursor；其他清單的固定查詢上限不是 cursor pagination。8 秒與 30 秒輪詢不是即時推播；系統內 published 不是外部送達；source 中的 CSP 與其他安全標頭不是遠端瀏覽器證據；冪等回執的 24 小時有界清理不是一般資料保存工作；內部 smoke、合成資料與自動測試也不能代替外部使用者或獨立查核。若候選版要進入 production，必須依風險完成相應控制與證據，或由具名決定人記錄不可接受而停止發布。

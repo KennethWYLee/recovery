@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-GHERKIN-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T09:59:27.795Z",
+  "generatedAt": "2026-07-31T14:50:55.277Z",
   "evidenceStatus": "verified_local",
   "verificationType": "executable_gherkin_domain_acceptance",
   "result": "passed_with_documented_limits",
@@ -14,29 +14,31 @@
   },
   "summary": {
     "features": 1,
-    "scenarios": 8,
-    "steps": 28,
-    "passedSteps": 28,
+    "scenarios": 10,
+    "steps": 35,
+    "passedSteps": 35,
     "failedSteps": 0
   },
   "inputs": [
     {
       "path": "features/core-reliability.feature",
-      "sha256": "0a0bab5ad039150227bb6c60cf6c873905c96f5fc5121aabdc9fd723bd51bf2f"
+      "sha256": "91e6411f62f620dcd1517aa33a886b6cd25d469225c93fd59cba99df384e0200"
     },
     {
       "path": "features/step_definitions/core-reliability.steps.mjs",
-      "sha256": "a440cebddfd66647ad40b401ecc4a07e5e6affabcf722ea032976d53bf1b9819"
+      "sha256": "e36c8f443eca96cabb1464cae6bbe9984d0db6ace1672b39da43b4999826961e"
     },
     {
       "path": "lib/operations-domain.ts",
-      "sha256": "11febf89dc9a9d062c15a8b7da8c7d5b4f5aff8e18ca940924120f4a5f567886"
+      "sha256": "44ac8e1baac7b4c2dfba2bbeb056dc618493a909a5292283b2f6d179f35f15e9"
     }
   ],
   "scenarioNames": [
     "A responder cannot resolve an incident",
     "An assigned commander can resolve a monitored incident",
     "An observer cannot be assigned operational response duties",
+    "A school viewer cannot change system data",
+    "An observer can review an incident without an assignment",
     "Completed work rejects insecure evidence",
     "Completed work accepts durable HTTPS evidence",
     "A deprecated service cannot receive a new incident",

@@ -27,13 +27,19 @@ import {
   normalizeEmail,
   normalizeOperationsId,
   normalizeSlug,
+  organizationRoleCanReadAllIncidents,
   organizationRoleCanHoldIncidentRole,
   taskStatusHasRequiredEvidence,
   type IncidentRole,
   type OperationsIncidentStatus,
   type OrganizationRole,
 } from "@/lib/operations-domain";
-import { actorHasPermission, rejectedMutationAudit } from "@/lib/operations-auth";
+import {
+  actorHasPermission,
+  actorPermissions,
+  organizationRoleCanUseRequestMethod,
+  rejectedMutationAudit,
+} from "@/lib/operations-auth";
 import {
   assertServiceLifecycleCursorSecret,
   decodeServiceLifecycleCursor,
@@ -91,6 +97,14 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
   if (path.length === 1 && path[0] === "health" && request.method === "GET") return health(requestId);
   const context = await authenticatedContext(request, requestId);
   try {
+    if (!organizationRoleCanUseRequestMethod(context.actor.role, request.method)) {
+      throw new ApiProblem(
+        403,
+        "READ_ONLY_ACCESS",
+        "This account can view operations data but cannot create, edit, assign, publish, or delete records.",
+        "Access denied",
+      );
+    }
     // Await each handler inside this try block so asynchronous rejections are
     // recorded by the payload-free denied/failure audit path below.
     if (path.length === 1 && path[0] === "access" && request.method === "GET") return await access(context);
@@ -156,19 +170,28 @@ function access(context: OperationsRequestContext): Response {
       role: context.actor.role,
     },
     organization: { id: context.actor.organizationId, name: context.actor.organizationName, timezone: context.actor.organizationTimeZone },
-    permissions: permissionsForActor(context),
+    permissions: [...actorPermissions(context.actor)],
+    policies: [
+      {
+        id: "verified-identity",
+        name: "已驗證身分",
+        description: "登入信箱由平台身分邊界提供；用戶端不能自行指定操作者。",
+        status: "enforced",
+      },
+      {
+        id: "ntub-read-only-access",
+        name: "校內唯讀存取",
+        description: "未另行授權的 @ntub.edu.tw 帳號可查閱系統，但不能建立、修改、指派、發布或刪除資料。",
+        status: "enforced",
+      },
+      {
+        id: "server-side-authorization",
+        name: "伺服器端授權",
+        description: "所有寫入要求都會在伺服器重新檢查身分、角色與資料狀態。",
+        status: "enforced",
+      },
+    ],
   }, context.requestId);
-}
-
-function permissionsForActor(context: OperationsRequestContext): string[] {
-  const byRole: Record<string, string[]> = {
-    admin: ["access:manage", "service:read", "service:write", "incident:read", "incident:create", "incident:assign", "incident:respond", "incident:command", "review:write", "audit:read"],
-    commander: ["service:read", "service:write", "incident:read", "incident:create", "incident:assign", "incident:respond", "incident:command", "review:write"],
-    responder: ["service:read", "incident:read", "incident:respond"],
-    observer: ["service:read", "incident:read"],
-    auditor: ["service:read", "incident:read", "audit:read"],
-  };
-  return byRole[context.actor.role] ?? [];
 }
 
 async function accessMembers(context: OperationsRequestContext, rest: string[]): Promise<Response> {
@@ -346,7 +369,7 @@ async function accessMembers(context: OperationsRequestContext, rest: string[]):
 
 async function overview(context: OperationsRequestContext): Promise<Response> {
   requirePermission(context, "incident:read");
-  const unrestricted = ["admin", "commander", "auditor"].includes(context.actor.role);
+  const unrestricted = organizationRoleCanReadAllIncidents(context.actor.role);
   const accessClause = unrestricted ? "" : "AND EXISTS (SELECT 1 FROM ops_incident_assignments a WHERE a.incident_id = i.id AND a.user_id = ? AND a.status = 'active')";
   const incidentBindings: unknown[] = [context.actor.organizationId];
   if (!unrestricted) incidentBindings.push(context.actor.id);
@@ -815,7 +838,7 @@ async function incidents(context: OperationsRequestContext, rest: string[]): Pro
 }
 
 async function listIncidents(context: OperationsRequestContext): Promise<Response> {
-  const unrestricted = ["admin", "commander", "auditor"].includes(context.actor.role);
+  const unrestricted = organizationRoleCanReadAllIncidents(context.actor.role);
   const sql = `SELECT i.*, s.name AS service_name,
                       ${QUALIFIED_INCIDENT_COMMANDER_PROJECTION_SQL}
                FROM ops_incidents i JOIN ops_services s ON s.id = i.service_id
@@ -1912,6 +1935,7 @@ async function incidentAssignments(context: OperationsRequestContext, incidentId
 
 async function audit(context: OperationsRequestContext): Promise<Response> {
   requirePermission(context, "audit:read");
+  const canViewActorEmail = actorHasPermission(context.actor, "access:manage");
   const url = new URL(context.request.url);
   const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") ?? 100) || 100));
   const rows = await context.db.prepare(
@@ -1923,7 +1947,7 @@ async function audit(context: OperationsRequestContext): Promise<Response> {
     id: row.id,
     actorUserId: row.actor_user_id,
     actorName: row.actor_name,
-    actorEmail: row.actor_email,
+    ...(canViewActorEmail ? { actorEmail: row.actor_email } : {}),
     actorRole: row.actor_role,
     action: row.action,
     resourceType: row.resource_type,

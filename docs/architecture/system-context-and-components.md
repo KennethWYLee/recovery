@@ -1,7 +1,7 @@
 # Continuity Ops 系統環境、元件與責任邊界
 
 文件版本：`1.0.0`  
-狀態：依目前原始碼、本機 migration 與受控 runtime-bootstrap 結果整理。正式託管身分、Log 管線及生產 D1 尚未驗證。
+狀態：依目前原始碼、本機 migration 與受控 runtime-bootstrap 結果整理。新的校內帳號建立與唯讀資料最小化為 `source_confirmed`，並有範圍受限的 `verified_local_controlled` 結果；正式託管身分、Log 管線及生產 D1 尚未驗證。
 
 ## 1. 系統環境
 
@@ -60,7 +60,7 @@ flowchart LR
 | 操作介面 | 顯示總覽、事件、服務、稽核與存取管理；依權限顯示操作；保存網址狀態；提供確認與錯誤回饋。 | 不能成為授權或資料不變條件的唯一保護。 | `app/operations/OperationsApp.tsx`、`app/globals.css` |
 | Worker 邊緣入口 | 將請求交給應用程式、處理圖片、補上 CSP、frame、MIME、referrer、permissions 等回應標頭。 | 不在原始碼中驗證託管身分 header 的上游防偽設定。 | `worker/index.ts` |
 | API 路由 | 產生 request ID、統一 dispatch、回傳 JSON 或 RFC 7807 問題、發出不含 payload 的 request telemetry。 | telemetry 發出不代表已被收集、保存或告警。 | `app/api/v1/[...path]/route.ts`、`app/api/v1/_shared.ts` |
-| 身分與權限 | 區分本機明確設定與正式 forwarded identity；查詢會員；檢查組織權限及事件角色。 | 已驗證身分不等於自動受邀；前端顯示不等於授權。 | `lib/operations-auth.ts`、`db/operations.ts`、`lib/operations-domain.ts` |
+| 身分與權限 | 區分本機明確設定與正式 forwarded identity；先採用既有會員；為正規化後網域精確為 `ntub.edu.tw` 的無會員帳號建立隨機唯讀角色；檢查組織權限、事件角色、HTTP method 與角色別回應欄位。 | 平台已驗證不等於取得寫入權限；前端顯示不等於授權；不得恢復既有 `suspended` 使用者或會員。 | `lib/operations-auth.ts`、`db/operations.ts`、`lib/operations-domain.ts` |
 | Schema readiness | 核對 durable phase、schema version、plan digest、最終 inventory 與 canonical fingerprint；未 ready 時阻止核心 API 使用部分結構。 | 不把表格存在或 batch 成功單獨解讀為 production ready。 | `db/operations-bootstrap-core.ts`、`app/api/v1/_shared.ts` |
 | Fresh-D1 runtime bootstrap | 僅讓已驗證且 Email 符合部署設定的管理員，以三個可重試階段建立全新託管 D1；每次 bootstrap 查詢少於 40。 | 不接受一般用戶端自報身分，不自動修補不相符結構，也不取代既有資料庫的 0001–0004 upgrade／restore。 | `db/operations-bootstrap.ts`、`db/operations-bootstrap-core.ts`、`tests/operations-bootstrap.test.mjs`、`scripts/run-local-runtime-bootstrap.mjs` |
 | API handlers | 驗證輸入、查詢資源關係、套用領域規則、組成 D1 batch、建立時間軸與稽核。 | 不直接傳送外部狀態頁、Email 或訊息。 | `app/api/v1/_handlers.ts`、`app/api/v1/_data.ts` |
@@ -74,14 +74,15 @@ flowchart LR
 
 兩次先前部署都在 Sites 處理 SQL migration 時回傳 `incomplete input`。現有本機結果排除 migration 整體語法與已標示 statement boundary 的錯誤；「部署端 SQL 切割方式不相容」仍是沒有平台 trace 的原因推論，不是已確認的平台實作事實。
 
-每份本機驗證只說明其明確綁定的 artifact、Log 或 migration 與本機 D1 行為。現有本機 API／安全 smoke 綁定 2.2.0 Worker SHA-256 `e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd`；71/71 項 API 檢查在隔離本機 D1 通過，同一 digest 也有 1265×513 與 360×844 應用程式視窗的內部瀏覽器核對。本輪瀏覽器查核未重跑兩分頁輪詢。正式部署還必須另行確認：identity edge、HTTPS domain、環境變數、deployment version、遠端 migration、Log 收集、告警、備份、容量與 rollback owner。
+每份本機驗證只說明其明確綁定的 artifact、Log 或 migration 與本機 D1 行為。既有 71/71 API 及瀏覽器證據綁定 Worker SHA-256 `e725a8a8c1cb9b0b41a1b478e6ad0ca6b11c515d673e051ced27c6c92429cedd`；新的 CO-VRF-RUNTIME-BOOTSTRAP-001 綁定 `930199c06dc8297377b5ab937cd5ad4105ff6d17ff6a6c94cd118a874199ac32`，在隔離本機 Worker／D1 核對並行校內首次登入、5 個讀取模組、4 個 method 拒絕、成員目錄拒絕、audit actor email 省略、既有 admin、其他網域及一筆 suspended 會員。兩組證據不得混用。正式部署仍須另行確認 identity edge 防偽、所有身分／角色組合、admin actor email、HTTPS domain、環境變數、deployment version、遠端 migration、Log 收集、告警、備份、容量與 rollback owner。
 
 ## 4. 信任與資料邊界
 
 | 邊界 | 進入資料 | 必要檢查 | 失敗時 |
 |---|---|---|---|
 | 瀏覽器到 Worker | URL、method、Origin、JSON、Idempotency-Key | 同源 mutation；串流累計實際 bytes、不信任 `Content-Length` 的 32 KiB 上限；有效 UTF-8 JSON object；欄位長度、URL／時間格式 | 超限時取消讀取並回傳 413；其他不合法輸入回傳 problem JSON 與 request ID，不執行寫入。 |
-| 身分邊界到應用程式 | 已驗證 Email 與顯示名稱 | 正式來源、Email 正規化、啟用使用者、啟用會員與啟用組織 | 401 或 403；未知身分不自動建立會員。 |
+| 身分邊界到應用程式 | 已驗證 Email 與顯示名稱 | 正式來源、Email 正規化；既有會員優先且使用者／會員 `suspended` 不復原；無會員時只接受網域精確為 `ntub.edu.tw` 並隨機建立 `observer`／`auditor` | 無身分回傳 401；其他網域未受邀者、相似網域與子網域回傳 403；不得改寫既有角色。 |
+| 角色到唯讀回應 | `observer`／`auditor`、HTTP method、要求的資料範圍 | 只允許 `GET`；事件讀取涵蓋全部事件；存取政策只回傳本人；稽核省略 actor email | 所有 `POST`、`PUT`、`PATCH`、`DELETE` 回傳 403；不得回傳成員目錄或 actor email。`admin` 保留 actor email。 |
 | 已驗證身分到 fresh-D1 bootstrap | 已驗證 Email、bootstrap Email 設定、durable phase | 兩個正規化 Email 完全相同；phase／version／digest／inventory 相符；每請求只推進一個受控階段 | 不相符身分不建立 schema；初始化中回傳 503；partial、digest 或 fingerprint 不相符時停止。 |
 | Schema readiness 到核心 API | durable ready marker、最終 inventory 與 fingerprint | 三階段完成且 14／20／46 inventory 與 fingerprint 相符 | 回傳 503，不讓 handler 使用部分完成的 schema。 |
 | 組織角色到事件角色 | 組織權限、事件指派 | 兩層授權同時成立；高風險角色另外限制 | 403 並在可信 actor 已建立時留下不含 payload 的拒絕稽核。 |

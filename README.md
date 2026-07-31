@@ -28,7 +28,7 @@ Continuity Ops 是單一組織部署的服務事件指揮與復原工作區。�
 ## 目前已實作的營運控制
 
 - 服務目錄支援建立、版本化更新、`active`／`deprecated` 生命週期、不可變 slug、SLO 目標、啟用中成員 owner、負責團隊及 HTTPS Runbook 連結。每次生命週期變更必須留下 8–1000 字原因、合格操作者與時間；仍有未結案事件時，資料庫會拒絕淘汰服務。生命週期歷程使用 HMAC-SHA256 簽章、綁定服務與組織的 opaque keyset cursor；缺少至少 32 字元的簽章 secret 時拒絕提供歷程頁面。升級前已淘汰的舊資料保留「未記錄原因」狀態，系統不補寫不存在的歷史理由。
-- 組織角色與事件指派分開判定，並使用 API 與 D1 共用語意的相容矩陣。`admin` 是唯一不需要事件指派的全域寫入例外；`observer` 與 `auditor` 不會因事件指派取得寫入權限。`service_owner` 是事件內的應變角色，不會授予服務目錄寫入權限；目前只有 `admin` 與 `commander` 具有 `service:write`。
+- 組織角色與事件指派分開判定，並使用 API 與 D1 共用語意的相容矩陣。`admin` 是唯一不需要事件指派的全域寫入例外；`observer` 與 `auditor` 可唯讀查看營運總覽、全部事件、服務、稽核及自己的存取政策，不會因事件指派取得寫入權限。`service_owner` 是事件內的應變角色，不會授予服務目錄寫入權限；目前只有 `admin` 與 `commander` 具有 `service:write`。
 - 事件指派以 `active`／`revoked` 保存，不實體刪除。撤銷最後一位事件指揮官時必須指定具資格的接任者，交接與撤銷在同一資料庫批次完成。
 - 事件通訊以 `draft`、`reviewed`、`published` 保存。只有草稿可以編輯，已核准內容不得改寫，已發布紀錄不可更新或刪除。利害關係人與公開通訊在核准前，必須安排晚於核准時間的下一次更新，或從第一個字元使用大小寫不拘的獨立 `[FINAL]` 標記；標記後必須是空白或訊息結束。發布時會再次確認排程仍在未來，過期時必須建立並重新核准新草稿。
 - 介面已對事件狀態變更、服務淘汰或重新啟用、角色撤銷與交接、工作完成或取消、成員降權或停用，以及通訊核准與標記發布提供相稱的確認、風險提示或理由欄位。介面確認不能取代 API 權限、狀態、版本與資料庫限制。
@@ -38,7 +38,7 @@ Continuity Ops 是單一組織部署的服務事件指揮與復原工作區。�
 - 事後檢討支援 `draft` 與 `completed`，且只能在事件已解決或結案後儲存。事件重新開啟時，已完成的檢討會回到草稿並增加版本，同時留下時間軸與稽核紀錄。
 - 所有目前的寫入端點要求 Idempotency-Key；相同 payload 可取得已保存回應，相同 key 搭配不同 payload 會被拒絕。回執保存 24 小時，建立新回執時執行有界的過期清理。
 - 未接入服務遙測時，服務狀態明確呈現為未知，SLO attainment 為無資料；系統不以零事件推論服務正常。
-- 未知或未受邀的已驗證身分不會自動建立成員資格；最後一位啟用中的管理員也不能被停用或降級。成員更新使用 `expectedVersion`，過期版本會被拒絕，避免管理者同時編輯時靜默覆寫。
+- 正式環境先採用既有會員資格，不會改變既有角色；既有使用者或會員若為 `suspended`，也不會因再次登入而恢復。正規化後的 Email 網域精確為 `ntub.edu.tw`、已由平台驗證且尚無會員資格的帳號，首次登入時會建立啟用中會員，並隨機指派 `observer` 或 `auditor`。兩者只能讀取營運總覽、全部事件、服務、稽核及自己的存取政策；伺服器拒絕所有 `POST`、`PUT`、`PATCH` 與 `DELETE`，不提供成員目錄，稽核頁不顯示 actor email。`admin` 仍可查看 actor email。其他網域的未受邀帳號仍回傳 403。最後一位啟用中的管理員不能被停用或降級；成員更新使用 `expectedVersion`，過期版本會被拒絕，避免管理者同時編輯時靜默覆寫。
 - API request telemetry 使用不含 request body 與原始資源 ID 的 JSON 結構，包含 request ID、route template、狀態、問題代碼、延遲、API／schema／部署版號。資料匯出 API 尚未實作。
 - JSON request body 以串流累計實際 bytes，不能只依賴可能缺漏或不正確的 `Content-Length`。超過 32 KiB 時會取消讀取並回傳 413；無效 UTF-8、JSON 或非 object 根節點會被明確拒絕。這是應用程式層限制，不代表已驗證託管平台的 edge 限制。
 - 畫面可見且沒有寫入進行時，選取事件的明細、時間軸與通訊每 8 秒重新讀取；總覽每 30 秒重新讀取，頁面重新可見時會立即更新事件明細。這是輪詢，不是即時推播，也不能證明外部通訊已送達。
@@ -128,7 +128,7 @@ node scripts/run-local-d1-restore-drill.mjs
 1. 以不可變的 source commit 執行 CI。
 2. 從正式網址查核 canonical 與社群預覽 metadata 使用正確的 HTTPS host。
 3. 對全新託管 D1 核對 ready 前 503、三個 bootstrap 階段、每次少於 50 queries、最終 inventory／fingerprint，以及不相符身分不能初始化；既有資料庫則走 0001–0004 migration 與還原程序。
-4. 完成平台已驗證身分轉送的信任設定，將 bootstrap administrator email 視為受控部署設定，並在第一位管理員建立後移除。
+4. 完成平台已驗證身分轉送的信任設定，將 bootstrap administrator email 視為受控部署設定，並在第一位管理員建立後移除。從正式邊界核對既有會員優先、`suspended` 不復原、精確 `@ntub.edu.tw` 首次登入建立唯讀角色、其他網域未受邀者回傳 403，以及校內唯讀使用者不能取得成員目錄或 actor email。
 5. 在 ready 後執行 health、API、授權負例與主要流程測試。
 6. 設定不可變的 `CONTINUITY_OPS_DEPLOYMENT_VERSION`，並從結構化 request telemetry 確認不再出現 `unversioned`。
 7. 以平台 secret 設定至少 32 字元的 `CONTINUITY_OPS_CURSOR_HMAC_SECRET`，並確認未出現在 Log、遙測或 evidence artifact。
@@ -137,7 +137,7 @@ node scripts/run-local-d1-restore-drill.mjs
 
 本機證據不能代替上述遠端查核。詳細步驟與停止條件見 [作業手冊](docs/operations-runbook.md)。
 
-尚未完成的 production 能力包括邊緣 rate limiting、生命週期歷程以外清單的 cursor pagination、附件與匯出、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、高風險確認流程的遠端瀏覽器驗證、遠端身分邊緣負例、CSP nonce／hash 收斂、production 備份還原演練、外部目標使用者驗證及獨立安全與可及性查核。固定筆數上限與目前的 CSP `unsafe-inline` 相容設定不能替代這些工作。
+尚未完成的 production 能力包括邊緣 rate limiting、生命週期歷程以外清單的 cursor pagination、附件與匯出、真實服務健康遙測、外部狀態頁／Email／訊息平台整合、高風險確認流程的遠端瀏覽器驗證、遠端身分邊緣負例、校內帳號自動建立與唯讀資料最小化政策的遠端驗證、CSP nonce／hash 收斂、production 備份還原演練、外部目標使用者驗證及獨立安全與可及性查核。固定筆數上限與目前的 CSP `unsafe-inline` 相容設定不能替代這些工作。
 
 ## 設計參考與證據狀態
 

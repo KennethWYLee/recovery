@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-QUALITY-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T09:59:46.947Z",
+  "generatedAt": "2026-07-31T14:51:15.329Z",
   "evidenceStatus": "verified_local",
   "verificationType": "unit_coverage_and_static_complexity_diagnostics",
   "result": "coverage_passed_with_complexity_findings",
@@ -22,8 +22,8 @@
       "tests/operations-input.test.ts",
       "tests/operations-bootstrap.test.mjs"
     ],
-    "tests": 37,
-    "passed": 37,
+    "tests": 39,
+    "passed": 39,
     "failed": 0,
     "exitCode": 0
   },
@@ -37,22 +37,22 @@
     },
     "result": "passed",
     "aggregate": {
-      "linePercent": 91.72,
-      "branchPercent": 84,
-      "functionPercent": 92.66,
+      "linePercent": 92.05,
+      "branchPercent": 85.43,
+      "functionPercent": 93.91,
       "gate": {
         "line": {
-          "actual": 91.72,
+          "actual": 92.05,
           "minimum": 90,
           "passed": true
         },
         "branch": {
-          "actual": 84,
+          "actual": 85.43,
           "minimum": 80,
           "passed": true
         },
         "function": {
-          "actual": 92.66,
+          "actual": 93.91,
           "minimum": 80,
           "passed": true
         }
@@ -99,29 +99,29 @@
       },
       {
         "path": "lib/operations-auth.ts",
-        "linePercent": 95.13,
-        "branchPercent": 76.32,
-        "functionPercent": 87.5,
+        "linePercent": 95.75,
+        "branchPercent": 83.87,
+        "functionPercent": 92.31,
         "uncoveredLineRanges": [
-          "145-146",
-          "163-164",
-          "209-210",
-          "215-217",
-          "224-225"
+          "151-152",
+          "196-197",
+          "242-243",
+          "248-250",
+          "257-258"
         ],
         "comparisonToAggregateThresholds": {
           "line": {
-            "actual": 95.13,
+            "actual": 95.75,
             "minimum": 90,
             "passed": true
           },
           "branch": {
-            "actual": 76.32,
+            "actual": 83.87,
             "minimum": 80,
-            "passed": false
+            "passed": true
           },
           "function": {
-            "actual": 87.5,
+            "actual": 92.31,
             "minimum": 80,
             "passed": true
           }
@@ -130,34 +130,33 @@
       },
       {
         "path": "lib/operations-domain.ts",
-        "linePercent": 93.96,
-        "branchPercent": 84.48,
-        "functionPercent": 80,
+        "linePercent": 94.66,
+        "branchPercent": 85,
+        "functionPercent": 83.87,
         "uncoveredLineRanges": [
-          "106-107",
-          "110-111",
-          "127-128",
-          "131-132",
-          "135-136",
-          "173-174",
-          "296-297",
-          "299-300",
-          "306-307",
-          "312-313"
+          "108-109",
+          "112-113",
+          "129-130",
+          "133-134",
+          "137-138",
+          "302-303",
+          "305-306",
+          "312-313",
+          "318-319"
         ],
         "comparisonToAggregateThresholds": {
           "line": {
-            "actual": 93.96,
+            "actual": 94.66,
             "minimum": 90,
             "passed": true
           },
           "branch": {
-            "actual": 84.48,
+            "actual": 85,
             "minimum": 80,
             "passed": true
           },
           "function": {
-            "actual": 80,
+            "actual": 83.87,
             "minimum": 80,
             "passed": true
           }
@@ -265,7 +264,7 @@
       },
       {
         "path": "lib/operations-auth.ts",
-        "line": 99,
+        "line": 105,
         "column": 8,
         "measuredComplexity": 20,
         "threshold": 15,
@@ -273,7 +272,7 @@
       },
       {
         "path": "lib/operations-auth.ts",
-        "line": 171,
+        "line": 204,
         "column": 8,
         "measuredComplexity": 27,
         "threshold": 15,
@@ -281,7 +280,7 @@
       },
       {
         "path": "lib/operations-domain.ts",
-        "line": 294,
+        "line": 300,
         "column": 8,
         "measuredComplexity": 21,
         "threshold": 15,
@@ -304,11 +303,11 @@
   "sourceBinding": [
     {
       "path": "lib/operations-domain.ts",
-      "sha256": "11febf89dc9a9d062c15a8b7da8c7d5b4f5aff8e18ca940924120f4a5f567886"
+      "sha256": "44ac8e1baac7b4c2dfba2bbeb056dc618493a909a5292283b2f6d179f35f15e9"
     },
     {
       "path": "lib/operations-auth.ts",
-      "sha256": "532dc5cd375a2eef9c9948014d6fa24878d03bb821373ac60e297a2cc2d7173d"
+      "sha256": "9d0c838d6b2af658d68455b9fb8013d10fb7cb6210d086656acc5358d7ff812c"
     },
     {
       "path": "lib/operations-time.ts",

@@ -18,8 +18,10 @@ import {
   normalizeEmail,
   normalizeOperationsId,
   normalizeSlug,
+  organizationRoleCanReadAllIncidents,
   organizationRoleCanHoldIncidentRole,
   operationsRouteTemplate,
+  permissionsForRole,
   roleHasPermission,
   serviceCanAcceptNewIncidents,
   taskStatusHasRequiredEvidence,
@@ -38,12 +40,18 @@ test("incident transitions require both an organization role and an incident ass
 
 test("read and organization permissions preserve least privilege", () => {
   assert.equal(canReadIncident("auditor", []), true);
-  assert.equal(canReadIncident("observer", []), false);
+  assert.equal(canReadIncident("observer", []), true);
   assert.equal(canReadIncident("observer", ["observer"]), true);
+  assert.equal(canReadIncident("responder", []), false);
+  assert.equal(organizationRoleCanReadAllIncidents("observer"), true);
+  assert.equal(organizationRoleCanReadAllIncidents("auditor"), true);
+  assert.equal(organizationRoleCanReadAllIncidents("responder"), false);
   assert.equal(roleHasPermission("admin", "access:manage"), true);
   assert.equal(roleHasPermission("auditor", "audit:read"), true);
   assert.equal(roleHasPermission("responder", "audit:read"), false);
   assert.equal(roleHasPermission("observer", "incident:respond"), false);
+  assert.deepEqual(permissionsForRole("observer"), ["access:read", "service:read", "incident:read", "audit:read"]);
+  assert.deepEqual(permissionsForRole("auditor"), ["access:read", "service:read", "incident:read", "audit:read"]);
 });
 
 test("incident filters and service lifecycle agree with new-incident eligibility", () => {

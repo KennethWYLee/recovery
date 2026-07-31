@@ -22,6 +22,17 @@ Feature: Core reliability controls
     When the actor is considered for the incident assignment "responder"
     Then the incident assignment is rejected
 
+  Scenario: A school viewer cannot change system data
+    Given the organization role is "auditor"
+    When the actor attempts to use the request method "PATCH"
+    Then the state-changing request is rejected
+
+  Scenario: An observer can review an incident without an assignment
+    Given the organization role is "observer"
+    And there is no active incident assignment
+    When incident read access is evaluated
+    Then the incident can be read
+
   Scenario: Completed work rejects insecure evidence
     Given a completed task cites "http://evidence.example.invalid/run/42"
     When the task evidence is validated
@@ -46,4 +57,3 @@ Feature: Core reliability controls
     Given the incident communication is "[FINAL] Monitoring has ended."
     When final communication status is evaluated
     Then the communication is treated as final
-

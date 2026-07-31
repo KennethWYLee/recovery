@@ -3,7 +3,11 @@ import test from "node:test";
 
 import {
   actorHasPermission,
+  isNtubEmail,
+  organizationRoleCanUseRequestMethod,
   provisioningRoleForIdentity,
+  randomReadOnlyOrganizationRole,
+  randomSchoolViewerDisplayName,
   rejectedMutationAudit,
   requestIsSameOrigin,
   resolveExternalOperationsIdentity,
@@ -58,7 +62,7 @@ test("production accepts only a forwarded verified email identity", () => {
   ), null);
 });
 
-test("verified identity alone does not authorize account provisioning", () => {
+test("only the bootstrap identity or exact NTUB domain can be provisioned", () => {
   const stranger = {
     externalId: "stranger@example.com",
     email: "stranger@example.com",
@@ -71,6 +75,25 @@ test("verified identity alone does not authorize account provisioning", () => {
     { ...stranger, externalId: "bootstrap@example.com", email: "bootstrap@example.com" },
     "bootstrap@example.com",
   ), "admin");
+  assert.equal(provisioningRoleForIdentity(
+    { ...stranger, externalId: "student@ntub.edu.tw", email: "student@ntub.edu.tw" },
+    "student@ntub.edu.tw",
+    () => "observer",
+  ), "admin");
+  assert.equal(provisioningRoleForIdentity(
+    { ...stranger, externalId: "student@ntub.edu.tw", email: "student@ntub.edu.tw" },
+    "bootstrap@example.com",
+    () => "observer",
+  ), "observer");
+  assert.equal(provisioningRoleForIdentity(
+    { ...stranger, externalId: "student@ntub.edu.tw", email: "student@ntub.edu.tw" },
+    null,
+    () => "auditor",
+  ), "auditor");
+  assert.ok(["observer", "auditor"].includes(provisioningRoleForIdentity(
+    { ...stranger, externalId: "random@ntub.edu.tw", email: "random@ntub.edu.tw" },
+    null,
+  ) ?? ""));
   assert.equal(provisioningRoleForIdentity({
     externalId: "local-operator",
     email: "local@example.com",
@@ -79,6 +102,21 @@ test("verified identity alone does not authorize account provisioning", () => {
     localRole: "commander",
     isLocal: true,
   }, null), "commander");
+});
+
+test("school email matching is exact and read-only identity selection is bounded", () => {
+  assert.equal(isNtubEmail(" Student@NTUB.EDU.TW "), true);
+  assert.equal(isNtubEmail("student@dept.ntub.edu.tw"), false);
+  assert.equal(isNtubEmail("student@ntub.edu.tw.example.com"), false);
+  assert.equal(isNtubEmail("student@ntub"), false);
+  assert.equal(isNtubEmail(null), false);
+
+  assert.equal(randomReadOnlyOrganizationRole(0), "observer");
+  assert.equal(randomReadOnlyOrganizationRole(1), "auditor");
+  assert.equal(randomReadOnlyOrganizationRole(2), "observer");
+  assert.ok(["observer", "auditor"].includes(randomReadOnlyOrganizationRole()));
+  assert.equal(randomSchoolViewerDisplayName("12345678-aaaa-bbbb-cccc-123456789abc"), "校內訪客 1234-5678");
+  assert.match(randomSchoolViewerDisplayName(), /^校內訪客 [A-Z0-9]{4}-[A-Z0-9]{4}$/u);
 });
 
 test("state-changing browser requests must be same-origin", () => {
@@ -99,10 +137,37 @@ test("organization roles expose an explicit permission matrix", () => {
   assert.equal(actorHasPermission({ role: "commander" }, "access:manage"), false);
   assert.equal(actorHasPermission({ role: "responder" }, "incident:respond"), true);
   assert.equal(actorHasPermission({ role: "observer" }, "incident:respond"), false);
+  assert.equal(actorHasPermission({ role: "observer" }, "audit:read"), true);
+  assert.equal(actorHasPermission({ role: "observer" }, "access:read"), true);
   assert.equal(actorHasPermission({ role: "auditor" }, "audit:read"), true);
+  assert.equal(actorHasPermission({ role: "auditor" }, "access:read"), true);
+});
+
+test("read-only organization roles cannot use any state-changing method", () => {
+  for (const role of ["observer", "auditor"] as const) {
+    for (const method of ["GET", "HEAD", "OPTIONS"]) {
+      assert.equal(organizationRoleCanUseRequestMethod(role, method), true, `${role} ${method}`);
+    }
+    for (const method of ["POST", "PUT", "PATCH", "DELETE", "post"]) {
+      assert.equal(organizationRoleCanUseRequestMethod(role, method), false, `${role} ${method}`);
+    }
+  }
+  for (const role of ["admin", "commander", "responder"] as const) {
+    assert.equal(organizationRoleCanUseRequestMethod(role, "POST"), true, role);
+  }
 });
 
 test("only verified-member mutation failures are eligible for payload-free security audit", () => {
+  assert.deepEqual(
+    rejectedMutationAudit("POST", ["services"], "READ_ONLY_ACCESS"),
+    {
+      outcome: "denied",
+      action: "service.create",
+      resourceType: "service",
+      resourceId: "pending",
+      route: "/api/v1/services",
+    },
+  );
   assert.deepEqual(
     rejectedMutationAudit("POST", ["incidents", "inc-123", "transitions"], "TRANSITION_NOT_ALLOWED"),
     {
