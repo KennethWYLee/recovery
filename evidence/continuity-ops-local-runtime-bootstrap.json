@@ -3,13 +3,13 @@
   "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T14:51:49.149Z",
+  "generatedAt": "2026-08-01T04:08:00.970Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "authenticated_fresh_d1_runtime_bootstrap_and_domain_read_only_access",
   "result": "passed_with_documented_limits",
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "9501de5c8af845a428ebff03d5bc9705f22fe6bdab5be814a9987d7bea147f7a"
+    "sha256": "9087f4feca1f94db364311a6017b47b7c50b820df3fe034bda7f38951b9a33d6"
   },
   "environment": {
     "runtime": "v24.15.0",
@@ -27,26 +27,26 @@
       "phase": 1,
       "status": "initializing",
       "queryCount": 39,
-      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+      "planDigest": "83c367be9340d1f87bd33ace025b710529d96b68334217b942d1d6d62633d58b"
     },
     {
       "phase": 2,
       "status": "initializing",
       "queryCount": 39,
-      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+      "planDigest": "83c367be9340d1f87bd33ace025b710529d96b68334217b942d1d6d62633d58b"
     },
     {
       "phase": 3,
       "status": "ready",
       "queryCount": 33,
-      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+      "planDigest": "83c367be9340d1f87bd33ace025b710529d96b68334217b942d1d6d62633d58b"
     }
   ],
   "finalState": {
     "schemaVersion": "0004",
     "phase": 3,
     "status": "ready",
-    "schemaDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3",
+    "schemaDigest": "83c367be9340d1f87bd33ace025b710529d96b68334217b942d1d6d62633d58b",
     "inventory": {
       "tables": 14,
       "indexes": 20,
@@ -107,7 +107,7 @@
     "nonMemberOtherDomainStatus": 403,
     "suspendedMembershipStatus": 403
   },
-  "totalDurationMs": 26800,
+  "totalDurationMs": 25175,
   "temporaryStateCleanup": "scheduled_after_runner_exit",
   "limitations": [
     "This is a local Wrangler and synthetic D1 exercise; it is not evidence that Sites production identity forwarding or hosted D1 initialization succeeded.",

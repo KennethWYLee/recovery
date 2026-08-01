@@ -309,6 +309,18 @@ try {
   const accessBody = JSON.parse(phase3.text);
   assert.equal(accessBody.data.actor.role, "admin");
 
+  const maintenanceBackup = await request(`${baseUrl}/api/v1/maintenance-database-backup`, [200]);
+  const maintenanceBackupBody = JSON.parse(maintenanceBackup.text);
+  assert.equal(maintenanceBackupBody.formatVersion, "continuity-ops-d1-backup-v1");
+  assert.equal(maintenanceBackupBody.source.schemaVersion, "0004");
+  assert.ok(Array.isArray(maintenanceBackupBody.schemaObjects));
+  assert.ok(Array.isArray(maintenanceBackupBody.tables));
+  assert.ok(maintenanceBackupBody.tables.length >= 14);
+  assert.deepEqual(maintenanceBackupBody.validation.foreignKeyViolations, []);
+  assert.ok(maintenanceBackupBody.validation.schemaObjectCount > 0);
+  assert.equal(maintenanceBackupBody.validation.tableCount, maintenanceBackupBody.tables.length);
+  assert.ok(maintenanceBackupBody.validation.totalRows >= 1);
+
   const health = await request(`${baseUrl}/api/v1/health`, [200]);
   const healthBody = JSON.parse(health.text);
   assert.equal(healthBody.data.status, "ok");
@@ -365,6 +377,8 @@ try {
 
   const memberDirectory = await request(`${baseUrl}/api/v1/access/members`, [403], schoolAccessOptions);
   parseProblem(memberDirectory, "PERMISSION_DENIED", 403);
+  const schoolBackupAttempt = await request(`${baseUrl}/api/v1/maintenance-database-backup`, [403], schoolAccessOptions);
+  parseProblem(schoolBackupAttempt, "PERMISSION_DENIED", 403);
 
   const schoolMutationCases = [
     { method: "POST", path: "services", key: "runtime-readonly-post", body: { name: "Blocked" } },

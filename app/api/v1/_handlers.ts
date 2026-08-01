@@ -86,6 +86,25 @@ const SERVICE_TIERS = ["tier_1", "tier_2", "tier_3", "tier_4"] as const;
 const SERVICE_STATUSES = ["active", "deprecated"] as const;
 const ENVIRONMENTS = ["production", "staging", "development", "other"] as const;
 const PRIORITIES = ["low", "medium", "high", "critical"] as const;
+const DATABASE_BACKUP_TABLES = [
+  "ops_organizations",
+  "ops_users",
+  "ops_memberships",
+  "ops_services",
+  "ops_service_lifecycle_events",
+  "ops_incidents",
+  "ops_incident_assignments",
+  "ops_incident_timeline",
+  "ops_incident_tasks",
+  "ops_incident_communications",
+  "ops_post_incident_reviews",
+  "ops_audit_events",
+  "ops_idempotency_receipts",
+  "ops_write_guards",
+  "ops_runtime_schema_state",
+  "ops_runtime_schema_phase_guards",
+  "d1_migrations",
+] as const;
 const ACTIVE_ASSIGNMENT_COMPATIBILITY_SQL = `(
   m.role = 'admin'
   OR (m.role = 'commander' AND a.incident_role IN ('incident_commander', 'communications_lead', 'observer'))
@@ -108,6 +127,9 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
     // Await each handler inside this try block so asynchronous rejections are
     // recorded by the payload-free denied/failure audit path below.
     if (path.length === 1 && path[0] === "access" && request.method === "GET") return await access(context);
+    if (path.length === 1 && path[0] === "maintenance-database-backup" && request.method === "GET") {
+      return await maintenanceDatabaseBackup(context);
+    }
     if (path[0] === "access" && path[1] === "members") return await accessMembers(context, path.slice(2));
     if (path.length === 1 && path[0] === "overview" && request.method === "GET") return await overview(context);
     if (path[0] === "services") return await services(context, path.slice(1));
@@ -147,6 +169,71 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
     }
     throw problem;
   }
+}
+
+async function maintenanceDatabaseBackup(context: OperationsRequestContext): Promise<Response> {
+  requirePermission(context, "access:manage");
+  if (context.actor.role !== "admin") {
+    throw new ApiProblem(403, "ADMIN_REQUIRED", "Only a system administrator may export a database backup.", "Access denied");
+  }
+
+  const schemaResult = await context.db.prepare(
+    `SELECT type, name, tbl_name, sql
+     FROM sqlite_schema
+     WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%'
+     ORDER BY type, name`,
+  ).all<Record<string, unknown>>();
+  const existingTableNames = new Set(
+    schemaResult.results
+      .filter((row) => row.type === "table" && typeof row.name === "string")
+      .map((row) => String(row.name)),
+  );
+  const missingProductTables = DATABASE_BACKUP_TABLES
+    .filter((name) => name.startsWith("ops_") && !name.startsWith("ops_runtime_") && !existingTableNames.has(name));
+  if (missingProductTables.length > 0) {
+    throw new ApiProblem(503, "DATABASE_BACKUP_SCHEMA_INCOMPLETE", "The database schema is incomplete; backup was not produced.");
+  }
+
+  const tableNames = DATABASE_BACKUP_TABLES.filter((name) => existingTableNames.has(name));
+  const tableResults = await context.db.batch(
+    tableNames.map((name) => context.db.prepare(`SELECT * FROM "${name}" ORDER BY rowid`)),
+  );
+  const tables = tableNames.map((name, index) => {
+    const rows = tableResults[index]?.results ?? [];
+    return { name, rowCount: rows.length, rows };
+  });
+  const foreignKeyResult = await context.db
+    .prepare("PRAGMA foreign_key_check")
+    .all<Record<string, unknown>>();
+  const generatedAt = operationsNow();
+
+  return new Response(JSON.stringify({
+    formatVersion: "continuity-ops-d1-backup-v1",
+    generatedAt,
+    source: {
+      product: "Continuity Ops",
+      apiVersion: OPERATIONS_API_VERSION,
+      schemaVersion: "0004",
+      organizationId: context.actor.organizationId,
+    },
+    validation: {
+      foreignKeyViolations: foreignKeyResult.results,
+      schemaObjectCount: schemaResult.results.length,
+      tableCount: tables.length,
+      totalRows: tables.reduce((sum, table) => sum + table.rowCount, 0),
+    },
+    schemaObjects: schemaResult.results,
+    tables,
+  }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": `attachment; filename="continuity-ops-d1-${generatedAt.replace(/[:.]/gu, "-")}.json"`,
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "x-request-id": context.requestId,
+    },
+  });
 }
 
 async function health(requestId: string): Promise<Response> {
