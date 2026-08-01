@@ -3,15 +3,15 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-01T04:22:52.320Z",
+  "generatedAt": "2026-08-01T08:45:34.116Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
     "status": "source_tree_has_uncommitted_changes",
     "repositoryRelativePath": ".",
-    "head": "e592f0a8bfef62d65b55ee234ede4a64c7c4995e",
-    "shortHead": "e592f0a8bfef",
-    "sourceDirtyEntryCount": 28,
+    "head": "6a19c3eb3385ebb5bf63528aa4738b0eed95d41d",
+    "shortHead": "6a19c3eb3385",
+    "sourceDirtyEntryCount": 1,
     "limitation": "The project contains uncommitted changes, so this manifest does not describe a clean commit rebuild."
   },
   "runtime": {
@@ -330,8 +330,8 @@
       },
       {
         "path": "PROJECT.md",
-        "bytes": 9685,
-        "sha256": "73aa793a34db4c94cacc39f064fd9c4bd01d59ac915df08d5de609e28172b672"
+        "bytes": 10883,
+        "sha256": "c8bce3052795d3f461dc62d1d9c3addac3f4e704cc79bfa84301e922c8bf530d"
       },
       {
         "path": "public/continuity-ops-social-preview-v2.png",
