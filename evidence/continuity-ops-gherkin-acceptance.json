@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-GHERKIN-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T14:50:55.277Z",
+  "generatedAt": "2026-08-01T04:22:01.295Z",
   "evidenceStatus": "verified_local",
   "verificationType": "executable_gherkin_domain_acceptance",
   "result": "passed_with_documented_limits",
@@ -30,7 +30,7 @@
     },
     {
       "path": "lib/operations-domain.ts",
-      "sha256": "44ac8e1baac7b4c2dfba2bbeb056dc618493a909a5292283b2f6d179f35f15e9"
+      "sha256": "9bb4a0733aa6630af79534bbb11a775fa637ce9a22634265c3a1b43ab37b2ab1"
     }
   ],
   "scenarioNames": [

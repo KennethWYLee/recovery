@@ -38,7 +38,7 @@ Continuity Ops 是單一組織部署的服務事件指揮與復原工作區。�
 - 事後檢討支援 `draft` 與 `completed`，且只能在事件已解決或結案後儲存。事件重新開啟時，已完成的檢討會回到草稿並增加版本，同時留下時間軸與稽核紀錄。
 - 所有目前的寫入端點要求 Idempotency-Key；相同 payload 可取得已保存回應，相同 key 搭配不同 payload 會被拒絕。回執保存 24 小時，建立新回執時執行有界的過期清理。
 - 未接入服務遙測時，服務狀態明確呈現為未知，SLO attainment 為無資料；系統不以零事件推論服務正常。
-- 正式環境先採用既有會員資格，不會改變既有角色；既有使用者或會員若為 `suspended`，也不會因再次登入而恢復。正規化後的 Email 網域精確為 `ntub.edu.tw`、已由平台驗證且尚無會員資格的帳號，首次登入時會建立啟用中會員，並隨機指派 `observer` 或 `auditor`。兩者只能讀取營運總覽、全部事件、服務、稽核及自己的存取政策；伺服器拒絕所有 `POST`、`PUT`、`PATCH` 與 `DELETE`，不提供成員目錄，稽核頁不顯示 actor email。`admin` 仍可查看 actor email。其他網域的未受邀帳號仍回傳 403。最後一位啟用中的管理員不能被停用或降級；成員更新使用 `expectedVersion`，過期版本會被拒絕，避免管理者同時編輯時靜默覆寫。
+- 正式環境先採用既有會員資格；既有使用者或會員若為 `suspended`，不會因再次登入而恢復。正規化後 Email 網域精確為 `ntub.edu.tw` 的已驗證帳號，首次登入先建立安全的唯讀會員；每次從登入入口進入時，可選擇 `commander`、`responder`、`observer` 或 `auditor`。`admin` 不列入角色選項，只能由既有授權或部署設定指派。角色選擇會更新伺服器端會員權限；若仍有進行中的事件責任，系統會拒絕不相容的切換。`observer` 與 `auditor` 維持唯讀且看不到成員目錄或稽核 actor email。其他網域未受邀帳號仍回傳 403。最後一位啟用中的管理員不能被停用或降級；所有角色更新都使用版本條件，避免並行操作靜默覆寫。
 - API request telemetry 使用不含 request body 與原始資源 ID 的 JSON 結構，包含 request ID、route template、狀態、問題代碼、延遲、API／schema／部署版號。資料匯出 API 尚未實作。
 - JSON request body 以串流累計實際 bytes，不能只依賴可能缺漏或不正確的 `Content-Length`。超過 32 KiB 時會取消讀取並回傳 413；無效 UTF-8、JSON 或非 object 根節點會被明確拒絕。這是應用程式層限制，不代表已驗證託管平台的 edge 限制。
 - 畫面可見且沒有寫入進行時，選取事件的明細、時間軸與通訊每 8 秒重新讀取；總覽每 30 秒重新讀取，頁面重新可見時會立即更新事件明細。這是輪詢，不是即時推播，也不能證明外部通訊已送達。
@@ -128,7 +128,7 @@ node scripts/run-local-d1-restore-drill.mjs
 1. 以不可變的 source commit 執行 CI。
 2. 從正式網址查核 canonical 與社群預覽 metadata 使用正確的 HTTPS host。
 3. 對全新託管 D1 核對 ready 前 503、三個 bootstrap 階段、每次少於 50 queries、最終 inventory／fingerprint，以及不相符身分不能初始化；既有資料庫則走 0001–0004 migration 與還原程序。
-4. 完成平台已驗證身分轉送的信任設定，將 bootstrap administrator email 視為受控部署設定，並在第一位管理員建立後移除。從正式邊界核對既有會員優先、`suspended` 不復原、精確 `@ntub.edu.tw` 首次登入建立唯讀角色、其他網域未受邀者回傳 403，以及校內唯讀使用者不能取得成員目錄或 actor email。
+4. 完成平台已驗證身分轉送的信任設定，將 bootstrap administrator email 視為受控部署設定，並在第一位管理員建立後移除。從正式邊界核對 `suspended` 不復原、精確 `@ntub.edu.tw` 帳號取得四種非管理員選項、`admin` 無法自選、角色切換後伺服器權限正確、其他網域未受邀者回傳 403，以及唯讀角色不能取得成員目錄或 actor email。
 5. 在 ready 後執行 health、API、授權負例與主要流程測試。
 6. 設定不可變的 `CONTINUITY_OPS_DEPLOYMENT_VERSION`，並從結構化 request telemetry 確認不再出現 `unversioned`。
 7. 以平台 secret 設定至少 32 字元的 `CONTINUITY_OPS_CURSOR_HMAC_SECRET`，並確認未出現在 Log、遙測或 evidence artifact。

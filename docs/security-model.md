@@ -22,7 +22,7 @@
 - 正式環境的身分來自部署平台已驗證並且無法被公開用戶端偽造的 header。若邊緣層不能保證這項條件，身分模型不成立，不得上線。
 - 本機身分只在 hostname 為 localhost／127.0.0.1，且 `CONTINUITY_OPS_ENVIRONMENT=development` 時允許。
 - `CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL` 是初始管理員識別設定，不是密碼。必須比對平台已驗證 email，不接受請求內容或一般用戶端自報 email。
-- 正式環境先查既有會員資格。既有角色（包含 `admin`）優先且不會因登入被改寫；既有使用者或會員若為 `suspended`，維持停用且不走自動建立流程。正規化後的 Email 網域精確為 `ntub.edu.tw` 且尚無會員資格的已驗證帳號，首次登入時建立啟用中會員，並隨機指派 `observer` 或 `auditor`。其他網域未受邀帳號回傳 403。身分無效時不使用不可信 header 建立稽核 actor。
+- 正式環境先查既有會員資格。既有 `admin` 由系統管理，不會出現在自選角色中；既有使用者或會員若為 `suspended`，維持停用且不走自動建立流程。正規化後 Email 網域精確為 `ntub.edu.tw` 的已驗證帳號，首次登入先建立唯讀會員，之後可在登入流程選擇 `commander`、`responder`、`observer` 或 `auditor`。角色切換需通過版本與啟用中事件指派相容性查核。其他網域未受邀帳號回傳 403。身分無效時不使用不可信 header 建立稽核 actor。
 - D1、Worker 與 identity proxy 均需有明確 owner。組織的外部狀態頁、Email 與訊息平台目前未連接 Continuity Ops，屬於系統外部的營運管道，不納入已實作控制。
 
 ## 3. 主要資產與分級
@@ -78,8 +78,8 @@ flowchart LR
 |---|---|---|
 | 偽造身分 header | 邊緣層剝除外部同名 header；Worker 只信任核准來源 | 需遠端設定與負例證據；目前不宣稱已部署 |
 | 本機身分誤用於遠端 | 同時檢查 environment 與 localhost；staging／production 不定義 local operator | 需單元、API 與部署設定負例 |
-| 水平／垂直越權 | 每個資源伺服器端查核組織角色、啟用中成員資格與事件指派；`observer` 與 `auditor` 可讀全部事件，但伺服器拒絕其所有非 `GET` 請求 | 單元、Gherkin 與隔離本機 Worker／D1 的受控驗證已通過；仍需在正式身分邊界以實際第二個 NTUB 帳號查核。服務目錄寫入目前不是 owner-scoped |
-| Email 網域判定錯誤或自動建立覆蓋既有會員 | 僅接受正規化後網域精確為 `ntub.edu.tw` 的有效 Email；先查既有會員，既有使用者或會員的 `suspended` 狀態不自動恢復，其他網域未受邀者回傳 403 | 單元與隔離本機 Worker／D1 已核對精確網域、並行首次登入、既有 admin、其他網域及一筆 suspended 會員；正式 edge、實際第二個 NTUB 帳號、suspended 使用者與其餘身分組合仍待查核 |
+| 水平／垂直越權 | 每個資源伺服器端查核目前組織角色、啟用中成員資格與事件指派；角色選擇只允許四種非管理員角色，並查核版本與進行中的責任 | 單元與隔離本機 Worker／D1 已核對角色清單、管理員排除與兩次角色切換；完整角色／事件責任矩陣與正式身分邊界仍待查核。服務目錄寫入目前不是 owner-scoped |
+| Email 網域或角色選擇判定錯誤 | 僅接受正規化後網域精確為 `ntub.edu.tw` 的有效 Email；`admin` 不列入自選值；`suspended` 狀態不自動恢復，其他網域未受邀者回傳 403 | 單元與隔離本機 Worker／D1 已核對精確網域、並行首次登入、管理員排除、既有 admin、其他網域及一筆 suspended 會員；正式 edge、實際第二個 NTUB 帳號與其餘身分組合仍待查核 |
 | 唯讀帳號取得不必要個資 | 校內唯讀帳號的存取政策只回傳本人資料，不回傳成員目錄；稽核頁不顯示 actor email，`admin` 才保留該欄位 | 隔離本機 Worker／D1 已核對成員目錄 403 與唯讀稽核省略 actor email；正式 edge 的實際第二個 NTUB 帳號、admin actor email 與瀏覽器畫面仍待查核 |
 | 重送或競態造成雙重寫入 | Idempotency-Key、request hash、24 小時回執、資料庫唯一性、optimistic version 與同批次寫入 | 已實作相同 payload replay、不同 payload 拒絕及有界過期清理；仍需遠端並行、重送與中途失敗測試 |
 | 分頁 cursor 被竄改或跨服務重用 | 生命週期 cursor 採 HMAC-SHA256 簽章，並將服務 ID 與組織 ID 納入簽章內容；拒絕非正規編碼、錯誤簽章、錯誤範圍及過長輸入 | secret 至少 32 字元且缺漏時 fail closed；真實值只能放在平台 secret，不得進入 repository、Log、遙測或 evidence artifact；輪替會使既有 cursor 失效 |

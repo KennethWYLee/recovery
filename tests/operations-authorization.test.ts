@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  SCHOOL_SELECTABLE_ORGANIZATION_ROLES,
   actorHasPermission,
   isNtubEmail,
+  isSchoolSelectableOrganizationRole,
   organizationRoleCanUseRequestMethod,
   provisioningRoleForIdentity,
   randomReadOnlyOrganizationRole,
@@ -119,6 +121,19 @@ test("school email matching is exact and read-only identity selection is bounded
   assert.match(randomSchoolViewerDisplayName(), /^校內訪客 [A-Z0-9]{4}-[A-Z0-9]{4}$/u);
 });
 
+test("school users can select every non-admin organization role but never admin", () => {
+  assert.deepEqual(
+    [...SCHOOL_SELECTABLE_ORGANIZATION_ROLES],
+    ["commander", "responder", "observer", "auditor"],
+  );
+  for (const role of SCHOOL_SELECTABLE_ORGANIZATION_ROLES) {
+    assert.equal(isSchoolSelectableOrganizationRole(role), true, role);
+  }
+  assert.equal(isSchoolSelectableOrganizationRole("admin"), false);
+  assert.equal(isSchoolSelectableOrganizationRole("owner"), false);
+  assert.equal(isSchoolSelectableOrganizationRole(null), false);
+});
+
 test("state-changing browser requests must be same-origin", () => {
   assert.equal(requestIsSameOrigin(new Request("https://ops.example.com/api/v1/incidents")), true);
   assert.equal(requestIsSameOrigin(new Request("https://ops.example.com/api/v1/incidents", {
@@ -158,6 +173,26 @@ test("read-only organization roles cannot use any state-changing method", () => 
 });
 
 test("only verified-member mutation failures are eligible for payload-free security audit", () => {
+  assert.deepEqual(
+    rejectedMutationAudit("POST", ["session", "role"], "ADMIN_ROLE_MANAGED"),
+    {
+      outcome: "denied",
+      action: "access.self_role.select",
+      resourceType: "membership",
+      resourceId: "self",
+      route: "/api/v1/session/role",
+    },
+  );
+  assert.deepEqual(
+    rejectedMutationAudit("POST", ["session", "role"], "INVALID_ROLE_SELECTION"),
+    {
+      outcome: "failure",
+      action: "access.self_role.select",
+      resourceType: "membership",
+      resourceId: "self",
+      route: "/api/v1/session/role",
+    },
+  );
   assert.deepEqual(
     rejectedMutationAudit("POST", ["services"], "READ_ONLY_ACCESS"),
     {

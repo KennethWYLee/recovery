@@ -25,7 +25,6 @@ const authorizedEmail = "runtime-bootstrap@example.invalid";
 const unauthorizedEmail = "not-bootstrap@example.invalid";
 const schoolViewerEmail = "runtime-viewer@ntub.edu.tw";
 const nonMemberEmail = "runtime-outsider@example.invalid";
-const maintenanceBackupToken = "runtime-maintenance-backup-token-000000000000000000000000";
 const node = process.execPath;
 let server;
 let serverOutput = "";
@@ -95,8 +94,6 @@ function startWorker(port, operatorEmail) {
     "CONTINUITY_OPS_DEPLOYMENT_VERSION:local-runtime-bootstrap-220",
     "--var",
     "CONTINUITY_OPS_CURSOR_HMAC_SECRET:runtime-bootstrap-test-only-secret-000000000",
-    "--var",
-    `CONTINUITY_OPS_MAINTENANCE_BACKUP_TOKEN:${maintenanceBackupToken}`,
     "--var",
     `CONTINUITY_OPS_LOCAL_OPERATOR_ID:${operatorEmail === authorizedEmail ? "runtime-bootstrap-owner" : "runtime-bootstrap-outsider"}`,
     "--var",
@@ -312,20 +309,6 @@ try {
   const accessBody = JSON.parse(phase3.text);
   assert.equal(accessBody.data.actor.role, "admin");
 
-  const maintenanceBackup = await request(`${baseUrl}/api/v1/maintenance-database-backup`, [200], {
-    headers: { "x-continuity-ops-backup-token": maintenanceBackupToken },
-  });
-  const maintenanceBackupBody = JSON.parse(maintenanceBackup.text);
-  assert.equal(maintenanceBackupBody.formatVersion, "continuity-ops-d1-backup-v1");
-  assert.equal(maintenanceBackupBody.source.schemaVersion, "0004");
-  assert.ok(Array.isArray(maintenanceBackupBody.schemaObjects));
-  assert.ok(Array.isArray(maintenanceBackupBody.tables));
-  assert.ok(maintenanceBackupBody.tables.length >= 14);
-  assert.deepEqual(maintenanceBackupBody.validation.foreignKeyViolations, []);
-  assert.ok(maintenanceBackupBody.validation.schemaObjectCount > 0);
-  assert.equal(maintenanceBackupBody.validation.tableCount, maintenanceBackupBody.tables.length);
-  assert.ok(maintenanceBackupBody.validation.totalRows >= 1);
-
   const health = await request(`${baseUrl}/api/v1/health`, [200]);
   const healthBody = JSON.parse(health.text);
   assert.equal(healthBody.data.status, "ok");
@@ -359,12 +342,31 @@ try {
     schoolAccessBodies[0].permissions,
     ["access:read", "service:read", "incident:read", "audit:read"],
   );
-  assert.ok(schoolAccessBodies[0].policies.some((policy) => policy.id === "ntub-read-only-access" && policy.status === "enforced"));
+  assert.ok(schoolAccessBodies[0].policies.some((policy) => policy.id === "ntub-role-selection" && policy.status === "enforced"));
 
   const forwardedAdmin = await request(`${baseUrl}/api/v1/access`, [200], {
     headers: forwardedIdentityHeaders(authorizedEmail, "Runtime Bootstrap Owner"),
   });
   assert.equal(JSON.parse(forwardedAdmin.text).data.actor.role, "admin");
+  const adminRoleSession = await request(`${baseUrl}/api/v1/session/role`, [200], {
+    headers: forwardedIdentityHeaders(authorizedEmail, "Runtime Bootstrap Owner"),
+  });
+  const adminRoleSessionBody = JSON.parse(adminRoleSession.text).data;
+  assert.equal(adminRoleSessionBody.managedRole, true);
+  assert.equal(adminRoleSessionBody.selectionRequired, false);
+  assert.equal(adminRoleSessionBody.currentRole, "admin");
+  assert.deepEqual(adminRoleSessionBody.options, []);
+  const adminRoleMutation = await request(`${baseUrl}/api/v1/session/role`, [403], {
+    method: "POST",
+    headers: {
+      ...forwardedIdentityHeaders(authorizedEmail, "Runtime Bootstrap Owner"),
+      "content-type": "application/json",
+      "idempotency-key": "runtime-admin-role-change",
+      origin: baseUrl,
+    },
+    body: JSON.stringify({ role: "observer", expectedVersion: adminRoleSessionBody.membershipVersion }),
+  });
+  parseProblem(adminRoleMutation, "SCHOOL_ROLE_SELECTION_NOT_AVAILABLE", 403);
 
   const nonMember = await request(`${baseUrl}/api/v1/access`, [403], {
     headers: forwardedIdentityHeaders(nonMemberEmail, "Runtime Outsider"),
@@ -382,8 +384,6 @@ try {
 
   const memberDirectory = await request(`${baseUrl}/api/v1/access/members`, [403], schoolAccessOptions);
   parseProblem(memberDirectory, "PERMISSION_DENIED", 403);
-  const schoolBackupAttempt = await request(`${baseUrl}/api/v1/maintenance-database-backup`, [403], schoolAccessOptions);
-  parseProblem(schoolBackupAttempt, "PERMISSION_DENIED", 403);
 
   const schoolMutationCases = [
     { method: "POST", path: "services", key: "runtime-readonly-post", body: { name: "Blocked" } },
@@ -406,6 +406,66 @@ try {
     parseProblem(result, "READ_ONLY_ACCESS", 403);
     schoolMutationStatuses.push(result.response.status);
   }
+
+  const schoolRoleSession = await request(`${baseUrl}/api/v1/session/role`, [200], schoolAccessOptions);
+  const schoolRoleSessionBody = JSON.parse(schoolRoleSession.text).data;
+  assert.equal(schoolRoleSessionBody.selectionRequired, true);
+  assert.equal(schoolRoleSessionBody.managedRole, false);
+  assert.equal(schoolRoleSessionBody.currentRole, schoolRole);
+  assert.deepEqual(
+    schoolRoleSessionBody.options.map((option) => option.role),
+    ["commander", "responder", "observer", "auditor"],
+  );
+  assert.ok(schoolRoleSessionBody.options.every((option) => option.available));
+  assert.ok(!schoolRoleSessionBody.options.some((option) => option.role === "admin"));
+
+  const rejectedAdminSelection = await request(`${baseUrl}/api/v1/session/role`, [400], {
+    method: "POST",
+    headers: {
+      ...schoolHeaders,
+      "content-type": "application/json",
+      "idempotency-key": "runtime-school-admin-role",
+      origin: baseUrl,
+    },
+    body: JSON.stringify({ role: "admin", expectedVersion: schoolRoleSessionBody.membershipVersion }),
+  });
+  parseProblem(rejectedAdminSelection, "INVALID_ROLE_SELECTION", 400);
+
+  const commanderSelection = await request(`${baseUrl}/api/v1/session/role`, [200], {
+    method: "POST",
+    headers: {
+      ...schoolHeaders,
+      "content-type": "application/json",
+      "idempotency-key": "runtime-school-role-commander",
+      origin: baseUrl,
+    },
+    body: JSON.stringify({ role: "commander", expectedVersion: schoolRoleSessionBody.membershipVersion }),
+  });
+  const commanderSelectionBody = JSON.parse(commanderSelection.text).data;
+  assert.equal(commanderSelectionBody.selectedRole, "commander");
+  const commanderAccess = await request(`${baseUrl}/api/v1/access`, [200], schoolAccessOptions);
+  const commanderAccessBody = JSON.parse(commanderAccess.text).data;
+  assert.equal(commanderAccessBody.actor.role, "commander");
+  assert.ok(commanderAccessBody.permissions.includes("incident:command"));
+
+  const refreshedRoleSession = await request(`${baseUrl}/api/v1/session/role`, [200], schoolAccessOptions);
+  const refreshedRoleSessionBody = JSON.parse(refreshedRoleSession.text).data;
+  assert.equal(refreshedRoleSessionBody.currentRole, "commander");
+  assert.equal(refreshedRoleSessionBody.membershipVersion, commanderSelectionBody.membershipVersion);
+  const observerSelection = await request(`${baseUrl}/api/v1/session/role`, [200], {
+    method: "POST",
+    headers: {
+      ...schoolHeaders,
+      "content-type": "application/json",
+      "idempotency-key": "runtime-school-role-observer",
+      origin: baseUrl,
+    },
+    body: JSON.stringify({ role: "observer", expectedVersion: refreshedRoleSessionBody.membershipVersion }),
+  });
+  const observerSelectionBody = JSON.parse(observerSelection.text).data;
+  assert.equal(observerSelectionBody.selectedRole, "observer");
+  const observerAccess = await request(`${baseUrl}/api/v1/access`, [200], schoolAccessOptions);
+  assert.equal(JSON.parse(observerAccess.text).data.actor.role, "observer");
   await stopWorker();
 
   const [schoolMembership] = d1Query(
@@ -414,7 +474,7 @@ try {
      WHERE u.email = '${schoolViewerEmail}' AND m.organization_id = 'ops-singleton'`,
   );
   assert.ok(schoolMembership);
-  assert.equal(schoolMembership.role, schoolRole);
+  assert.equal(schoolMembership.role, "observer");
   assert.equal(schoolMembership.status, "active");
   assert.equal(schoolMembership.display_name, schoolDisplayName);
   assert.equal(d1Query(`SELECT COUNT(*) AS count FROM ops_users WHERE email = '${schoolViewerEmail}'`)[0].count, 1);
@@ -474,7 +534,7 @@ try {
     productVersion: PRODUCT_VERSION,
     generatedAt: new Date().toISOString(),
     evidenceStatus: "verified_local_controlled",
-    verificationType: "authenticated_fresh_d1_runtime_bootstrap_and_domain_read_only_access",
+    verificationType: "authenticated_fresh_d1_runtime_bootstrap_and_domain_role_selection",
     result: "passed_with_documented_limits",
     buildArtifact: { path: "dist/server/index.js", sha256: buildSha256 },
     environment: { runtime: process.version, platform: process.platform, database: "isolated synthetic local D1" },
@@ -507,9 +567,14 @@ try {
       overviewStatus: overview.response.status,
       checksPassed: 3,
     },
-    schoolReadOnlyAccess: {
+    schoolRoleSelection: {
       exactEmailDomain: "ntub.edu.tw",
-      assignedRole: schoolRole,
+      initialProvisioningRole: schoolRole,
+      selectableRoles: ["commander", "responder", "observer", "auditor"],
+      administratorSelectable: false,
+      selectedRolesVerified: ["commander", "observer"],
+      serverPermissionChangedWithSelection: true,
+      administratorRoleManaged: true,
       randomizedDisplayNameFormat: "校內訪客 XXXX-XXXX",
       concurrentFirstAccessResponses: schoolAccessBodies.length,
       uniqueUserCount: 1,
@@ -525,6 +590,8 @@ try {
       memberDirectoryStatus: memberDirectory.response.status,
       auditActorEmailRedacted: true,
       existingAdministratorRolePreserved: true,
+      administratorSelectionAttemptStatus: adminRoleMutation.response.status,
+      schoolAdministratorSelectionAttemptStatus: rejectedAdminSelection.response.status,
       nonMemberOtherDomainStatus: nonMember.response.status,
       suspendedMembershipStatus: suspendedSchoolAccess.response.status,
     },
@@ -532,7 +599,7 @@ try {
     temporaryStateCleanup: "scheduled_after_runner_exit",
     limitations: [
       "This is a local Wrangler and synthetic D1 exercise; it is not evidence that Sites production identity forwarding or hosted D1 initialization succeeded.",
-      "The exercise covers one configured administrator, one exact-domain school viewer, one other-domain non-member, and one suspended school membership; it is not a complete identity-provider or access-policy audit.",
+      "The exercise covers one configured administrator, one exact-domain school member selecting two roles, one other-domain non-member, and one suspended school membership; it is not a complete identity-provider or access-policy audit.",
       "Forwarded identity headers are supplied directly to the local Worker. This does not prove that the hosted edge strips spoofed headers or forwards only verified identities.",
       "The per-request query counts cover bootstrap statements only; Cloudflare plan enforcement and production capacity were not measured.",
     ],
@@ -546,7 +613,7 @@ try {
     productVersion: PRODUCT_VERSION,
     generatedAt: new Date().toISOString(),
     evidenceStatus: "failed_local_controlled",
-    verificationType: "authenticated_fresh_d1_runtime_bootstrap_and_domain_read_only_access",
+    verificationType: "authenticated_fresh_d1_runtime_bootstrap_and_domain_role_selection",
     result: "failed",
     buildArtifact: { path: "dist/server/index.js", sha256: buildSha256 },
     failure: error instanceof Error ? error.message : String(error),

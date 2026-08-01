@@ -35,8 +35,11 @@ import {
   type OrganizationRole,
 } from "@/lib/operations-domain";
 import {
+  SCHOOL_SELECTABLE_ORGANIZATION_ROLES,
   actorHasPermission,
   actorPermissions,
+  isNtubEmail,
+  isSchoolSelectableOrganizationRole,
   organizationRoleCanUseRequestMethod,
   rejectedMutationAudit,
 } from "@/lib/operations-auth";
@@ -86,25 +89,6 @@ const SERVICE_TIERS = ["tier_1", "tier_2", "tier_3", "tier_4"] as const;
 const SERVICE_STATUSES = ["active", "deprecated"] as const;
 const ENVIRONMENTS = ["production", "staging", "development", "other"] as const;
 const PRIORITIES = ["low", "medium", "high", "critical"] as const;
-const DATABASE_BACKUP_TABLES = [
-  "ops_organizations",
-  "ops_users",
-  "ops_memberships",
-  "ops_services",
-  "ops_service_lifecycle_events",
-  "ops_incidents",
-  "ops_incident_assignments",
-  "ops_incident_timeline",
-  "ops_incident_tasks",
-  "ops_incident_communications",
-  "ops_post_incident_reviews",
-  "ops_audit_events",
-  "ops_idempotency_receipts",
-  "ops_write_guards",
-  "ops_runtime_schema_state",
-  "ops_runtime_schema_phase_guards",
-  "d1_migrations",
-] as const;
 const ACTIVE_ASSIGNMENT_COMPATIBILITY_SQL = `(
   m.role = 'admin'
   OR (m.role = 'commander' AND a.incident_role IN ('incident_commander', 'communications_lead', 'observer'))
@@ -114,12 +98,11 @@ const ACTIVE_ASSIGNMENT_COMPATIBILITY_SQL = `(
 
 export async function dispatchOperationsApi(request: Request, path: string[], requestId: string): Promise<Response> {
   if (path.length === 1 && path[0] === "health" && request.method === "GET") return health(requestId);
-  const isMaintenanceBackup = path.length === 1 && path[0] === "maintenance-database-backup" && request.method === "GET";
-  if (isMaintenanceBackup && await maintenanceBackupTokenMatches(request)) {
-    return maintenanceDatabaseBackup(operationsDb(), requestId);
-  }
   const context = await authenticatedContext(request, requestId);
   try {
+    if (path.length === 2 && path[0] === "session" && path[1] === "role") {
+      return await schoolSessionRole(context);
+    }
     if (!organizationRoleCanUseRequestMethod(context.actor.role, request.method)) {
       throw new ApiProblem(
         403,
@@ -131,13 +114,6 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
     // Await each handler inside this try block so asynchronous rejections are
     // recorded by the payload-free denied/failure audit path below.
     if (path.length === 1 && path[0] === "access" && request.method === "GET") return await access(context);
-    if (isMaintenanceBackup) {
-      requirePermission(context, "access:manage");
-      if (context.actor.role !== "admin") {
-        throw new ApiProblem(403, "ADMIN_REQUIRED", "Only a system administrator may export a database backup.", "Access denied");
-      }
-      return await maintenanceDatabaseBackup(context.db, context.requestId);
-    }
     if (path[0] === "access" && path[1] === "members") return await accessMembers(context, path.slice(2));
     if (path.length === 1 && path[0] === "overview" && request.method === "GET") return await overview(context);
     if (path[0] === "services") return await services(context, path.slice(1));
@@ -179,79 +155,158 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
   }
 }
 
-async function maintenanceBackupTokenMatches(request: Request): Promise<boolean> {
-  const configured = operationsEnvironment().CONTINUITY_OPS_MAINTENANCE_BACKUP_TOKEN?.trim() ?? "";
-  const provided = request.headers.get("x-continuity-ops-backup-token")?.trim() ?? "";
-  if (configured.length < 43 || provided.length !== configured.length) return false;
-  const [configuredHash, providedHash] = await Promise.all([
-    operationsSha256(configured),
-    operationsSha256(provided),
-  ]);
-  let difference = 0;
-  for (let index = 0; index < configuredHash.length; index += 1) {
-    difference |= configuredHash.charCodeAt(index) ^ providedHash.charCodeAt(index);
-  }
-  return difference === 0;
-}
-
-async function maintenanceDatabaseBackup(db: D1Database, requestId: string): Promise<Response> {
-  const schemaResult = await db.prepare(
-    `SELECT type, name, tbl_name, sql
-     FROM sqlite_schema
-     WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%'
-     ORDER BY type, name`,
-  ).all<Record<string, unknown>>();
-  const existingTableNames = new Set(
-    schemaResult.results
-      .filter((row) => row.type === "table" && typeof row.name === "string")
-      .map((row) => String(row.name)),
-  );
-  const missingProductTables = DATABASE_BACKUP_TABLES
-    .filter((name) => name.startsWith("ops_") && !name.startsWith("ops_runtime_") && !existingTableNames.has(name));
-  if (missingProductTables.length > 0) {
-    throw new ApiProblem(503, "DATABASE_BACKUP_SCHEMA_INCOMPLETE", "The database schema is incomplete; backup was not produced.");
+async function schoolSessionRole(context: OperationsRequestContext): Promise<Response> {
+  if (!isNtubEmail(context.actor.email)) {
+    if (context.request.method === "GET") {
+      return successResponse({
+        selectionRequired: false,
+        managedRole: true,
+        currentRole: context.actor.role,
+        membershipVersion: null,
+        options: [],
+      }, context.requestId);
+    }
+    throw new ApiProblem(403, "SCHOOL_ROLE_SELECTION_NOT_AVAILABLE", "This account uses an assigned organization role.", "Access denied");
   }
 
-  const tableNames = DATABASE_BACKUP_TABLES.filter((name) => existingTableNames.has(name));
-  const tableResults = await db.batch(
-    tableNames.map((name) => db.prepare(`SELECT * FROM "${name}" ORDER BY rowid`)),
-  );
-  const tables = tableNames.map((name, index) => {
-    const rows = tableResults[index]?.results ?? [];
-    return { name, rowCount: rows.length, rows };
-  });
-  const foreignKeyResult = await db
-    .prepare("PRAGMA foreign_key_check")
-    .all<Record<string, unknown>>();
-  const generatedAt = operationsNow();
+  const membership = await context.db.prepare(
+    `SELECT role, status, version
+     FROM ops_memberships
+     WHERE id = ? AND organization_id = ? AND user_id = ?`,
+  ).bind(context.actor.membershipId, context.actor.organizationId, context.actor.id).first<{
+    role: string;
+    status: string;
+    version: number;
+  }>();
+  if (!membership || membership.status !== "active" || !isOrganizationRole(membership.role)) {
+    throw new ApiProblem(403, "ACTIVE_MEMBERSHIP_REQUIRED", "An active membership is required.", "Access denied");
+  }
 
-  return new Response(JSON.stringify({
-    formatVersion: "continuity-ops-d1-backup-v1",
-    generatedAt,
-    source: {
-      product: "Continuity Ops",
-      apiVersion: OPERATIONS_API_VERSION,
-      schemaVersion: "0004",
-      organizationId: OPERATIONS_ORGANIZATION_ID,
-    },
-    validation: {
-      foreignKeyViolations: foreignKeyResult.results,
-      schemaObjectCount: schemaResult.results.length,
-      tableCount: tables.length,
-      totalRows: tables.reduce((sum, table) => sum + table.rowCount, 0),
-    },
-    schemaObjects: schemaResult.results,
-    tables,
-  }), {
-    status: 200,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "content-disposition": `attachment; filename="continuity-ops-d1-${generatedAt.replace(/[:.]/gu, "-")}.json"`,
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
-      "x-request-id": requestId,
-    },
+  if (membership.role === "admin") {
+    if (context.request.method === "GET") {
+      return successResponse({
+        selectionRequired: false,
+        managedRole: true,
+        currentRole: "admin",
+        membershipVersion: membership.version,
+        options: [],
+      }, context.requestId);
+    }
+    throw new ApiProblem(403, "ADMIN_ROLE_MANAGED", "Administrator access is assigned by the system and cannot be selected.", "Access denied");
+  }
+
+  const activeAssignments = await context.db.prepare(
+    `SELECT DISTINCT incident_role
+     FROM ops_incident_assignments
+     WHERE organization_id = ? AND user_id = ? AND status = 'active'
+     ORDER BY incident_role`,
+  ).bind(context.actor.organizationId, context.actor.id).all<{ incident_role: string }>();
+  const activeIncidentRoles = activeAssignments.results
+    .map((assignment) => assignment.incident_role)
+    .filter(isIncidentRole);
+  const options = SCHOOL_SELECTABLE_ORGANIZATION_ROLES.map((role) => ({
+    role,
+    available: activeIncidentRoles.every((incidentRole) => organizationRoleCanHoldIncidentRole(role, incidentRole)),
+  }));
+
+  if (context.request.method === "GET") {
+    return successResponse({
+      selectionRequired: true,
+      managedRole: false,
+      currentRole: membership.role,
+      membershipVersion: membership.version,
+      options,
+    }, context.requestId);
+  }
+  if (context.request.method !== "POST") {
+    throw new ApiProblem(405, "METHOD_NOT_ALLOWED", "Use GET or POST for role selection.");
+  }
+
+  const body = await readJsonObject(context.request);
+  const key = idempotencyKey(context.request, body);
+  const role = body.role;
+  const expectedVersion = requiredInteger(body, "expectedVersion");
+  if (!isSchoolSelectableOrganizationRole(role)) {
+    throw new ApiProblem(400, "INVALID_ROLE_SELECTION", "Select commander, responder, observer, or auditor.");
+  }
+  const actionScope = `session.role.select:${context.actor.membershipId}`;
+  const replay = await readIdempotentReplay<{
+    selectedRole: OrganizationRole;
+    membershipVersion: number;
+  }>({
+    db: context.db,
+    actor: context.actor,
+    actionScope,
+    idempotencyKey: key,
+    requestPayload: body,
+    now: operationsNow(),
   });
+  if (replay) return successResponse({ ...replay, replayed: true }, context.requestId);
+  if (expectedVersion !== membership.version) {
+    throw new ApiProblem(409, "VERSION_CONFLICT", "The membership changed. Reload the role selection before continuing.", "Conflict");
+  }
+  const selectedOption = options.find((option) => option.role === role);
+  if (!selectedOption?.available) {
+    throw new ApiProblem(
+      409,
+      "INCIDENT_ROLE_INCOMPATIBLE",
+      "Hand off or revoke incompatible active incident responsibilities before selecting this role.",
+      "Conflict",
+    );
+  }
+
+  const now = operationsNow();
+  const nextVersion = expectedVersion + 1;
+  const guardId = operationsId("guard");
+  const result = await executeIdempotentBatch({
+    db: context.db,
+    actor: context.actor,
+    actionScope,
+    idempotencyKey: key,
+    requestPayload: body,
+    responseData: { selectedRole: role, membershipVersion: nextVersion },
+    now,
+    statements: [
+      context.db.prepare(
+        `INSERT INTO ops_write_guards (id, passed, created_at)
+         SELECT ?, CASE WHEN EXISTS (
+           SELECT 1 FROM ops_memberships
+           WHERE id = ? AND organization_id = ? AND user_id = ?
+             AND status = 'active' AND role <> 'admin' AND version = ?
+         ) THEN 1 ELSE 0 END, ?`,
+      ).bind(
+        guardId,
+        context.actor.membershipId,
+        context.actor.organizationId,
+        context.actor.id,
+        expectedVersion,
+        now,
+      ),
+      context.db.prepare(
+        `UPDATE ops_memberships
+         SET role = ?, version = version + 1, updated_at = ?
+         WHERE id = ? AND organization_id = ? AND user_id = ?
+           AND status = 'active' AND role <> 'admin' AND version = ?`,
+      ).bind(
+        role,
+        now,
+        context.actor.membershipId,
+        context.actor.organizationId,
+        context.actor.id,
+        expectedVersion,
+      ),
+      auditInsert(context.db, context.actor, {
+        requestId: context.requestId,
+        action: "access.self_role.select",
+        resourceType: "membership",
+        resourceId: context.actor.membershipId,
+        occurredAt: now,
+        details: { fromRole: membership.role, selectedRole: role, fromVersion: expectedVersion, toVersion: nextVersion },
+      }),
+      context.db.prepare("DELETE FROM ops_write_guards WHERE id = ?").bind(guardId),
+    ],
+  });
+  return successResponse({ ...result.data, replayed: result.replayed }, context.requestId);
 }
 
 async function health(requestId: string): Promise<Response> {
@@ -267,6 +322,7 @@ async function health(requestId: string): Promise<Response> {
 }
 
 function access(context: OperationsRequestContext): Response {
+  const schoolIdentity = isNtubEmail(context.actor.email);
   return successResponse({
     actor: {
       id: context.actor.id,
@@ -284,9 +340,13 @@ function access(context: OperationsRequestContext): Response {
         status: "enforced",
       },
       {
-        id: "ntub-read-only-access",
-        name: "校內唯讀存取",
-        description: "未另行授權的 @ntub.edu.tw 帳號可查閱系統，但不能建立、修改、指派、發布或刪除資料。",
+        id: schoolIdentity ? "ntub-role-selection" : "assigned-organization-role",
+        name: schoolIdentity ? "校內角色選擇" : "組織角色授權",
+        description: schoolIdentity
+          ? context.actor.role === "admin"
+            ? "系統管理員由系統指派，不列入校內帳號的角色選項。"
+            : "本次操作權限依登入時選擇的角色決定；所有操作仍由伺服器驗證。"
+          : "本帳號的組織角色由既有會員資格或部署設定決定。",
         status: "enforced",
       },
       {

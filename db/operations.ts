@@ -102,7 +102,7 @@ export async function loadOrProvisionOperationsActor(
   const newNtubReadOnlyMember = !existingMembership && isNtubEmail(email) &&
     isReadOnlyOrganizationRole(provisioningRole) && identity.source === "forwarded_identity";
   const preserveSchoolViewerName = Boolean(
-    existingMembership && isNtubEmail(email) && isReadOnlyOrganizationRole(existingRole),
+    existingMembership && isNtubEmail(email) && existingRole !== "admin",
   );
   const displayName = newNtubReadOnlyMember
     ? randomSchoolViewerDisplayName()
