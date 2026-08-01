@@ -25,6 +25,7 @@ const authorizedEmail = "runtime-bootstrap@example.invalid";
 const unauthorizedEmail = "not-bootstrap@example.invalid";
 const schoolViewerEmail = "runtime-viewer@ntub.edu.tw";
 const nonMemberEmail = "runtime-outsider@example.invalid";
+const maintenanceBackupToken = "runtime-maintenance-backup-token-000000000000000000000000";
 const node = process.execPath;
 let server;
 let serverOutput = "";
@@ -94,6 +95,8 @@ function startWorker(port, operatorEmail) {
     "CONTINUITY_OPS_DEPLOYMENT_VERSION:local-runtime-bootstrap-220",
     "--var",
     "CONTINUITY_OPS_CURSOR_HMAC_SECRET:runtime-bootstrap-test-only-secret-000000000",
+    "--var",
+    `CONTINUITY_OPS_MAINTENANCE_BACKUP_TOKEN:${maintenanceBackupToken}`,
     "--var",
     `CONTINUITY_OPS_LOCAL_OPERATOR_ID:${operatorEmail === authorizedEmail ? "runtime-bootstrap-owner" : "runtime-bootstrap-outsider"}`,
     "--var",
@@ -309,7 +312,9 @@ try {
   const accessBody = JSON.parse(phase3.text);
   assert.equal(accessBody.data.actor.role, "admin");
 
-  const maintenanceBackup = await request(`${baseUrl}/api/v1/maintenance-database-backup`, [200]);
+  const maintenanceBackup = await request(`${baseUrl}/api/v1/maintenance-database-backup`, [200], {
+    headers: { "x-continuity-ops-backup-token": maintenanceBackupToken },
+  });
   const maintenanceBackupBody = JSON.parse(maintenanceBackup.text);
   assert.equal(maintenanceBackupBody.formatVersion, "continuity-ops-d1-backup-v1");
   assert.equal(maintenanceBackupBody.source.schemaVersion, "0004");

@@ -114,6 +114,10 @@ const ACTIVE_ASSIGNMENT_COMPATIBILITY_SQL = `(
 
 export async function dispatchOperationsApi(request: Request, path: string[], requestId: string): Promise<Response> {
   if (path.length === 1 && path[0] === "health" && request.method === "GET") return health(requestId);
+  const isMaintenanceBackup = path.length === 1 && path[0] === "maintenance-database-backup" && request.method === "GET";
+  if (isMaintenanceBackup && await maintenanceBackupTokenMatches(request)) {
+    return maintenanceDatabaseBackup(operationsDb(), requestId);
+  }
   const context = await authenticatedContext(request, requestId);
   try {
     if (!organizationRoleCanUseRequestMethod(context.actor.role, request.method)) {
@@ -127,8 +131,12 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
     // Await each handler inside this try block so asynchronous rejections are
     // recorded by the payload-free denied/failure audit path below.
     if (path.length === 1 && path[0] === "access" && request.method === "GET") return await access(context);
-    if (path.length === 1 && path[0] === "maintenance-database-backup" && request.method === "GET") {
-      return await maintenanceDatabaseBackup(context);
+    if (isMaintenanceBackup) {
+      requirePermission(context, "access:manage");
+      if (context.actor.role !== "admin") {
+        throw new ApiProblem(403, "ADMIN_REQUIRED", "Only a system administrator may export a database backup.", "Access denied");
+      }
+      return await maintenanceDatabaseBackup(context.db, context.requestId);
     }
     if (path[0] === "access" && path[1] === "members") return await accessMembers(context, path.slice(2));
     if (path.length === 1 && path[0] === "overview" && request.method === "GET") return await overview(context);
@@ -171,13 +179,23 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
   }
 }
 
-async function maintenanceDatabaseBackup(context: OperationsRequestContext): Promise<Response> {
-  requirePermission(context, "access:manage");
-  if (context.actor.role !== "admin") {
-    throw new ApiProblem(403, "ADMIN_REQUIRED", "Only a system administrator may export a database backup.", "Access denied");
+async function maintenanceBackupTokenMatches(request: Request): Promise<boolean> {
+  const configured = operationsEnvironment().CONTINUITY_OPS_MAINTENANCE_BACKUP_TOKEN?.trim() ?? "";
+  const provided = request.headers.get("x-continuity-ops-backup-token")?.trim() ?? "";
+  if (configured.length < 43 || provided.length !== configured.length) return false;
+  const [configuredHash, providedHash] = await Promise.all([
+    operationsSha256(configured),
+    operationsSha256(provided),
+  ]);
+  let difference = 0;
+  for (let index = 0; index < configuredHash.length; index += 1) {
+    difference |= configuredHash.charCodeAt(index) ^ providedHash.charCodeAt(index);
   }
+  return difference === 0;
+}
 
-  const schemaResult = await context.db.prepare(
+async function maintenanceDatabaseBackup(db: D1Database, requestId: string): Promise<Response> {
+  const schemaResult = await db.prepare(
     `SELECT type, name, tbl_name, sql
      FROM sqlite_schema
      WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%'
@@ -195,14 +213,14 @@ async function maintenanceDatabaseBackup(context: OperationsRequestContext): Pro
   }
 
   const tableNames = DATABASE_BACKUP_TABLES.filter((name) => existingTableNames.has(name));
-  const tableResults = await context.db.batch(
-    tableNames.map((name) => context.db.prepare(`SELECT * FROM "${name}" ORDER BY rowid`)),
+  const tableResults = await db.batch(
+    tableNames.map((name) => db.prepare(`SELECT * FROM "${name}" ORDER BY rowid`)),
   );
   const tables = tableNames.map((name, index) => {
     const rows = tableResults[index]?.results ?? [];
     return { name, rowCount: rows.length, rows };
   });
-  const foreignKeyResult = await context.db
+  const foreignKeyResult = await db
     .prepare("PRAGMA foreign_key_check")
     .all<Record<string, unknown>>();
   const generatedAt = operationsNow();
@@ -214,7 +232,7 @@ async function maintenanceDatabaseBackup(context: OperationsRequestContext): Pro
       product: "Continuity Ops",
       apiVersion: OPERATIONS_API_VERSION,
       schemaVersion: "0004",
-      organizationId: context.actor.organizationId,
+      organizationId: OPERATIONS_ORGANIZATION_ID,
     },
     validation: {
       foreignKeyViolations: foreignKeyResult.results,
@@ -231,7 +249,7 @@ async function maintenanceDatabaseBackup(context: OperationsRequestContext): Pro
       "content-disposition": `attachment; filename="continuity-ops-d1-${generatedAt.replace(/[:.]/gu, "-")}.json"`,
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
-      "x-request-id": context.requestId,
+      "x-request-id": requestId,
     },
   });
 }
