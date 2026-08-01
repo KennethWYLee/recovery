@@ -1,9 +1,9 @@
 # Continuity Ops 核心請求與資料流程
 
 文件版本：`1.0.0`  
-狀態：`source_confirmed`。校內帳號建立與唯讀資料最小化已有隔離本機 Worker／D1 的 `verified_local_controlled` 結果；正式身分邊界仍須以實際第二個 NTUB 帳號確認。
+狀態：`source_confirmed`。校內帳號建立、角色選項、管理員排除與角色切換已有隔離本機 Worker／D1 的 `verified_local_controlled` 結果；正式身分邊界仍須以實際第二個 NTUB 帳號確認。
 
-## 1. 正式身分解析與校內唯讀存取
+## 1. 正式身分解析與校內角色選擇
 
 ```mermaid
 sequenceDiagram
@@ -11,6 +11,7 @@ sequenceDiagram
     participant E as 平台身分邊界
     participant A as 身分與權限
     participant D as D1
+    participant R as 角色選擇
     participant H as API handler
 
     U->>E: 登入
@@ -18,29 +19,36 @@ sequenceDiagram
     A->>D: 先查既有使用者與會員資格
     alt 已有會員資格
       D-->>A: 原角色與狀態
-      alt 會員為 active
-        A-->>H: 沿用原角色
+      alt 會員為 active 且角色為 admin
+        A-->>R: 管理員由系統指派；不顯示選項
+      else 會員為 active 且非 admin
+        A-->>R: 目前角色與會員版本
       else 會員為 suspended
         A-->>U: 403；不自動恢復
       end
     else 尚無會員資格
       A->>A: 正規化並比對精確 @ntub.edu.tw
       alt 精確校內網域
-        A->>D: 建立啟用中會員；隨機 observer 或 auditor
-        D-->>A: 唯讀角色
-        A-->>H: 唯讀 request context
+        A->>D: 建立啟用中唯讀會員
+        D-->>R: 目前角色與會員版本
       else 其他、相似或子網域
         A-->>U: 403；不建立會員
       end
     end
-    alt GET
-      H-->>U: 總覽、全部事件、服務、稽核或本人存取政策
-    else POST／PUT／PATCH／DELETE
-      H-->>U: 403；不執行寫入
+    alt 可選角色
+      R-->>U: commander／responder／observer／auditor
+      U->>R: 選擇角色與目前版本
+      R->>D: 查核版本與啟用中事件責任相容性
+      alt 查核通過
+        D-->>R: 更新會員角色並寫入稽核
+        R-->>H: 依新角色建立 request context
+      else 版本過期或責任不相容
+        R-->>U: 409；不變更角色
+      end
     end
 ```
 
-`observer` 與 `auditor` 的存取政策回應只包含本人，不包含成員目錄；其稽核回應不包含 actor email。`admin` 仍可查看 actor email。這些限制在伺服器端執行，不能只靠畫面隱藏欄位或按鈕。
+`admin` 不在可選角色清單中，自選 API 也會拒絕該值。`observer` 與 `auditor` 的存取政策回應只包含本人，不包含成員目錄；其稽核回應不包含 actor email。這些限制與角色切換都在伺服器端執行，不能只靠畫面隱藏欄位或按鈕。
 
 ## 2. 一般寫入請求
 

@@ -35,8 +35,11 @@ import {
   type OrganizationRole,
 } from "@/lib/operations-domain";
 import {
+  SCHOOL_SELECTABLE_ORGANIZATION_ROLES,
   actorHasPermission,
   actorPermissions,
+  isNtubEmail,
+  isSchoolSelectableOrganizationRole,
   organizationRoleCanUseRequestMethod,
   rejectedMutationAudit,
 } from "@/lib/operations-auth";
@@ -97,6 +100,9 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
   if (path.length === 1 && path[0] === "health" && request.method === "GET") return health(requestId);
   const context = await authenticatedContext(request, requestId);
   try {
+    if (path.length === 2 && path[0] === "session" && path[1] === "role") {
+      return await schoolSessionRole(context);
+    }
     if (!organizationRoleCanUseRequestMethod(context.actor.role, request.method)) {
       throw new ApiProblem(
         403,
@@ -149,6 +155,160 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
   }
 }
 
+async function schoolSessionRole(context: OperationsRequestContext): Promise<Response> {
+  if (!isNtubEmail(context.actor.email)) {
+    if (context.request.method === "GET") {
+      return successResponse({
+        selectionRequired: false,
+        managedRole: true,
+        currentRole: context.actor.role,
+        membershipVersion: null,
+        options: [],
+      }, context.requestId);
+    }
+    throw new ApiProblem(403, "SCHOOL_ROLE_SELECTION_NOT_AVAILABLE", "This account uses an assigned organization role.", "Access denied");
+  }
+
+  const membership = await context.db.prepare(
+    `SELECT role, status, version
+     FROM ops_memberships
+     WHERE id = ? AND organization_id = ? AND user_id = ?`,
+  ).bind(context.actor.membershipId, context.actor.organizationId, context.actor.id).first<{
+    role: string;
+    status: string;
+    version: number;
+  }>();
+  if (!membership || membership.status !== "active" || !isOrganizationRole(membership.role)) {
+    throw new ApiProblem(403, "ACTIVE_MEMBERSHIP_REQUIRED", "An active membership is required.", "Access denied");
+  }
+
+  if (membership.role === "admin") {
+    if (context.request.method === "GET") {
+      return successResponse({
+        selectionRequired: false,
+        managedRole: true,
+        currentRole: "admin",
+        membershipVersion: membership.version,
+        options: [],
+      }, context.requestId);
+    }
+    throw new ApiProblem(403, "ADMIN_ROLE_MANAGED", "Administrator access is assigned by the system and cannot be selected.", "Access denied");
+  }
+
+  const activeAssignments = await context.db.prepare(
+    `SELECT DISTINCT incident_role
+     FROM ops_incident_assignments
+     WHERE organization_id = ? AND user_id = ? AND status = 'active'
+     ORDER BY incident_role`,
+  ).bind(context.actor.organizationId, context.actor.id).all<{ incident_role: string }>();
+  const activeIncidentRoles = activeAssignments.results
+    .map((assignment) => assignment.incident_role)
+    .filter(isIncidentRole);
+  const options = SCHOOL_SELECTABLE_ORGANIZATION_ROLES.map((role) => ({
+    role,
+    available: activeIncidentRoles.every((incidentRole) => organizationRoleCanHoldIncidentRole(role, incidentRole)),
+  }));
+
+  if (context.request.method === "GET") {
+    return successResponse({
+      selectionRequired: true,
+      managedRole: false,
+      currentRole: membership.role,
+      membershipVersion: membership.version,
+      options,
+    }, context.requestId);
+  }
+  if (context.request.method !== "POST") {
+    throw new ApiProblem(405, "METHOD_NOT_ALLOWED", "Use GET or POST for role selection.");
+  }
+
+  const body = await readJsonObject(context.request);
+  const key = idempotencyKey(context.request, body);
+  const role = body.role;
+  const expectedVersion = requiredInteger(body, "expectedVersion");
+  if (!isSchoolSelectableOrganizationRole(role)) {
+    throw new ApiProblem(400, "INVALID_ROLE_SELECTION", "Select commander, responder, observer, or auditor.");
+  }
+  const actionScope = `session.role.select:${context.actor.membershipId}`;
+  const replay = await readIdempotentReplay<{
+    selectedRole: OrganizationRole;
+    membershipVersion: number;
+  }>({
+    db: context.db,
+    actor: context.actor,
+    actionScope,
+    idempotencyKey: key,
+    requestPayload: body,
+    now: operationsNow(),
+  });
+  if (replay) return successResponse({ ...replay, replayed: true }, context.requestId);
+  if (expectedVersion !== membership.version) {
+    throw new ApiProblem(409, "VERSION_CONFLICT", "The membership changed. Reload the role selection before continuing.", "Conflict");
+  }
+  const selectedOption = options.find((option) => option.role === role);
+  if (!selectedOption?.available) {
+    throw new ApiProblem(
+      409,
+      "INCIDENT_ROLE_INCOMPATIBLE",
+      "Hand off or revoke incompatible active incident responsibilities before selecting this role.",
+      "Conflict",
+    );
+  }
+
+  const now = operationsNow();
+  const nextVersion = expectedVersion + 1;
+  const guardId = operationsId("guard");
+  const result = await executeIdempotentBatch({
+    db: context.db,
+    actor: context.actor,
+    actionScope,
+    idempotencyKey: key,
+    requestPayload: body,
+    responseData: { selectedRole: role, membershipVersion: nextVersion },
+    now,
+    statements: [
+      context.db.prepare(
+        `INSERT INTO ops_write_guards (id, passed, created_at)
+         SELECT ?, CASE WHEN EXISTS (
+           SELECT 1 FROM ops_memberships
+           WHERE id = ? AND organization_id = ? AND user_id = ?
+             AND status = 'active' AND role <> 'admin' AND version = ?
+         ) THEN 1 ELSE 0 END, ?`,
+      ).bind(
+        guardId,
+        context.actor.membershipId,
+        context.actor.organizationId,
+        context.actor.id,
+        expectedVersion,
+        now,
+      ),
+      context.db.prepare(
+        `UPDATE ops_memberships
+         SET role = ?, version = version + 1, updated_at = ?
+         WHERE id = ? AND organization_id = ? AND user_id = ?
+           AND status = 'active' AND role <> 'admin' AND version = ?`,
+      ).bind(
+        role,
+        now,
+        context.actor.membershipId,
+        context.actor.organizationId,
+        context.actor.id,
+        expectedVersion,
+      ),
+      auditInsert(context.db, context.actor, {
+        requestId: context.requestId,
+        action: "access.self_role.select",
+        resourceType: "membership",
+        resourceId: context.actor.membershipId,
+        occurredAt: now,
+        details: { fromRole: membership.role, selectedRole: role, fromVersion: expectedVersion, toVersion: nextVersion },
+      }),
+      context.db.prepare("DELETE FROM ops_write_guards WHERE id = ?").bind(guardId),
+    ],
+  });
+  return successResponse({ ...result.data, replayed: result.replayed }, context.requestId);
+}
+
 async function health(requestId: string): Promise<Response> {
   try {
     const row = await operationsDb().prepare(
@@ -162,6 +322,7 @@ async function health(requestId: string): Promise<Response> {
 }
 
 function access(context: OperationsRequestContext): Response {
+  const schoolIdentity = isNtubEmail(context.actor.email);
   return successResponse({
     actor: {
       id: context.actor.id,
@@ -179,9 +340,13 @@ function access(context: OperationsRequestContext): Response {
         status: "enforced",
       },
       {
-        id: "ntub-read-only-access",
-        name: "校內唯讀存取",
-        description: "未另行授權的 @ntub.edu.tw 帳號可查閱系統，但不能建立、修改、指派、發布或刪除資料。",
+        id: schoolIdentity ? "ntub-role-selection" : "assigned-organization-role",
+        name: schoolIdentity ? "校內角色選擇" : "組織角色授權",
+        description: schoolIdentity
+          ? context.actor.role === "admin"
+            ? "系統管理員由系統指派，不列入校內帳號的角色選項。"
+            : "本次操作權限依登入時選擇的角色決定；所有操作仍由伺服器驗證。"
+          : "本帳號的組織角色由既有會員資格或部署設定決定。",
         status: "enforced",
       },
       {

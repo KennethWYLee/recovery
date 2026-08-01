@@ -298,6 +298,9 @@ export function incidentTimestampUpdates(to: OperationsIncidentStatus, now: stri
 
 /** Returns a bounded route template without logging user-controlled identifiers. */
 export function operationsRouteTemplate(path: readonly string[]): string {
+  if (path.length === 2 && path[0] === "session" && path[1] === "role") {
+    return "/api/v1/session/role";
+  }
   if (path.length === 1 && ["health", "access", "overview", "services", "incidents", "audit"].includes(path[0])) {
     return `/api/v1/${path[0]}`;
   }

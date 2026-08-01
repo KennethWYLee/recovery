@@ -163,6 +163,10 @@ test("milestone timestamps are explicit and status-specific", () => {
 
 test("request telemetry uses bounded route templates instead of record identifiers", () => {
   assert.equal(
+    operationsRouteTemplate(["session", "role"]),
+    "/api/v1/session/role",
+  );
+  assert.equal(
     operationsRouteTemplate(["incidents", "inc-sensitive-123", "assignments", "assign-sensitive-456"]),
     "/api/v1/incidents/:incidentId/assignments/:assignmentId",
   );

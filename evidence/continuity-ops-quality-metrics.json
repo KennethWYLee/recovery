@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-QUALITY-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-07-31T14:51:15.329Z",
+  "generatedAt": "2026-08-01T04:22:20.134Z",
   "evidenceStatus": "verified_local",
   "verificationType": "unit_coverage_and_static_complexity_diagnostics",
   "result": "coverage_passed_with_complexity_findings",
@@ -22,8 +22,8 @@
       "tests/operations-input.test.ts",
       "tests/operations-bootstrap.test.mjs"
     ],
-    "tests": 39,
-    "passed": 39,
+    "tests": 40,
+    "passed": 40,
     "failed": 0,
     "exitCode": 0
   },
@@ -37,22 +37,22 @@
     },
     "result": "passed",
     "aggregate": {
-      "linePercent": 92.05,
-      "branchPercent": 85.43,
-      "functionPercent": 93.91,
+      "linePercent": 92.17,
+      "branchPercent": 85.81,
+      "functionPercent": 93.97,
       "gate": {
         "line": {
-          "actual": 92.05,
+          "actual": 92.17,
           "minimum": 90,
           "passed": true
         },
         "branch": {
-          "actual": 85.43,
+          "actual": 85.81,
           "minimum": 80,
           "passed": true
         },
         "function": {
-          "actual": 93.91,
+          "actual": 93.97,
           "minimum": 80,
           "passed": true
         }
@@ -99,29 +99,29 @@
       },
       {
         "path": "lib/operations-auth.ts",
-        "linePercent": 95.75,
-        "branchPercent": 83.87,
-        "functionPercent": 92.31,
+        "linePercent": 96.07,
+        "branchPercent": 84.85,
+        "functionPercent": 92.86,
         "uncoveredLineRanges": [
-          "151-152",
-          "196-197",
-          "242-243",
-          "248-250",
-          "257-258"
+          "156-157",
+          "207-208",
+          "263-264",
+          "269-271",
+          "278-279"
         ],
         "comparisonToAggregateThresholds": {
           "line": {
-            "actual": 95.75,
+            "actual": 96.07,
             "minimum": 90,
             "passed": true
           },
           "branch": {
-            "actual": 83.87,
+            "actual": 84.85,
             "minimum": 80,
             "passed": true
           },
           "function": {
-            "actual": 92.31,
+            "actual": 92.86,
             "minimum": 80,
             "passed": true
           }
@@ -130,8 +130,8 @@
       },
       {
         "path": "lib/operations-domain.ts",
-        "linePercent": 94.66,
-        "branchPercent": 85,
+        "linePercent": 94.71,
+        "branchPercent": 85.71,
         "functionPercent": 83.87,
         "uncoveredLineRanges": [
           "108-109",
@@ -139,19 +139,19 @@
           "129-130",
           "133-134",
           "137-138",
-          "302-303",
           "305-306",
-          "312-313",
-          "318-319"
+          "308-309",
+          "315-316",
+          "321-322"
         ],
         "comparisonToAggregateThresholds": {
           "line": {
-            "actual": 94.66,
+            "actual": 94.71,
             "minimum": 90,
             "passed": true
           },
           "branch": {
-            "actual": 85,
+            "actual": 85.71,
             "minimum": 80,
             "passed": true
           },
@@ -264,7 +264,7 @@
       },
       {
         "path": "lib/operations-auth.ts",
-        "line": 105,
+        "line": 110,
         "column": 8,
         "measuredComplexity": 20,
         "threshold": 15,
@@ -272,19 +272,19 @@
       },
       {
         "path": "lib/operations-auth.ts",
-        "line": 204,
+        "line": 215,
         "column": 8,
-        "measuredComplexity": 27,
+        "measuredComplexity": 30,
         "threshold": 15,
-        "message": "Function 'rejectedMutationAudit' has a complexity of 27. Maximum allowed is 15."
+        "message": "Function 'rejectedMutationAudit' has a complexity of 30. Maximum allowed is 15."
       },
       {
         "path": "lib/operations-domain.ts",
         "line": 300,
         "column": 8,
-        "measuredComplexity": 21,
+        "measuredComplexity": 24,
         "threshold": 15,
-        "message": "Function 'operationsRouteTemplate' has a complexity of 21. Maximum allowed is 15."
+        "message": "Function 'operationsRouteTemplate' has a complexity of 24. Maximum allowed is 15."
       },
       {
         "path": "lib/operations-input.ts",
@@ -303,11 +303,11 @@
   "sourceBinding": [
     {
       "path": "lib/operations-domain.ts",
-      "sha256": "44ac8e1baac7b4c2dfba2bbeb056dc618493a909a5292283b2f6d179f35f15e9"
+      "sha256": "9bb4a0733aa6630af79534bbb11a775fa637ce9a22634265c3a1b43ab37b2ab1"
     },
     {
       "path": "lib/operations-auth.ts",
-      "sha256": "9d0c838d6b2af658d68455b9fb8013d10fb7cb6210d086656acc5358d7ff812c"
+      "sha256": "3b9d4d6f847328b073f4a3f38fc696def20c1afc79e1cccd1de0b7911dd4a317"
     },
     {
       "path": "lib/operations-time.ts",

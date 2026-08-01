@@ -55,7 +55,8 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 - service slug 不可變；active／deprecated 更新使用 expectedVersion；仍有未結案事件時不得 deprecated；每次淘汰或重新啟用都要有專用確認、8–1000 字非空白原因、合格的啟用中 admin／commander、request ID 與 UTC 時間，並新增不可更新或刪除的生命週期歷程。只有換行、歸位、tab、vertical tab、form feed 或 NBSP 的原因必須被拒絕；重新啟用保留既有歷史，舊淘汰資料不得補造不存在的理由。`service_owner` 事件角色不得因此取得 `service:write`。
 - 指派撤銷保留 revoked row、ended time 與 actor；最後一位事件指揮官沒有接任者時被拒絕；有合格接任者時，新指派、原指派撤銷、timeline 與 audit 必須同批完成。
 - 最後一位啟用中 admin 不得被停用或降級；仍為未結案事件唯一指揮官的成員，不得在交接前失去合格組織角色。成員更新必須使用 `expectedVersion`；兩位管理者並行變更時，過期版本必須得到 409 而非覆寫新狀態。
-- 正式環境必須先採用既有會員，不得改寫既有角色；既有 `suspended` 會員不得自動恢復。只有正規化後精確 `@ntub.edu.tw` 且尚無會員資格的已驗證帳號，才在首次登入建立啟用中會員，並隨機指派 `observer` 或 `auditor`。大小寫、相似網域、子網域、其他網域、重複與並行首次登入都要有正反例；其他網域未受邀者回傳 403。
+- 正式環境不得自動恢復既有 `suspended` 會員。只有正規化後精確 `@ntub.edu.tw` 的已驗證帳號，才可首次建立唯讀會員，並在登入流程選擇 `commander`、`responder`、`observer` 或 `auditor`。`admin` 必須同時從畫面選項與 API 允許值排除。大小寫、相似網域、子網域、其他網域、重複與並行首次登入都要有正反例；其他網域未受邀者回傳 403。
+- 每次自選角色都要驗證目前會員版本、啟用中事件責任相容性、冪等重播與稽核紀錄。過期版本或不相容責任不得留下部分更新；既有 `admin` 必須維持系統管理且不能使用自選 API 改變角色。
 - `observer` 與 `auditor` 必須可讀營運總覽、全部事件、服務、稽核及自己的存取政策；所有 `POST`、`PUT`、`PATCH` 與 `DELETE` 均回傳 403。存取政策不得回傳成員目錄，稽核回應不得回傳 actor email；`admin` 應可查看 actor email。無效身分不得使用未驗證 header 建立 actor 稽核。
 - 每個 mutation 都要求有效 Idempotency-Key。相同 scope／actor／key／payload 重播相同回應；不同 payload 使用相同 key 被拒絕；過期回執不重播，且有界清理不得刪除未過期或其他組織資料。
 - request telemetry 必須是可解析 JSON，使用不含資源 ID 的 route template，且有 request ID、method、status、problem code、latency、API／schema／deployment version。不得出現 request body、token、cookie、authorization header 或使用者提供的自由文字。
@@ -72,7 +73,7 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 
 1. 從新建立的 staging 環境套用 migration。
 2. 使用具寫入權限的平台已驗證既有會員，執行服務建立／更新／淘汰、事件建立、角色指派／撤銷／交接、調查、處置、工作與完成證據、通訊草稿／核准／標記發布、具欄位約束的驗證證據、三門檻解決、重新開啟及事後檢討草稿／完成。
-3. 另以首次登入的精確 `@ntub.edu.tw` 帳號核對隨機唯讀角色、全部讀取頁、本人存取政策及稽核資料最小化；驗證其所有 `POST`、`PUT`、`PATCH`、`DELETE`，以及未授權角色、他人資源、stale version、重複或錯誤重用 Idempotency-Key、資源關係不合與過長輸入，均被伺服器拒絕。
+3. 另以精確 `@ntub.edu.tw` 帳號逐一選擇四種非管理員角色，核對畫面、API 權限、可見資料與事件指派限制。直接提交 `admin`、過期版本、不相容事件責任、重複或錯誤重用 Idempotency-Key、他人資源、資源關係不合與過長輸入，均須由伺服器依契約拒絕；`observer` 與 `auditor` 仍須完成所有非 `GET` method 負例及資料最小化查核。
 4. 由非原實作者使用事前凍結案例執行主要流程及失敗情境。
 5. 以 known-good 與 known-bad 輸入檢查測試 harness 本身。
 6. 從平台 request telemetry 確認 deployment version 與 artifact 對應且不是 `unversioned`，並驗證未知服務遙測不被顯示為正常。
@@ -85,7 +86,7 @@ CI 僅產生待審的建置產物，不自動部署生產環境。
 - 依 [`../security-model.md`](../security-model.md) 的信任邊界與權限矩陣設計負例。
 - 以 OWASP ASVS 5.0.0 的固定版本 requirement ID 建立適用、不適用、已驗證與待驗證清單。
 - 執行依賴審計、秘密掃描、靜態安全分析、授權負例及相稱的獨立安全查核。
-- 在實際 private identity edge 驗證外部請求不能偽造受信任身分 header；既有會員優先且 `suspended` 不復原；只有精確 `@ntub.edu.tw` 的無會員帳號建立唯讀角色；其他網域未受邀者回傳 403；最後一位管理員與事件指揮交接 guard 會 fail closed。
+- 在實際 private identity edge 驗證外部請求不能偽造受信任身分 header；`suspended` 不復原；只有精確 `@ntub.edu.tw` 帳號能進入角色選擇；`admin` 不可自選；其他網域未受邀者回傳 403；版本、事件責任、最後一位管理員與事件指揮交接 guard 會 fail closed。
 - 驗證深層連結的查詢參數不接受秘密或權限資訊，無效 view／incident／tab 不會繞過伺服器身分、組織與資源授權。
 - 查核所有高風險操作的介面確認範圍，但仍以 API 權限、狀態、版本與資料庫負例作為必要安全證據。
 - 驗證 Worker 安全標頭在遠端回應生效，並追蹤目前 inline script/style 相容設定改為 CSP nonce／hash 的剩餘工作。

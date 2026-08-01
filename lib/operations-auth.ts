@@ -61,6 +61,8 @@ const DENIED_MUTATION_CODES = new Set([
   "SERVICE_STATUS_CHANGE_ACTOR_INVALID",
   "LAST_ADMIN_REQUIRED",
   "ACTIVE_INCIDENT_HANDOFF_REQUIRED",
+  "ADMIN_ROLE_MANAGED",
+  "SCHOOL_ROLE_SELECTION_NOT_AVAILABLE",
 ]);
 
 const FAILED_MUTATION_CODES = new Set([
@@ -86,6 +88,7 @@ const FAILED_MUTATION_CODES = new Set([
   "COMMUNICATION_STATUS_CONFLICT",
   "INCIDENT_COMMUNICATION_PUBLISH_BLOCKED",
   "COMMUNICATION_NEXT_UPDATE_REQUIRED",
+  "INVALID_ROLE_SELECTION",
 ]);
 
 const EMAIL_HEADER = "oai-authenticated-user-email";
@@ -94,6 +97,8 @@ const NAME_ENCODING_HEADER = "oai-authenticated-user-full-name-encoding";
 export const NTUB_EMAIL_DOMAIN = "ntub.edu.tw";
 export const READ_ONLY_ORGANIZATION_ROLES = ["observer", "auditor"] as const;
 export type ReadOnlyOrganizationRole = (typeof READ_ONLY_ORGANIZATION_ROLES)[number];
+export const SCHOOL_SELECTABLE_ORGANIZATION_ROLES = ["commander", "responder", "observer", "auditor"] as const;
+export type SchoolSelectableOrganizationRole = (typeof SCHOOL_SELECTABLE_ORGANIZATION_ROLES)[number];
 
 const MUTATING_HTTP_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -184,6 +189,12 @@ export function isReadOnlyOrganizationRole(role: OrganizationRole | null | undef
   return role === "observer" || role === "auditor";
 }
 
+export function isSchoolSelectableOrganizationRole(value: unknown): value is SchoolSelectableOrganizationRole {
+  return typeof value === "string" && SCHOOL_SELECTABLE_ORGANIZATION_ROLES.includes(
+    value as SchoolSelectableOrganizationRole,
+  );
+}
+
 export function organizationRoleCanUseRequestMethod(role: OrganizationRole, method: string): boolean {
   return !MUTATING_HTTP_METHODS.has(method.toUpperCase()) || !isReadOnlyOrganizationRole(role);
 }
@@ -214,6 +225,16 @@ export function rejectedMutationAudit(
       ? "failure"
       : null;
   if (!outcome) return null;
+
+  if (path.length === 2 && path[0] === "session" && path[1] === "role") {
+    return {
+      outcome,
+      action: "access.self_role.select",
+      resourceType: "membership",
+      resourceId: "self",
+      route: "/api/v1/session/role",
+    };
+  }
 
   if (path[0] === "incidents") {
     const incidentId = normalizeOperationsId(path[1]) || "unresolved";

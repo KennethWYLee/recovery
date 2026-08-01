@@ -28,6 +28,9 @@ test("production bundle exposes the professional operations product and security
 
   assert.match(worker, /Continuity Ops/);
   assert.match(worker, /\/api\/v1\/incidents/);
+  assert.match(worker, /\/api\/v1\/session\/role/);
+  assert.match(worker, /access\.self_role\.select/);
+  assert.match(worker, /ADMIN_ROLE_MANAGED/);
   assert.match(worker, /x-content-type-options/);
   assert.match(worker, /content-security-policy/);
   assert.match(worker, /frame-ancestors 'none'/);
@@ -41,13 +44,16 @@ test("production bundle exposes the professional operations product and security
 test("client bundle contains the incident command workspace without teaching or grading copy", async () => {
   const assets = await readdir(new URL("../dist/client/assets/", import.meta.url));
   const operationsAsset = assets.find((name) => name.startsWith("OperationsApp-") && name.endsWith(".js"));
+  const roleSelectionAsset = assets.find((name) => name.startsWith("RoleSelectionClient-") && name.endsWith(".js"));
   const cssAssets = assets.filter((name) => name.endsWith(".css"));
 
   assert.ok(operationsAsset, "OperationsApp client asset is missing");
+  assert.ok(roleSelectionAsset, "RoleSelectionClient client asset is missing");
   assert.ok(cssAssets.length > 0, "compiled stylesheet is missing");
 
-  const [operations, css] = await Promise.all([
+  const [operations, roleSelection, css] = await Promise.all([
     readFile(new URL(`../dist/client/assets/${operationsAsset}`, import.meta.url), "utf8"),
+    readFile(new URL(`../dist/client/assets/${roleSelectionAsset}`, import.meta.url), "utf8"),
     Promise.all(cssAssets.map((name) => readFile(new URL(`../dist/client/assets/${name}`, import.meta.url), "utf8")))
       .then((parts) => parts.join("\n")),
   ]);
@@ -60,6 +66,13 @@ test("client bundle contains the incident command workspace without teaching or 
   assert.match(operations, /\/api\/v1\/overview/);
   assert.match(operations, /Idempotency-Key|idempotencyKey/);
   assert.doesNotMatch(operations, forbiddenProductCopy);
+  assert.match(roleSelection, /事件指揮/);
+  assert.match(roleSelection, /應變人員/);
+  assert.match(roleSelection, /觀察者/);
+  assert.match(roleSelection, /稽核人員/);
+  assert.match(roleSelection, /\/api\/v1\/session\/role/);
+  assert.match(roleSelection, /系統管理員.*不會出現在選項中/u);
+  assert.doesNotMatch(roleSelection, forbiddenProductCopy);
   assert.match(css, /focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /@media/);

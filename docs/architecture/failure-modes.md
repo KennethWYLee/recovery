@@ -7,8 +7,8 @@
 
 | 編號 | 可能失效方式 | 可能影響 | 如何發現 | 現有預防或限制 | 剩餘工作與證據狀態 |
 |---|---|---|---|---|---|
-| FM-01 | 正式環境允許用戶端偽造 forwarded identity header | 攻擊者冒用既有會員，或讓偽造校內 Email 取得唯讀資料 | 以外部請求嘗試加入相同 header；查 edge 設定與 access log | 應用程式只接受指定的 forwarded identity header；校內自動建立角色只有唯讀權限 | 必須在 private identity edge 做偽造 header、既有管理員及校內自動建立負例；目前 `not_verified`。 |
-| FM-02 | Email 網域誤判，或自動建立覆蓋既有會員狀態 | 相似網域取得資料、管理員被降權，或 `suspended` 會員被復原 | 以精確校內網域、大小寫、相似網域、子網域、既有各角色及 `suspended` 帳號登入 | 先查既有會員；只為網域精確為 `ntub.edu.tw` 且尚無會員資格的身分建立隨機 `observer`／`auditor`；其他網域未受邀者回傳 403 | 單元與隔離本機 Worker／D1 已核對精確網域、並行首次登入、既有 admin、其他網域及一筆 suspended 會員；正式 edge、實際第二個 NTUB 帳號、suspended 使用者與其餘身分組合仍待查核。 |
+| FM-01 | 正式環境允許用戶端偽造 forwarded identity header | 攻擊者冒用既有會員，或讓偽造校內 Email 自選營運角色 | 以外部請求嘗試加入相同 header；查 edge 設定與 access log | 應用程式只接受指定的 forwarded identity header；角色選擇仍需啟用中的精確校內身分 | 必須在 private identity edge 做偽造 header、既有管理員及校內角色選擇負例；目前 `not_verified`。 |
+| FM-02 | Email 網域誤判、自選管理員，或登入流程覆蓋停用狀態 | 相似網域取得資料、帳號自行擴張為管理員，或 `suspended` 會員被復原 | 以精確校內網域、大小寫、相似網域、子網域、`admin` 選值及 `suspended` 帳號登入 | 只接受網域精確為 `ntub.edu.tw`；`admin` 不在選項且 API 拒絕；`suspended` 不復原；角色更新需版本與事件責任相容性 | 單元與隔離本機 Worker／D1 已核對精確網域、四種選項、管理員排除、兩次角色切換、既有 admin、其他網域及一筆 suspended 會員；正式 edge、實際第二個 NTUB 帳號與完整責任組合仍待查核。 |
 | FM-03 | 兩位操作者同時更新，後寫覆蓋先寫 | 遺失新資料或決定 | 同時送出相同 `expectedVersion`，觀察第二筆結果 | version 欄位、write guard 與 D1 version triggers | 本機負例已驗證；仍要在 staging 多工作階段重跑。 |
 | FM-04 | 網路逾時造成同一 mutation 重送 | 重複事件、角色、工作或通訊 | 使用相同 key 重送，核對筆數與回應 | request hash 綁定的冪等回執、同 scope 唯一索引、先讀回執 | 本機已驗證；正式 24 小時清理與容量監控未驗證。 |
 | FM-05 | 多筆寫入只完成一部分 | 資源已更新但缺時間軸、稽核或回執 | 刻意使 batch 中一個 statement 違反 constraint，核對所有資料 | D1 batch、write guard、資料庫 constraint／trigger | migration 來源已涵蓋部分；仍需獨立 QA 保存實際結果。 |
