@@ -3,13 +3,13 @@
   "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-01T04:22:51.689Z",
+  "generatedAt": "2026-08-03T04:34:08.496Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "authenticated_fresh_d1_runtime_bootstrap_and_domain_role_selection",
   "result": "passed_with_documented_limits",
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "4e6a21b724b7f1836f472deee57711aab7ee34f395124004446029f37b7d6eff"
+    "sha256": "959d637638cf330a8a2968443667ce004cab51b084dd5ba3c736d50b7db6f713"
   },
   "environment": {
     "runtime": "v24.15.0",
@@ -65,7 +65,7 @@
   },
   "schoolRoleSelection": {
     "exactEmailDomain": "ntub.edu.tw",
-    "initialProvisioningRole": "auditor",
+    "initialProvisioningRole": "observer",
     "selectableRoles": [
       "commander",
       "responder",
@@ -122,7 +122,7 @@
     "nonMemberOtherDomainStatus": 403,
     "suspendedMembershipStatus": 403
   },
-  "totalDurationMs": 24674,
+  "totalDurationMs": 24191,
   "temporaryStateCleanup": "scheduled_after_runner_exit",
   "limitations": [
     "This is a local Wrangler and synthetic D1 exercise; it is not evidence that Sites production identity forwarding or hosted D1 initialization succeeded.",
