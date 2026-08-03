@@ -173,12 +173,23 @@ async function ensure(db, plan, digest, caller = AUTHORIZED_CALLER) {
 
 test("fresh bootstrap plan has three bounded phases and the complete 0004 inventory", async () => {
   const { plan, digest } = await bootstrapPlan();
-  assert.match(digest, /^[a-f0-9]{64}$/u);
+  assert.equal(digest, "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3");
   assert.deepEqual(plan.phases.map((phase) => phase.length), [29, 33, 23]);
   assert.ok(plan.phases.every((phase) => phase.length + 3 < 40));
   assert.equal(plan.finalInventory.tables.length, 14);
   assert.equal(plan.finalInventory.indexes.length, 20);
   assert.equal(plan.finalInventory.triggers.length, 46);
+});
+
+test("schema plan digest is identical for LF and CRLF migration sources", async () => {
+  const [migration0001, , migration0003, migration0004] = await migrationSources();
+  const lfSources = [migration0001, migration0003, migration0004]
+    .map((source) => source.replace(/\r\n?/gu, "\n"));
+  const crlfSources = lfSources.map((source) => source.replace(/\n/gu, "\r\n"));
+  const lfPlan = createFreshOperationsSchemaPlan(...lfSources);
+  const crlfPlan = createFreshOperationsSchemaPlan(...crlfSources);
+
+  assert.equal(await operationsSchemaPlanDigest(crlfPlan), await operationsSchemaPlanDigest(lfPlan));
 });
 
 test("fresh plan produces the same canonical sqlite_schema as migrations 0001 through 0004", async () => {

@@ -190,7 +190,9 @@ export function createFreshOperationsSchemaPlan(
 
 export async function operationsSchemaPlanDigest(plan: OperationsSchemaBootstrapPlan): Promise<string> {
   const canonical = plan.phases
-    .map((phase, index) => `phase:${index + 1}\n${phase.map((statement) => statement.trim()).join("\n-- statement --\n")}`)
+    .map((phase, index) => `phase:${index + 1}\n${phase
+      .map((statement) => statement.trim().replace(/\r\n?/gu, "\n"))
+      .join("\n-- statement --\n")}`)
     .join("\n-- phase --\n");
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");

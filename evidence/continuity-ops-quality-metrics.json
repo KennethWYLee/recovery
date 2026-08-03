@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-QUALITY-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-01T04:22:20.134Z",
+  "generatedAt": "2026-08-03T04:33:36.810Z",
   "evidenceStatus": "verified_local",
   "verificationType": "unit_coverage_and_static_complexity_diagnostics",
   "result": "coverage_passed_with_complexity_findings",
@@ -22,8 +22,8 @@
       "tests/operations-input.test.ts",
       "tests/operations-bootstrap.test.mjs"
     ],
-    "tests": 40,
-    "passed": 40,
+    "tests": 41,
+    "passed": 41,
     "failed": 0,
     "exitCode": 0
   },
@@ -37,12 +37,12 @@
     },
     "result": "passed",
     "aggregate": {
-      "linePercent": 92.17,
+      "linePercent": 92.18,
       "branchPercent": 85.81,
       "functionPercent": 93.97,
       "gate": {
         "line": {
-          "actual": 92.17,
+          "actual": 92.18,
           "minimum": 90,
           "passed": true
         },
@@ -61,26 +61,26 @@
     "perFile": [
       {
         "path": "db/operations-bootstrap-core.ts",
-        "linePercent": 86.36,
+        "linePercent": 86.4,
         "branchPercent": 87.31,
         "functionPercent": 100,
         "uncoveredLineRanges": [
           "123-126",
           "159-162",
           "172-173",
-          "426-436",
-          "454-464",
-          "468-469",
-          "475-476",
-          "478-479",
-          "482-483",
-          "486-506",
-          "542-550",
-          "554-568"
+          "428-438",
+          "456-466",
+          "470-471",
+          "477-478",
+          "480-481",
+          "484-485",
+          "488-508",
+          "544-552",
+          "556-570"
         ],
         "comparisonToAggregateThresholds": {
           "line": {
-            "actual": 86.36,
+            "actual": 86.4,
             "minimum": 90,
             "passed": false
           },
@@ -256,7 +256,7 @@
     "findings": [
       {
         "path": "db/operations-bootstrap-core.ts",
-        "line": 390,
+        "line": 392,
         "column": 8,
         "measuredComplexity": 40,
         "threshold": 15,
@@ -323,7 +323,7 @@
     },
     {
       "path": "db/operations-bootstrap-core.ts",
-      "sha256": "e90f80c10d8a5f6e44a288987a72c7e8d959e0f835ea8ce9d612095801523cf4"
+      "sha256": "59504d163e4fd173783e6f500be91d9dfb81c64b4c8c7258f14701b1b1e1103b"
     }
   ],
   "interpretation": [

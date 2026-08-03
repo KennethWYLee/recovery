@@ -3,15 +3,15 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-01T04:22:52.320Z",
+  "generatedAt": "2026-08-03T04:34:09.090Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
     "status": "source_tree_has_uncommitted_changes",
     "repositoryRelativePath": ".",
-    "head": "e592f0a8bfef62d65b55ee234ede4a64c7c4995e",
-    "shortHead": "e592f0a8bfef",
-    "sourceDirtyEntryCount": 28,
+    "head": "8c1d031f74d8d6c29f02988825145c55718251e3",
+    "shortHead": "8c1d031f74d8",
+    "sourceDirtyEntryCount": 2,
     "limitation": "The project contains uncommitted changes, so this manifest does not describe a clean commit rebuild."
   },
   "runtime": {
@@ -145,8 +145,8 @@
       },
       {
         "path": "db/operations-bootstrap-core.ts",
-        "bytes": 23685,
-        "sha256": "e90f80c10d8a5f6e44a288987a72c7e8d959e0f835ea8ce9d612095801523cf4"
+        "bytes": 23724,
+        "sha256": "59504d163e4fd173783e6f500be91d9dfb81c64b4c8c7258f14701b1b1e1103b"
       },
       {
         "path": "db/operations-bootstrap.ts",
@@ -330,8 +330,8 @@
       },
       {
         "path": "PROJECT.md",
-        "bytes": 9685,
-        "sha256": "73aa793a34db4c94cacc39f064fd9c4bd01d59ac915df08d5de609e28172b672"
+        "bytes": 10883,
+        "sha256": "c8bce3052795d3f461dc62d1d9c3addac3f4e704cc79bfa84301e922c8bf530d"
       },
       {
         "path": "public/continuity-ops-social-preview-v2.png",
@@ -460,8 +460,8 @@
       },
       {
         "path": "tests/operations-bootstrap.test.mjs",
-        "bytes": 14156,
-        "sha256": "d1f0ae3359d2e69c4927af60eb6fe80a38cd65a935ed97867c53464ada9680dc"
+        "bytes": 14819,
+        "sha256": "83349957c2eb86b91d621ed1f7c4aea2d7934ce3a3627aa9c9644417f292db23"
       },
       {
         "path": "tests/operations-domain.test.ts",
@@ -528,7 +528,7 @@
   "build": {
     "status": "local_build_present",
     "fileCount": 36,
-    "aggregateSha256": "b4cd2567d932eb739b70a87a01e63c1a54895c2f6f2cdacd2b60ad3694f87ce1",
+    "aggregateSha256": "bea76720fcc24f39be167f35d1bd7ef6453cbac5b8f1c466d5b18c06e495cad1",
     "files": [
       {
         "path": "dist/.openai/hosting.json",
@@ -632,8 +632,8 @@
       },
       {
         "path": "dist/server/index.js",
-        "bytes": 864710,
-        "sha256": "4e6a21b724b7f1836f472deee57711aab7ee34f395124004446029f37b7d6eff"
+        "bytes": 864735,
+        "sha256": "959d637638cf330a8a2968443667ce004cab51b084dd5ba3c736d50b7db6f713"
       },
       {
         "path": "dist/server/ssr/__vite_rsc_assets_manifest.js",
@@ -693,7 +693,7 @@
       {
         "path": "dist/server/ssr/vinext-server.json",
         "bytes": 86,
-        "sha256": "f98d26d3f47e1852016f4700e04151761bf59b1245a2953eeb92d4683ee861a4"
+        "sha256": "e5fbcabdbdb80e2f96f44e14214fde8161cbb7819fc050d5c96bbd90bfcd3c0a"
       },
       {
         "path": "dist/server/vinext-externals.json",
@@ -703,7 +703,7 @@
       {
         "path": "dist/server/vinext-server.json",
         "bytes": 86,
-        "sha256": "f98d26d3f47e1852016f4700e04151761bf59b1245a2953eeb92d4683ee861a4"
+        "sha256": "e5fbcabdbdb80e2f96f44e14214fde8161cbb7819fc050d5c96bbd90bfcd3c0a"
       },
       {
         "path": "dist/server/wrangler.json",
@@ -723,13 +723,13 @@
     {
       "path": "evidence/continuity-ops-gherkin-acceptance.json",
       "bytes": 2056,
-      "sha256": "3d81c9cc26f901afd3948921a836cc6ff9589641a364416a9decbe574bd64eeb",
+      "sha256": "ecfd2d5e2cba5736f2875d681dbb0ebc13b37fa99c2eaf9a1a4545aa5aadf1ad",
       "present": true,
       "evidenceId": "CO-VRF-GHERKIN-001",
       "evidenceStatus": "verified_local",
       "result": "passed_with_documented_limits",
       "verificationType": "executable_gherkin_domain_acceptance",
-      "generatedAt": "2026-08-01T04:22:01.295Z",
+      "generatedAt": "2026-08-03T04:33:17.973Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -739,13 +739,13 @@
     {
       "path": "evidence/continuity-ops-gherkin-fault-injection.json",
       "bytes": 15402,
-      "sha256": "dd6c0649cc6d738333d9229021a59742c37495b9aad96d4345d2c91467d84061",
+      "sha256": "880e9fccfa70bbc1565f2ab7a61e68a2a8cf99912d78b79e44eedea5bb714fa7",
       "present": true,
       "evidenceId": "CO-VRF-GHERKIN-FAULT-001",
       "evidenceStatus": "verified_local",
       "result": "passed",
       "verificationType": "risk_oriented_gherkin_fault_injection",
-      "generatedAt": "2026-08-01T04:22:06.715Z",
+      "generatedAt": "2026-08-03T04:33:23.271Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -754,14 +754,14 @@
     },
     {
       "path": "evidence/continuity-ops-quality-metrics.json",
-      "bytes": 10212,
-      "sha256": "748204b1982c082db0c5be20b4edb96871e0da1e65e4bee0986108a981d5df0e",
+      "bytes": 10210,
+      "sha256": "13f3271e0ced109a67d4015088fd3376a46e9ae04b8b4503abd81c33c824e4c4",
       "present": true,
       "evidenceId": "CO-VRF-QUALITY-001",
       "evidenceStatus": "verified_local",
       "result": "coverage_passed_with_complexity_findings",
       "verificationType": "unit_coverage_and_static_complexity_diagnostics",
-      "generatedAt": "2026-08-01T04:22:20.134Z",
+      "generatedAt": "2026-08-03T04:33:36.810Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -770,14 +770,14 @@
     },
     {
       "path": "evidence/continuity-ops-fault-injection.json",
-      "bytes": 67177,
-      "sha256": "63875ff97f20932125e5fd4c7e458a6751522f868823d45dcfc6ac0cfddbce07",
+      "bytes": 67176,
+      "sha256": "6e8746ccbd56a25fbb85a6050652ea4d310297bcbdf48fee0c08878cb75d7400",
       "present": true,
       "evidenceId": "CO-VRF-FAULT-001",
       "evidenceStatus": "verified_local",
       "result": "passed",
       "verificationType": "risk_oriented_targeted_fault_injection",
-      "generatedAt": "2026-08-01T04:22:16.420Z",
+      "generatedAt": "2026-08-03T04:33:33.062Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -882,16 +882,16 @@
     },
     {
       "path": "evidence/continuity-ops-local-runtime-bootstrap.json",
-      "bytes": 4269,
-      "sha256": "0f070b8f0614cb55b5f3250d77143bfc904af537b6e71f7c16ab6fff4c025a45",
+      "bytes": 4270,
+      "sha256": "ad0ba37114c70f12a6e9453e91107eb2556e980626e7a71ac32d26f3fb090bb0",
       "present": true,
       "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
       "evidenceStatus": "verified_local_controlled",
       "result": "passed_with_documented_limits",
       "verificationType": "authenticated_fresh_d1_runtime_bootstrap_and_domain_role_selection",
-      "generatedAt": "2026-08-01T04:22:51.689Z",
+      "generatedAt": "2026-08-03T04:34:08.496Z",
       "limitationCount": 4,
-      "associatedBuildSha256": "4e6a21b724b7f1836f472deee57711aab7ee34f395124004446029f37b7d6eff",
+      "associatedBuildSha256": "959d637638cf330a8a2968443667ce004cab51b084dd5ba3c736d50b7db6f713",
       "matchesCurrentWorkerBuild": true,
       "bindingScope": "current_worker_artifact",
       "bindingEvaluation": "matches_current_worker"
@@ -947,13 +947,13 @@
     {
       "path": "evidence/continuity-ops-sbom.cdx.json",
       "bytes": 699903,
-      "sha256": "4f63dd467cd43d92453a8eb4c12cb72c4d4fdec9f8757ad5452c09b7b8dfb9d0",
+      "sha256": "672bea70ddfe8086566fd6d20887dae9304c859d0de8e49680cf1e091ffae1ab",
       "present": true,
       "evidenceId": null,
       "evidenceStatus": "inventory_generated",
       "result": "not_applicable",
       "verificationType": "cyclonedx_dependency_inventory",
-      "generatedAt": "2026-08-01T04:21:43.427Z",
+      "generatedAt": "2026-08-03T04:33:02.107Z",
       "limitationCount": 0,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
