@@ -1129,6 +1129,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   const [toast, setToast] = useState<string | null>(null);
   const overviewAbortRef = useRef<AbortController | null>(null);
   const detailAbortRef = useRef<AbortController | null>(null);
+  const detailRequestIncidentRef = useRef<string | null>(null);
   const mutationKeysRef = useRef(new Map<string, string>());
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileNavWasOpenRef = useRef(false);
@@ -1192,7 +1193,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   }
 
   const loadOverview = useCallback(async (quiet = false) => {
-    overviewAbortRef.current?.abort();
+    if (overviewAbortRef.current && !overviewAbortRef.current.signal.aborted) return false;
     const controller = new AbortController();
     overviewAbortRef.current = controller;
     if (!quiet) setLoading(true);
@@ -1326,14 +1327,19 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
       setOverviewError(getErrorMessage(error));
       return false;
     } finally {
+      if (overviewAbortRef.current === controller) overviewAbortRef.current = null;
       if (!controller.signal.aborted) setLoading(false);
     }
   }, []);
 
   const loadIncident = useCallback(async (incidentId: string, quiet = false) => {
-    detailAbortRef.current?.abort();
+    if (detailAbortRef.current && !detailAbortRef.current.signal.aborted) {
+      if (detailRequestIncidentRef.current === incidentId) return false;
+      detailAbortRef.current.abort();
+    }
     const controller = new AbortController();
     detailAbortRef.current = controller;
+    detailRequestIncidentRef.current = incidentId;
     if (!quiet) {
       setDetailLoading(true);
       setDetailError(null);
@@ -1393,6 +1399,10 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
       setDetailError(getErrorMessage(error));
       return false;
     } finally {
+      if (detailAbortRef.current === controller) {
+        detailAbortRef.current = null;
+        detailRequestIncidentRef.current = null;
+      }
       if (!controller.signal.aborted) setDetailLoading(false);
     }
   }, []);
@@ -1414,17 +1424,17 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   }, [loadOverview, mutationPending]);
 
   useEffect(() => {
-    if (!selectedIncidentId) return;
+    if (!selectedIncidentId || !snapshot) return;
     window.localStorage.setItem("continuity-ops:selected-incident", selectedIncidentId);
     const detailLoad = window.setTimeout(() => {
       setDetailLastUpdatedAt(null);
       void loadIncident(selectedIncidentId);
     }, 0);
     return () => window.clearTimeout(detailLoad);
-  }, [selectedIncidentId, loadIncident]);
+  }, [selectedIncidentId, loadIncident, snapshot]);
 
   useEffect(() => {
-    if (!selectedIncidentId) return;
+    if (!selectedIncidentId || !snapshot) return;
     const refreshVisibleDetail = () => {
       if (document.visibilityState === "visible" && !mutationPending) void loadIncident(selectedIncidentId, true);
     };
@@ -1437,7 +1447,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [loadIncident, mutationPending, selectedIncidentId]);
+  }, [loadIncident, mutationPending, selectedIncidentId, snapshot]);
 
   const actor: Actor = snapshot?.actor ?? {
     id: initialIdentity.email,

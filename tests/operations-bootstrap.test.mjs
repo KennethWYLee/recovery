@@ -305,6 +305,35 @@ test("an exact Wrangler 0001-0005 database is adopted atomically, but bad histor
   }
 });
 
+test("an exact externally migrated database safely advances a stale ready-state marker", async () => {
+  const { plan, digest } = await bootstrapPlan();
+  const db = new SqliteD1Database();
+  try {
+    await applyMigrationChain(db.sqlite, true);
+    assert.equal((await ensure(db, plan, digest)).status, "ready");
+    db.sqlite.prepare(
+      `UPDATE ${OPERATIONS_BOOTSTRAP_STATE_TABLE}
+       SET schema_version = '0004', schema_digest = 'legacy-ready-digest'
+       WHERE singleton = 1`,
+    ).run();
+
+    const adopted = await ensure(db, plan, digest, { verified: true, email: "viewer@ntub.edu.tw" });
+    assert.equal(adopted.status, "ready");
+    assert.equal(adopted.schemaVersion, "0005");
+    assert.equal(adopted.schemaDigest, digest);
+    assert.ok(adopted.queryCount > 0);
+    const state = db.sqlite.prepare(
+      `SELECT schema_version, schema_digest, status
+       FROM ${OPERATIONS_BOOTSTRAP_STATE_TABLE} WHERE singleton = 1`,
+    ).get();
+    assert.equal(state.schema_version, "0005");
+    assert.equal(state.schema_digest, digest);
+    assert.equal(state.status, "ready");
+  } finally {
+    db.close();
+  }
+});
+
 test("a failed phase rolls back every statement and can be retried without partial initialization", async () => {
   const { plan, digest } = await bootstrapPlan();
   const db = new SqliteD1Database();

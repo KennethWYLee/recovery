@@ -279,6 +279,46 @@ async function hasExactWranglerMigrationHistory(db: D1Database, counter: QueryCo
     && result.results.every((row, index) => row.id === index + 1 && row.name === OPERATIONS_WRANGLER_MIGRATIONS[index]);
 }
 
+async function adoptExactMigratedSchemaState(options: {
+  db: D1Database;
+  plan: OperationsSchemaBootstrapPlan;
+  planDigest: string;
+  state: RuntimeSchemaStateRow;
+  now: string;
+  counter: QueryCounter;
+}): Promise<OperationsSchemaBootstrapResult | null> {
+  const { db, plan, planDigest, state, now, counter } = options;
+  if (state.status !== "ready" || state.phase !== plan.phases.length) return null;
+
+  const snapshot = await readSchemaSnapshot(db, counter);
+  if (!inventoryEquals(snapshot.inventory, plan.finalInventory)
+    || snapshot.fingerprint !== OPERATIONS_FINAL_SCHEMA_FINGERPRINT
+    || !(await hasExactWranglerMigrationHistory(db, counter))) {
+    return null;
+  }
+
+  counter.count += 1;
+  await db.prepare(
+    `UPDATE ${OPERATIONS_BOOTSTRAP_STATE_TABLE}
+     SET schema_version = ?, schema_digest = ?, updated_at = ?, completed_at = ?
+     WHERE singleton = 1 AND schema_version = ? AND schema_digest = ?
+       AND phase = ? AND status = 'ready'`,
+  ).bind(
+    plan.schemaVersion,
+    planDigest,
+    now,
+    now,
+    state.schema_version,
+    state.schema_digest,
+    state.phase,
+  ).run();
+
+  const adoptedState = await readState(db, counter);
+  if (!adoptedState) return null;
+  const adoptedResult = resultFromState(adoptedState, planDigest, counter.count);
+  return adoptedResult.ready ? adoptedResult : null;
+}
+
 function resultFromState(state: RuntimeSchemaStateRow, expectedDigest: string, queryCount: number): OperationsSchemaBootstrapResult {
   if (state.schema_version !== OPERATIONS_BOOTSTRAP_SCHEMA_VERSION || state.schema_digest !== expectedDigest) {
     return {
@@ -470,7 +510,11 @@ export async function ensureOperationsSchemaCore(options: {
     };
   }
   let stateResult = resultFromState(state, planDigest, counter.count);
-  if (stateResult.status === "mismatch") return stateResult;
+  if (stateResult.status === "mismatch") {
+    const adopted = await adoptExactMigratedSchemaState({ db, plan, planDigest, state, now, counter });
+    if (adopted) return adopted;
+    return stateResult;
+  }
   if (!Number.isInteger(state.phase) || state.phase < 0 || state.phase > plan.phases.length) {
     return { ...stateResult, ready: false, status: "mismatch", reason: "state_mismatch" };
   }

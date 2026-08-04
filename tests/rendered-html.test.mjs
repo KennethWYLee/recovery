@@ -114,3 +114,10 @@ test("Sites build binds D1 and keeps deployment migration packaging separate", a
   assert.match(worker, /ops_runtime_schema_state/);
   assert.match(worker, /DATABASE_INITIALIZING/);
 });
+
+test("operations polling cannot cancel an in-flight initial load", async () => {
+  const source = await readFile(new URL("../app/operations/OperationsApp.tsx", import.meta.url), "utf8");
+  assert.match(source, /overviewAbortRef\.current && !overviewAbortRef\.current\.signal\.aborted\) return false/);
+  assert.match(source, /detailRequestIncidentRef\.current === incidentId\) return false/);
+  assert.equal((source.match(/if \(!selectedIncidentId \|\| !snapshot\) return;/g) ?? []).length, 2);
+});

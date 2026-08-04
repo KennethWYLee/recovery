@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-QUALITY-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-04T23:26:01.164Z",
+  "generatedAt": "2026-08-04T23:50:15.093Z",
   "evidenceStatus": "verified_local",
   "verificationType": "unit_coverage_and_static_complexity_diagnostics",
   "result": "coverage_passed_with_complexity_findings",
@@ -22,8 +22,8 @@
       "tests/operations-input.test.ts",
       "tests/operations-bootstrap.test.mjs"
     ],
-    "tests": 41,
-    "passed": 41,
+    "tests": 42,
+    "passed": 42,
     "failed": 0,
     "exitCode": 0
   },
@@ -37,22 +37,22 @@
     },
     "result": "passed",
     "aggregate": {
-      "linePercent": 92.34,
-      "branchPercent": 86.27,
-      "functionPercent": 94.02,
+      "linePercent": 92.42,
+      "branchPercent": 85.96,
+      "functionPercent": 94.07,
       "gate": {
         "line": {
-          "actual": 92.34,
+          "actual": 92.42,
           "minimum": 90,
           "passed": true
         },
         "branch": {
-          "actual": 86.27,
+          "actual": 85.96,
           "minimum": 80,
           "passed": true
         },
         "function": {
-          "actual": 94.02,
+          "actual": 94.07,
           "minimum": 80,
           "passed": true
         }
@@ -61,31 +61,32 @@
     "perFile": [
       {
         "path": "db/operations-bootstrap-core.ts",
-        "linePercent": 86.51,
-        "branchPercent": 87.41,
+        "linePercent": 87.09,
+        "branchPercent": 86.3,
         "functionPercent": 100,
         "uncoveredLineRanges": [
           "124-127",
           "164-167",
           "177-178",
-          "433-443",
-          "461-471",
-          "475-476",
-          "482-483",
-          "485-486",
-          "489-490",
-          "493-513",
-          "549-557",
-          "561-575"
+          "297-298",
+          "473-483",
+          "501-511",
+          "519-520",
+          "526-527",
+          "529-530",
+          "533-534",
+          "537-557",
+          "593-601",
+          "605-619"
         ],
         "comparisonToAggregateThresholds": {
           "line": {
-            "actual": 86.51,
+            "actual": 87.09,
             "minimum": 90,
             "passed": false
           },
           "branch": {
-            "actual": 87.41,
+            "actual": 86.3,
             "minimum": 80,
             "passed": true
           },
@@ -255,11 +256,11 @@
     "findings": [
       {
         "path": "db/operations-bootstrap-core.ts",
-        "line": 397,
+        "line": 437,
         "column": 8,
-        "measuredComplexity": 40,
+        "measuredComplexity": 41,
         "threshold": 15,
-        "message": "Async function 'ensureOperationsSchemaCore' has a complexity of 40. Maximum allowed is 15."
+        "message": "Async function 'ensureOperationsSchemaCore' has a complexity of 41. Maximum allowed is 15."
       },
       {
         "path": "lib/operations-auth.ts",
@@ -322,7 +323,7 @@
     },
     {
       "path": "db/operations-bootstrap-core.ts",
-      "sha256": "a71e3ef6e661fb07857d0d89ab4a58bf5ddbadc94f2689b549ec844c37dc428d"
+      "sha256": "56f3e5c3958183cbf2b8a7da1eeaedbd2e758b33a87edc0f70d341c136edd297"
     }
   ],
   "interpretation": [
