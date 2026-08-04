@@ -1,9 +1,10 @@
 "use client";
 
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
+  Activity,
   Boxes,
   Check,
   Clock3,
@@ -18,6 +19,8 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import type { ObservabilitySnapshot, ObservabilityWindow } from "@/db/operations-telemetry";
+import { normalizeObservabilitySnapshot } from "@/lib/observability-client";
 import {
   canApproveIncidentCommunication,
   canDraftIncidentCommunication,
@@ -29,6 +32,8 @@ import {
   type OrganizationRole,
 } from "@/lib/operations-domain";
 import { parseZonedDateTimeInput, resolveOrganizationTimeZone, toZonedDateTimeInput } from "@/lib/operations-time";
+
+const ObservabilityView = lazy(() => import("./ObservabilityView").then((module) => ({ default: module.ObservabilityView })));
 
 export type InitialIdentity = {
   displayName: string;
@@ -52,7 +57,7 @@ type TaskStatus = "open" | "in_progress" | "blocked" | "completed" | "cancelled"
 type TaskPriority = "critical" | "high" | "medium" | "low";
 type CommunicationAudience = "internal" | "stakeholder" | "public";
 type CommunicationStatus = "draft" | "reviewed" | "published";
-type ViewId = "overview" | "incidents" | "services" | "audit" | "access";
+type ViewId = "overview" | "observability" | "incidents" | "services" | "audit" | "access";
 type WorkspaceTab = "summary" | "timeline" | "tasks" | "communications" | "review";
 type Actor = {
   id: string;
@@ -378,6 +383,7 @@ class ApiError extends Error {
 
 const NAV_ITEMS: { id: ViewId; label: string; description: string; icon: IconName }[] = [
   { id: "overview", label: "營運總覽", description: "風險與待處理事項", icon: "grid" },
+  { id: "observability", label: "系統觀測", description: "流量、錯誤與延遲", icon: "pulse" },
   { id: "incidents", label: "事件指揮", description: "共享事件工作區", icon: "incident" },
   { id: "services", label: "服務目錄", description: "責任、SLO 與操作手冊", icon: "service" },
   { id: "audit", label: "稽核紀錄", description: "操作、結果與請求編號", icon: "audit" },
@@ -386,6 +392,7 @@ const NAV_ITEMS: { id: ViewId; label: string; description: string; icon: IconNam
 
 const NAV_PERMISSIONS: Record<ViewId, readonly string[]> = {
   overview: [],
+  observability: ["observability:read"],
   incidents: ["incident:read"],
   services: ["service:read"],
   audit: ["audit:read"],
@@ -393,7 +400,7 @@ const NAV_PERMISSIONS: Record<ViewId, readonly string[]> = {
 };
 const NO_PERMISSIONS: readonly string[] = [];
 
-const VIEW_IDS: readonly ViewId[] = ["overview", "incidents", "services", "audit", "access"];
+const VIEW_IDS: readonly ViewId[] = ["overview", "observability", "incidents", "services", "audit", "access"];
 const WORKSPACE_TABS: readonly WorkspaceTab[] = ["summary", "timeline", "tasks", "communications", "review"];
 
 const SEVERITY_ORDER: Record<Severity, number> = { SEV1: 1, SEV2: 2, SEV3: 3, SEV4: 4 };
@@ -1017,11 +1024,12 @@ function auditResourceLabel(resourceType: string): string {
   return labels[resourceType] ?? resourceType;
 }
 
-type IconName = "grid" | "incident" | "service" | "audit" | "access" | "search" | "refresh" | "plus" | "menu" | "close" | "clock" | "check" | "arrow";
+type IconName = "grid" | "pulse" | "incident" | "service" | "audit" | "access" | "search" | "refresh" | "plus" | "menu" | "close" | "clock" | "check" | "arrow";
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const glyphs: Record<IconName, LucideIcon> = {
     grid: LayoutDashboard,
+    pulse: Activity,
     incident: Siren,
     service: Boxes,
     audit: ScrollText,
@@ -1086,6 +1094,8 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [detail, setDetail] = useState<IncidentDetail | null>(null);
   const [auditRecords, setAuditRecords] = useState<AuditRecord[] | null>(null);
+  const [observabilityData, setObservabilityData] = useState<ObservabilitySnapshot | null>(null);
+  const [observabilityRange, setObservabilityRange] = useState<ObservabilityWindow>("24h");
   const [accessData, setAccessData] = useState<AccessData | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -1545,6 +1555,21 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
     }
   }, []);
 
+  const loadObservabilityView = useCallback(async () => {
+    setSecondaryLoading(true);
+    setSecondaryError(null);
+    try {
+      const payload = await apiRequest<unknown>(`/api/v1/observability?range=${observabilityRange}`);
+      setObservabilityData(normalizeObservabilitySnapshot(payload));
+      return true;
+    } catch (error) {
+      setSecondaryError(getErrorMessage(error));
+      return false;
+    } finally {
+      setSecondaryLoading(false);
+    }
+  }, [observabilityRange]);
+
   const loadAccessView = useCallback(async () => {
     setSecondaryLoading(true);
     setSecondaryError(null);
@@ -1603,14 +1628,16 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   useEffect(() => {
     if (!snapshot) return;
     const shouldLoadAudit = activeView === "audit" && actorPermissions.includes("audit:read") && !auditRecords && !secondaryLoading && !secondaryError;
+    const shouldLoadObservability = activeView === "observability" && actorPermissions.includes("observability:read") && !observabilityData && !secondaryLoading && !secondaryError;
     const shouldLoadAccess = activeView === "access" && viewAllowed("access", actorPermissions) && !accessData && !secondaryLoading && !secondaryError;
-    if (!shouldLoadAudit && !shouldLoadAccess) return;
+    if (!shouldLoadAudit && !shouldLoadObservability && !shouldLoadAccess) return;
     const loadSecondaryView = window.setTimeout(() => {
       if (shouldLoadAudit) void loadAuditView();
+      if (shouldLoadObservability) void loadObservabilityView();
       if (shouldLoadAccess) void loadAccessView();
     }, 0);
     return () => window.clearTimeout(loadSecondaryView);
-  }, [accessData, activeView, actorPermissions, auditRecords, loadAccessView, loadAuditView, secondaryError, secondaryLoading, snapshot]);
+  }, [accessData, activeView, actorPermissions, auditRecords, loadAccessView, loadAuditView, loadObservabilityView, observabilityData, secondaryError, secondaryLoading, snapshot]);
 
   useEffect(() => {
     if (!snapshot) return;
@@ -1660,6 +1687,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   async function refreshOperations(quiet = false) {
     const requests: Promise<boolean>[] = [loadOverview(quiet)];
     if (selectedIncidentId) requests.push(loadIncident(selectedIncidentId, quiet));
+    if (activeView === "observability" && actorPermissions.includes("observability:read")) requests.push(loadObservabilityView());
     const results = await Promise.all(requests);
     return results.every(Boolean);
   }
@@ -2026,7 +2054,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
         </div>
         <nav>
           <p className="nav-section-label">OPERATIONS</p>
-          {visibleNavItems.filter((item) => ["overview", "incidents", "services"].includes(item.id)).map((item) => (
+          {visibleNavItems.filter((item) => ["overview", "observability", "incidents", "services"].includes(item.id)).map((item) => (
             <button key={item.id} className={renderedView === item.id ? "active" : ""} type="button" aria-current={renderedView === item.id ? "page" : undefined} onClick={() => changeView(item.id)}>
               <Icon name={item.icon} /><span><strong>{item.label}</strong><small>{item.description}</small></span>
             </button>
@@ -2080,6 +2108,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
           ) : (
             <>
               {renderedView === "overview" && <OverviewView snapshot={snapshot} lastUpdatedAt={overviewLastUpdatedAt} stale={Boolean(overviewError)} timeZone={organizationTimeZone} selectIncident={selectIncident} openIncidents={() => changeView("incidents")} />}
+              {renderedView === "observability" && <Suspense fallback={<div className="workspace-loading" role="status"><span className="spinner" />正在載入系統觀測圖表…</div>}><ObservabilityView data={observabilityData} loading={secondaryLoading} error={secondaryError} range={observabilityRange} onRangeChange={(nextRange) => { setObservabilityRange(nextRange); setObservabilityData(null); setSecondaryError(null); }} retry={() => void loadObservabilityView()} timeZone={organizationTimeZone} role={organizationRole ?? "observer"} /></Suspense>}
               {renderedView === "incidents" && (
                 <IncidentsView
                   incidents={filteredIncidents}
@@ -2162,16 +2191,45 @@ function OverviewView({ snapshot, lastUpdatedAt, stale, timeZone, selectIncident
   const serviceAttention = [...snapshot.services]
     .filter((service) => service.activeIncidentCount > 0 || service.status !== "operational" || service.telemetryStatus === "unavailable")
     .sort((a, b) => b.activeIncidentCount - a.activeIncidentCount || Number(a.status === "unknown") - Number(b.status === "unknown"));
+  const severityCounts = (["SEV1", "SEV2", "SEV3", "SEV4"] as const).map((severity) => ({
+    severity,
+    count: active.filter((incident) => incident.severity === severity).length,
+  }));
+  const activeSeverityTotal = Math.max(1, severityCounts.reduce((sum, item) => sum + item.count, 0));
+  const organizationRole = snapshot.actor.roles[0] as OrganizationRole | undefined;
+  const situationTitle = metrics.sev1Incidents > 0
+    ? `${metrics.sev1Incidents}件重大事件需要立即指揮`
+    : metrics.activeIncidents > 0
+      ? `${metrics.activeIncidents}件事件仍在處理`
+      : "目前沒有未結案事件";
+  const situationDescription = metrics.sev1Incidents > 0
+    ? "先確認影響範圍、事件指揮官與下一次對外更新，再檢查是否有新的5xx或延遲異常。"
+    : metrics.activeIncidents > 0
+      ? "依嚴重度、服務影響與逾期工作安排下一個行動；尚未接入的監控資料不視為正常。"
+      : "持續確認服務遙測與工作狀態；沒有事件不代表沒有未知風險。";
+  const roleBrief = organizationRole === "responder"
+    ? "從事件工作區與系統觀測比對異常，留下可以重跑的驗證證據。"
+    : organizationRole === "auditor"
+      ? "利用request ID交叉查核錯誤請求與稽核紀錄，不以單一畫面下結論。"
+      : organizationRole === "observer"
+        ? "先掌握事件、服務影響與資料更新時間；目前角色維持唯讀。"
+        : "確認高風險事件已有負責人，並讓每個下一步都有明確所有者。";
   return (
     <div className="view-stack">
-      <PageHeader eyebrow="OPERATIONS" title="營運總覽" description="優先處理會影響服務延續性的事件、SLO 與未指派工作。">
+      <PageHeader eyebrow="LIVE BRIEFING" title="營運總覽" description="先掌握現在的風險、責任與下一個行動，再進入事件細節。">
         <div className={`freshness ${stale ? "stale" : ""}`}><span className={lastUpdatedAt && !stale ? "live-dot" : "live-dot idle"} />{stale ? `快照 ${formatTimestamp(lastUpdatedAt?.toISOString(), timeZone)}` : lastUpdatedAt ? `更新於 ${formatTimestamp(lastUpdatedAt.toISOString(), timeZone)}` : "等待首次更新"}</div>
       </PageHeader>
-      <section className="metric-grid" aria-label="需要處理的營運風險">
-        <MetricCard label="SEV1" value={metrics.sev1Incidents} note="需立即處理的重大事件" tone={metrics.sev1Incidents > 0 ? "critical" : "neutral"} />
-        <MetricCard label="未指派指揮官" value={metrics.unassignedIncidents ?? "—"} note={metrics.unassignedIncidents == null ? "伺服器未提供此項統計" : "未結案且沒有有效事件指揮官"} tone={(metrics.unassignedIncidents ?? 0) > 0 ? "critical" : "neutral"} />
-        <MetricCard label="逾期工作" value={metrics.overdueTasks} note="仍待處理且已超過到期時間" tone={metrics.overdueTasks > 0 ? "warning" : "neutral"} />
-        <MetricCard label="未結案事件" value={metrics.activeIncidents} note={`${metrics.incidentAffectedServices} 項服務受到事件影響`} tone={metrics.activeIncidents > 0 ? "warning" : "neutral"} />
+      <section className={`command-briefing ${metrics.sev1Incidents > 0 ? "critical" : metrics.activeIncidents > 0 ? "active" : "calm"}`} aria-labelledby="situation-title">
+        <div className="command-briefing-copy"><span className="briefing-kicker">CURRENT SITUATION</span><h2 id="situation-title">{situationTitle}</h2><p>{situationDescription}</p>{metrics.activeIncidents > 0 && <button className="button briefing-action" type="button" onClick={openIncidents}>進入事件指揮 <Icon name="arrow" size={16} /></button>}</div>
+        <dl className="command-briefing-facts">
+          <div><dt>受影響服務</dt><dd>{metrics.incidentAffectedServices}</dd><small>目前未結案事件</small></div>
+          <div><dt>未指派指揮官</dt><dd>{metrics.unassignedIncidents ?? "—"}</dd><small>需要明確責任</small></div>
+          <div><dt>逾期工作</dt><dd>{metrics.overdueTasks}</dd><small>仍待完成或取消</small></div>
+        </dl>
+      </section>
+      <section className="overview-insight-grid">
+        <article className="panel severity-profile" aria-labelledby="severity-profile-title"><header><div><p className="eyebrow">INCIDENT PROFILE</p><h2 id="severity-profile-title">未結案事件分布</h2></div><span>{active.length}件</span></header><div className="severity-bar" role="img" aria-label={severityCounts.map((item) => `${item.severity} ${item.count}件`).join("、")}>{severityCounts.filter((item) => item.count > 0).map((item) => <span key={item.severity} className={item.severity.toLowerCase()} style={{ width: `${item.count / activeSeverityTotal * 100}%` }} />)}</div><dl>{severityCounts.map((item) => <div key={item.severity}><dt><span className={`severity-dot ${item.severity.toLowerCase()}`} />{item.severity}</dt><dd>{item.count}</dd></div>)}</dl></article>
+        <article className="panel role-brief"><p className="eyebrow">YOUR OPERATING FOCUS</p><h2>{ORGANIZATION_ROLE_LABEL[organizationRole ?? "observer"]}的判斷重點</h2><p>{roleBrief}</p><button className="text-button" type="button" onClick={() => openIncidents()}>查看需要處理的事件 <Icon name="arrow" size={16} /></button></article>
       </section>
       <section className="panel reliability-strip" aria-labelledby="reliability-metrics-title">
         <div className="reliability-heading"><p className="eyebrow">RESPONSE ANALYTICS</p><h2 id="reliability-metrics-title">應變指標</h2><span>目前組織中，操作者有權查看的事件</span></div>
@@ -3448,10 +3506,6 @@ function PageHeader({ eyebrow, title, description, children }: { eyebrow: string
 
 function PanelHeader({ title, eyebrow, id, children }: { title: string; eyebrow: string; id: string; children?: ReactNode }) {
   return <header className="panel-header"><div><p className="eyebrow">{eyebrow}</p><h2 id={id}>{title}</h2></div>{children}</header>;
-}
-
-function MetricCard({ label, value, note, tone }: { label: string; value: string | number; note: string; tone: "critical" | "warning" | "neutral" }) {
-  return <article className={`metric-card ${tone}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>;
 }
 
 function IncidentTable({ incidents, selectIncident, emptyMessage, timeZone }: { incidents: IncidentSummary[]; selectIncident: (id: string) => void; emptyMessage: string; timeZone: string }) {

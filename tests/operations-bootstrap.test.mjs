@@ -27,8 +27,8 @@ async function migrationSources() {
 }
 
 async function bootstrapPlan() {
-  const [migration0001, , migration0003, migration0004] = await migrationSources();
-  const plan = createFreshOperationsSchemaPlan(migration0001, migration0003, migration0004);
+  const [migration0001, , migration0003, migration0004, migration0005] = await migrationSources();
+  const plan = createFreshOperationsSchemaPlan(migration0001, migration0003, migration0004, migration0005);
   return { plan, digest: await operationsSchemaPlanDigest(plan) };
 }
 
@@ -171,19 +171,19 @@ async function ensure(db, plan, digest, caller = AUTHORIZED_CALLER) {
   });
 }
 
-test("fresh bootstrap plan has three bounded phases and the complete 0004 inventory", async () => {
+test("fresh bootstrap plan has three bounded phases and the complete 0005 inventory", async () => {
   const { plan, digest } = await bootstrapPlan();
-  assert.equal(digest, "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3");
-  assert.deepEqual(plan.phases.map((phase) => phase.length), [29, 33, 23]);
+  assert.equal(digest, "d375830a0de59dec1d0a29a4ec5b0356e636b72e458ffb0bb888de57225059a3");
+  assert.deepEqual(plan.phases.map((phase) => phase.length), [29, 33, 26]);
   assert.ok(plan.phases.every((phase) => phase.length + 3 < 40));
-  assert.equal(plan.finalInventory.tables.length, 14);
-  assert.equal(plan.finalInventory.indexes.length, 20);
+  assert.equal(plan.finalInventory.tables.length, 15);
+  assert.equal(plan.finalInventory.indexes.length, 22);
   assert.equal(plan.finalInventory.triggers.length, 46);
 });
 
 test("schema plan digest is identical for LF and CRLF migration sources", async () => {
-  const [migration0001, , migration0003, migration0004] = await migrationSources();
-  const lfSources = [migration0001, migration0003, migration0004]
+  const [migration0001, , migration0003, migration0004, migration0005] = await migrationSources();
+  const lfSources = [migration0001, migration0003, migration0004, migration0005]
     .map((source) => source.replace(/\r\n?/gu, "\n"));
   const crlfSources = lfSources.map((source) => source.replace(/\n/gu, "\r\n"));
   const lfPlan = createFreshOperationsSchemaPlan(...lfSources);
@@ -192,7 +192,7 @@ test("schema plan digest is identical for LF and CRLF migration sources", async 
   assert.equal(await operationsSchemaPlanDigest(crlfPlan), await operationsSchemaPlanDigest(lfPlan));
 });
 
-test("fresh plan produces the same canonical sqlite_schema as migrations 0001 through 0004", async () => {
+test("fresh plan produces the same canonical sqlite_schema as migrations 0001 through 0005", async () => {
   const { plan } = await bootstrapPlan();
   const migrated = new DatabaseSync(":memory:");
   const bootstrapped = new DatabaseSync(":memory:");
@@ -282,7 +282,7 @@ test("same-isolate in-flight work is coalesced and a fully verified ready databa
   }
 });
 
-test("an exact Wrangler 0001-0004 database is adopted atomically, but bad history is rejected", async () => {
+test("an exact Wrangler 0001-0005 database is adopted atomically, but bad history is rejected", async () => {
   const { plan, digest } = await bootstrapPlan();
   const valid = new SqliteD1Database();
   const invalid = new SqliteD1Database();
@@ -294,7 +294,7 @@ test("an exact Wrangler 0001-0004 database is adopted atomically, but bad histor
     assert.equal(valid.sqlite.prepare(`SELECT status FROM ${OPERATIONS_BOOTSTRAP_STATE_TABLE} WHERE singleton = 1`).get().status, "ready");
 
     await applyMigrationChain(invalid.sqlite, true);
-    invalid.sqlite.prepare("UPDATE d1_migrations SET name = 'wrong.sql' WHERE id = 4").run();
+    invalid.sqlite.prepare("UPDATE d1_migrations SET name = 'wrong.sql' WHERE id = 5").run();
     const rejected = await ensure(invalid, plan, digest);
     assert.equal(rejected.status, "mismatch");
     assert.equal(rejected.reason, "untracked_schema_objects");
@@ -363,7 +363,7 @@ test("concurrent bootstrap attempts re-read durable state and converge without d
     const final = await ensure(db, plan, digest, null);
     assert.equal(final.status, "ready");
     assert.deepEqual(schemaInventory(db.sqlite), plan.finalInventory);
-    assert.equal(new Set(productSchemaRows(db.sqlite).map((row) => `${row.type}:${row.name}`)).size, 80);
+    assert.equal(new Set(productSchemaRows(db.sqlite).map((row) => `${row.type}:${row.name}`)).size, 83);
   } finally {
     db.close();
   }

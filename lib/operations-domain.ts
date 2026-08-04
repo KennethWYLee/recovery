@@ -56,6 +56,7 @@ export const PERMISSIONS = [
   "incident:command",
   "review:write",
   "audit:read",
+  "observability:read",
 ] as const;
 export type OperationsPermission = (typeof PERMISSIONS)[number];
 
@@ -71,10 +72,11 @@ const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OperationsPermission[]
     "incident:respond",
     "incident:command",
     "review:write",
+    "observability:read",
   ],
-  responder: ["service:read", "incident:read", "incident:respond"],
-  observer: ["access:read", "service:read", "incident:read", "audit:read"],
-  auditor: ["access:read", "service:read", "incident:read", "audit:read"],
+  responder: ["service:read", "incident:read", "incident:respond", "observability:read"],
+  observer: ["access:read", "service:read", "incident:read", "audit:read", "observability:read"],
+  auditor: ["access:read", "service:read", "incident:read", "audit:read", "observability:read"],
 };
 
 /**
@@ -301,7 +303,7 @@ export function operationsRouteTemplate(path: readonly string[]): string {
   if (path.length === 2 && path[0] === "session" && path[1] === "role") {
     return "/api/v1/session/role";
   }
-  if (path.length === 1 && ["health", "access", "overview", "services", "incidents", "audit"].includes(path[0])) {
+  if (path.length === 1 && ["health", "access", "overview", "observability", "services", "incidents", "audit"].includes(path[0])) {
     return `/api/v1/${path[0]}`;
   }
   if (path[0] === "access" && path[1] === "members") {

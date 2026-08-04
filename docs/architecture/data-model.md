@@ -1,7 +1,7 @@
 # Continuity Ops 資料模型
 
 文件版本：`1.0.0`  
-狀態：依 `db/operations-schema.ts` 與 migration `0001` 至 `0004` 整理。實際 D1 以已套用 migration 及 schema 查詢為準。
+狀態：依 `db/operations-schema.ts` 與 migration `0001` 至 `0005` 整理。實際 D1 以已套用 migration 及 schema 查詢為準。
 
 ## 1. ERD
 
@@ -13,6 +13,7 @@ erDiagram
     OPS_ORGANIZATIONS ||--o{ OPS_INCIDENTS : owns
     OPS_ORGANIZATIONS ||--o{ OPS_AUDIT_EVENTS : records
     OPS_ORGANIZATIONS ||--o{ OPS_IDEMPOTENCY_RECEIPTS : scopes
+    OPS_ORGANIZATIONS ||--o{ OPS_REQUEST_TELEMETRY : observes
 
     OPS_USERS ||--o{ OPS_MEMBERSHIPS : joins
     OPS_USERS ||--o{ OPS_SERVICES : owns
@@ -79,6 +80,19 @@ erDiagram
       text changed_by_user_id FK
       text request_id UK
       text changed_at
+    }
+    OPS_REQUEST_TELEMETRY {
+      text id PK
+      text organization_id FK
+      text request_id UK
+      text route_template
+      text method
+      integer status_code
+      text problem_code
+      integer latency_ms
+      text deployment_version
+      text source
+      text occurred_at
     }
     OPS_INCIDENTS {
       text id PK
@@ -170,6 +184,7 @@ erDiagram
 | 通訊 | 保存內部、利害關係人或公開受眾的草稿、審核與發布標記。 | 建立時只能 draft；reviewed 內容不可改；published 不可改／刪；外部受眾需未來更新或 `[FINAL]`。 |
 | 事後檢討 | 保存影響、原因、偵測缺口、學習與後續工作。 | 每個事件最多一筆；未解決事件不可建立；completed 六段皆須達最低內容；重新開啟回到 draft。 |
 | 稽核 | 保存可信 actor 的成功、拒絕及可判定失敗。 | append-only；保留 request ID、角色、資源及問題代碼；拒絕紀錄不保存 request payload。 |
+| 結構化請求紀錄 | 保存 API 的 route template、方法、結果、問題代碼、延遲、request ID、版本、環境與資料來源。 | 不保存 request body、權杖、Cookie、Email 或原始資源 ID；`source` 只能是 `runtime` 或 `simulated`；request ID 唯一。 |
 | 冪等回執 | 讓逾時重試不重複寫入。 | 組織、actor、action scope 與 key hash 唯一；同 key 不同 request hash 被拒絕；24 小時後才能過期清理。 |
 
 ## 3. 核心資料流

@@ -39,7 +39,7 @@ Continuity Ops 是單一組織部署的服務事件指揮與復原工作區。�
 - 所有目前的寫入端點要求 Idempotency-Key；相同 payload 可取得已保存回應，相同 key 搭配不同 payload 會被拒絕。回執保存 24 小時，建立新回執時執行有界的過期清理。
 - 未接入服務遙測時，服務狀態明確呈現為未知，SLO attainment 為無資料；系統不以零事件推論服務正常。
 - 正式環境先採用既有會員資格；既有使用者或會員若為 `suspended`，不會因再次登入而恢復。正規化後 Email 網域精確為 `ntub.edu.tw` 的已驗證帳號，首次登入先建立安全的唯讀會員；每次從登入入口進入時，可選擇 `commander`、`responder`、`observer` 或 `auditor`。`admin` 不列入角色選項，只能由既有授權或部署設定指派。角色選擇會更新伺服器端會員權限；若仍有進行中的事件責任，系統會拒絕不相容的切換。`observer` 與 `auditor` 維持唯讀且看不到成員目錄或稽核 actor email。其他網域未受邀帳號仍回傳 403。最後一位啟用中的管理員不能被停用或降級；所有角色更新都使用版本條件，避免並行操作靜默覆寫。
-- API request telemetry 使用不含 request body 與原始資源 ID 的 JSON 結構，包含 request ID、route template、狀態、問題代碼、延遲、API／schema／部署版號。資料匯出 API 尚未實作。
+- API request telemetry 使用不含 request body、身分資料與原始資源 ID 的固定欄位，包含 request ID、route template、狀態、問題代碼、延遲、API／schema／部署版號。schema `0005` 將紀錄保存至 D1；「系統觀測」依 24 小時、7 天或 30 天呈現流量、4xx／5xx、延遲、主要路徑與最近錯誤。資料匯出 API 尚未實作。
 - JSON request body 以串流累計實際 bytes，不能只依賴可能缺漏或不正確的 `Content-Length`。超過 32 KiB 時會取消讀取並回傳 413；無效 UTF-8、JSON 或非 object 根節點會被明確拒絕。這是應用程式層限制，不代表已驗證託管平台的 edge 限制。
 - 畫面可見且沒有寫入進行時，選取事件的明細、時間軸與通訊每 8 秒重新讀取；總覽每 30 秒重新讀取，頁面重新可見時會立即更新事件明細。這是輪詢，不是即時推播，也不能證明外部通訊已送達。
 - 組織時區保存於 D1，並可用 `CONTINUITY_OPS_ORGANIZATION_TIMEZONE` 設為有效的 IANA 時區。畫面、到期時間、通訊排程與證據觀測時間使用同一組織時區；缺值或無效值以 UTC 顯示，日光節約時間中不存在或有兩種可能的地方時間會被拒絕。
@@ -61,23 +61,27 @@ npm run dev
 
 Open Graph、Twitter 與 canonical metadata 會依目前請求的 HTTPS host 產生；部署後應從正式網址核對轉送 host 與 protocol 是否正確。
 
+`CONTINUITY_OPS_PUBLIC_ORIGIN` 是登入頁手機 QR Code 的正式 HTTPS origin，不含 path、query 或 fragment。QR 只連到同站的 `/role-selection`，不包含帳號、密碼、session 或權杖；未設定時才使用受託管平台轉送的 HTTPS host。正式部署應明確設定並掃碼核對目的網址。
+
 `CONTINUITY_OPS_DEPLOYMENT_VERSION` 是寫入平台結構化遙測的不可變發布識別，應設為可對回 source commit 或 artifact 的值。未設定時系統會記錄 `unversioned`；本機可用明確的開發標記，但 staging 與 production 發現 `unversioned` 必須停止發布。
 
 `CONTINUITY_OPS_CURSOR_HMAC_SECRET` 用於簽署生命週期分頁 cursor，至少 32 字元。正式環境應以平台 secret 管理，不得寫入 repository、Log、遙測或證據檔；各環境使用不同值。輪替後，輪替前取得的 cursor 會失效，使用者必須重新載入第一頁。
 
 `db:migrate:local` 使用 Wrangler 的 migration 紀錄，只套用尚未套用的 [`db/migrations`](db/migrations) 檔案。它不會對已完成的資料庫盲目重跑 SQL；如果 migration 失敗，開發伺服器不會啟動。可以使用 `npm run db:migrations:list:local` 查看本機狀態。
 
-資料契約版本目前為 `0004`。`0002_continuity_ops_contract_upgrade.sql` 補齊時區、成員版本、指派歷程、證據欄位、通訊與約束；`0003_assignment_role_integrity.sql` 加入組織角色與事件角色的相容性限制；`0004_service_lifecycle_accountability.sql` 保存並限制未來服務生命週期變更的原因、操作者與時間。`0003` 發現既有不相容指派時會停止；`0004` 不會替既有淘汰狀態捏造歷史理由。
+資料契約版本目前為 `0005`。`0002_continuity_ops_contract_upgrade.sql` 補齊時區、成員版本、指派歷程、證據欄位、通訊與約束；`0003_assignment_role_integrity.sql` 加入組織角色與事件角色的相容性限制；`0004_service_lifecycle_accountability.sql` 保存並限制未來服務生命週期變更的原因、操作者與時間；`0005_request_observability.sql` 保存不含內容與身分資料的結構化請求紀錄。`0003` 發現既有不相容指派時會停止；`0004` 不會替既有淘汰狀態捏造歷史理由。
 
 ### 全新託管 D1 初始化
 
-本機開發、既有資料庫升級、還原演練與回歸測試仍使用 0001–0004 migration。全新空白的 Sites D1 則由 Worker 內的受控 runtime bootstrap 建立最終 `0004` 結構；兩條路徑有不同用途，runtime bootstrap 不可用來升級已有正式資料的資料庫。
+本機開發、既有資料庫升級、還原演練與回歸測試使用 0001–0005 migration。全新空白的 Sites D1 則由 Worker 內的受控 runtime bootstrap 建立最終 `0005` 結構；兩條路徑有不同用途，runtime bootstrap 不可用來升級已有正式資料的資料庫。
 
 Runtime bootstrap 固定分成三個可重試階段。三階段分別建立 29、33、23 個 schema statements；含狀態查核、guard 與最終 fingerprint 驗證後，本機實測各請求使用 39、39、33 個 D1 queries，均低於 50。只有平台已驗證，且正規化 Email 與 `CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL` 完全相同的身分可以推進；一般請求在完成前收到 503，讀取介面只對明確的初始化狀態做有限次重試。每階段以 D1 batch 交易執行，失敗不保留該階段的部分結果。
 
-系統只在 14 個產品資料表、20 個 index、46 個 trigger 與 canonical fingerprint 全部相符後標記 ready。若資料庫已有部分或不相符的 `ops_` 結構，初始化會停止，不會自動刪表或補寫。由 Wrangler 完整套用的既有資料庫，必須同時具有完全相符的最終結構與 0001–0004 migration 紀錄才可採用。完成第一位管理員建置後，可移除 bootstrap Email 設定；既有啟用會員仍可登入。
+系統只在 15 個產品資料表、22 個 index、46 個 trigger 與 canonical fingerprint 全部相符後標記 ready。若資料庫已有部分或不相符的 `ops_` 結構，初始化會停止，不會自動刪表或補寫。由 Wrangler 完整套用的既有資料庫，必須同時具有完全相符的最終結構與 0001–0005 migration 紀錄才可採用。完成第一位管理員建置後，可移除 bootstrap Email 設定；既有啟用會員仍可登入。
 
-兩次先前的 Sites 發布嘗試都在平台處理 SQL migration 時失敗，錯誤為 `incomplete input`。本機整檔、逐 statement 與 Wrangler 驗證均通過；因此部署端 SQL 切割相容性是目前最符合證據的原因推論，但沒有平台 trace 可把它寫成已確認的 Sites 缺陷。部署 artifact 仍保留 `DB` binding，但不交付 deployment-time SQL migrations。
+若要在本機檢查圖表與錯誤情境，先完成 migration，再執行 `npm run seed:demo:observability`。此命令只會取代本機資料庫中 `source = 'simulated'` 的請求紀錄，不會刪除正式執行紀錄，也不會連線到遠端 D1。畫面會持續標示模擬資料的筆數與用途。
+
+兩次先前的 Sites 發布嘗試都在平台處理含 trigger 的完整 SQL migration 集合時失敗，錯誤為 `incomplete input`。本機整檔、逐 statement 與 Wrangler 驗證均通過；因此部署端 SQL 切割相容性是目前最符合證據的原因推論，但沒有平台 trace 可把它寫成已確認的 Sites 缺陷。目前部署包只交付不含 trigger、且與 `db/migrations/0005_request_observability.sql` 逐字相同的 `0005` 向前升級；既有 `0001`–`0004` 仍由已驗證的遠端資料庫狀態或 fresh-D1 runtime bootstrap 負責。
 
 Vite 開發伺服器、migration 指令與建置後 Worker preview 均明確使用 `.wrangler/state` 作為本機持久化路徑，並共用 `continuity-ops-local-d1` binding。不要混用 Wrangler 的其他預設狀態目錄。
 
@@ -127,7 +131,7 @@ node scripts/run-local-d1-restore-drill.mjs
 
 1. 以不可變的 source commit 執行 CI。
 2. 從正式網址查核 canonical 與社群預覽 metadata 使用正確的 HTTPS host。
-3. 對全新託管 D1 核對 ready 前 503、三個 bootstrap 階段、每次少於 50 queries、最終 inventory／fingerprint，以及不相符身分不能初始化；既有資料庫則走 0001–0004 migration 與還原程序。
+3. 對全新託管 D1 核對 ready 前 503、三個 bootstrap 階段、每次少於 40 queries、最終 inventory／fingerprint，以及不相符身分不能初始化；既有資料庫則走 0001–0005 migration 與還原程序。
 4. 完成平台已驗證身分轉送的信任設定，將 bootstrap administrator email 視為受控部署設定，並在第一位管理員建立後移除。從正式邊界核對 `suspended` 不復原、精確 `@ntub.edu.tw` 帳號取得四種非管理員選項、`admin` 無法自選、角色切換後伺服器權限正確、其他網域未受邀者回傳 403，以及唯讀角色不能取得成員目錄或 actor email。
 5. 在 ready 後執行 health、API、授權負例與主要流程測試。
 6. 設定不可變的 `CONTINUITY_OPS_DEPLOYMENT_VERSION`，並從結構化 request telemetry 確認不再出現 `unversioned`。

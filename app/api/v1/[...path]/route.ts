@@ -1,5 +1,5 @@
 import { dispatchOperationsApi, normalizeOperationsApiError } from "../_handlers";
-import { emitOperationsRequestTelemetry, problemResponse, requestId } from "../_shared";
+import { emitOperationsRequestTelemetry, persistOperationsRequestTelemetry, problemResponse, requestId } from "../_shared";
 import { drainOperationsRequestBody } from "@/lib/operations-input";
 
 export const dynamic = "force-dynamic";
@@ -29,14 +29,16 @@ async function handle(request: Request, context: RouteContext): Promise<Response
     response = problemResponse(problem, currentRequestId);
   }
   try {
-    emitOperationsRequestTelemetry({
+    const telemetry = {
       requestId: currentRequestId,
       path,
       method: request.method,
       status: response.status,
       problemCode,
       latencyMs: performance.now() - startedAt,
-    });
+    };
+    emitOperationsRequestTelemetry(telemetry);
+    await persistOperationsRequestTelemetry(telemetry);
   } catch {
     // Telemetry must never change the API result.
   }

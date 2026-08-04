@@ -194,6 +194,15 @@ assert.doesNotThrow(() => new Intl.DateTimeFormat("en-US", { timeZone: access.or
 assert.ok(access.permissions.includes("access:manage"));
 assert.ok(access.permissions.includes("incident:command"));
 assert.ok(access.permissions.includes("audit:read"));
+assert.ok(access.permissions.includes("observability:read"));
+const observability = expectSuccess(await request("/api/v1/observability?range=24h"), 200);
+assert.equal(observability.window, "24h");
+assert.equal(observability.bucketUnit, "hour");
+assert.ok(Number.isInteger(observability.summary.totalRequests));
+assert.ok(Array.isArray(observability.timeSeries));
+assert.ok(Array.isArray(observability.routes));
+assert.ok(Array.isArray(observability.recentErrors));
+expectProblem(await request("/api/v1/observability?range=1h"), 400, "INVALID_RANGE", "unsupported observability range");
 markPassed("health and authenticated administrative access");
 
 // Request-boundary negatives are intentionally not persisted because no actor is established.

@@ -15,6 +15,7 @@ import {
   type OperationsActor,
 } from "@/lib/operations-auth";
 import { cleanOperationsText, operationsRouteTemplate, type OperationsPermission } from "@/lib/operations-domain";
+import { persistRequestTelemetry } from "@/db/operations-telemetry";
 import {
   RequestBodyError,
   boundedOperationsText,
@@ -23,7 +24,7 @@ import {
 } from "@/lib/operations-input";
 
 export const OPERATIONS_API_VERSION = "2.2.0";
-export const OPERATIONS_SCHEMA_VERSION = "0004";
+export const OPERATIONS_SCHEMA_VERSION = "0005";
 
 export class ApiProblem extends Error {
   constructor(
@@ -245,6 +246,27 @@ export function emitOperationsRequestTelemetry(values: {
     deploymentVersion: deploymentVersion(),
     schemaVersion: OPERATIONS_SCHEMA_VERSION,
   }));
+}
+
+export async function persistOperationsRequestTelemetry(values: {
+  requestId: string;
+  path: readonly string[];
+  method: string;
+  status: number;
+  problemCode?: string | null;
+  latencyMs: number;
+}): Promise<void> {
+  await persistRequestTelemetry(operationsDb(), {
+    requestId: values.requestId,
+    route: operationsRouteTemplate(values.path),
+    method: values.method,
+    status: values.status,
+    problemCode: values.problemCode,
+    latencyMs: values.latencyMs,
+    apiVersion: OPERATIONS_API_VERSION,
+    schemaVersion: OPERATIONS_SCHEMA_VERSION,
+    deploymentVersion: deploymentVersion(),
+  });
 }
 
 export function emitRejectedMutationAuditFailure(values: {

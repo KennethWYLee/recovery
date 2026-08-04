@@ -1,14 +1,15 @@
 const STATEMENT_BREAKPOINT = "--> statement-breakpoint";
 
-export const OPERATIONS_BOOTSTRAP_SCHEMA_VERSION = "0004";
+export const OPERATIONS_BOOTSTRAP_SCHEMA_VERSION = "0005";
 export const OPERATIONS_BOOTSTRAP_STATE_TABLE = "ops_runtime_schema_state";
 export const OPERATIONS_BOOTSTRAP_GUARD_TABLE = "ops_runtime_schema_phase_guards";
-export const OPERATIONS_FINAL_SCHEMA_FINGERPRINT = "415323881a3ddc7d27764c2b51b5ce6101bde9ef6b6b5460383e37453635bfc9";
+export const OPERATIONS_FINAL_SCHEMA_FINGERPRINT = "8308c078945d82ca0abd6703f331e5b57ef978d149c0877152926126592cca9e";
 export const OPERATIONS_WRANGLER_MIGRATIONS = [
   "0001_continuity_ops_v2.sql",
   "0002_continuity_ops_contract_upgrade.sql",
   "0003_assignment_role_integrity.sql",
   "0004_service_lifecycle_accountability.sql",
+  "0005_request_observability.sql",
 ] as const;
 
 export type OperationsSchemaObjectType = "table" | "index" | "trigger";
@@ -135,36 +136,40 @@ export function createFreshOperationsSchemaPlan(
   migration0001: string,
   migration0003: string,
   migration0004: string,
+  migration0005: string,
 ): OperationsSchemaBootstrapPlan {
   const statements0001 = splitMigrationStatements(migration0001).filter((statement) => !/^PRAGMA\b/iu.test(statementSqlStart(statement)));
   const statements0003 = splitMigrationStatements(migration0003).filter(isTriggerStatement);
   const statements0004 = splitMigrationStatements(migration0004);
+  const statements0005 = splitMigrationStatements(migration0005);
 
   const triggers = [
     ...statements0001.filter(isTriggerStatement),
     ...statements0003,
     ...statements0004.filter(isTriggerStatement),
+    ...statements0005.filter(isTriggerStatement),
   ];
   const nonTriggers = [
     ...statements0001.filter((statement) => !isTriggerStatement(statement)),
     ...statements0004.filter((statement) => !isTriggerStatement(statement)),
+    ...statements0005.filter((statement) => !isTriggerStatement(statement)),
   ];
   const indexes = nonTriggers.filter(isIndexStatement);
   const structuralStatements = nonTriggers.filter((statement) => !isIndexStatement(statement));
 
   const allStatements = [...nonTriggers, ...triggers];
   const finalInventory = inventoryFromStatements(allStatements);
-  assertInventory(finalInventory, { tables: 14, indexes: 20, triggers: 46 });
-  if (structuralStatements.length !== 19 || indexes.length !== 20 || triggers.length !== 46) {
+  assertInventory(finalInventory, { tables: 15, indexes: 22, triggers: 46 });
+  if (structuralStatements.length !== 20 || indexes.length !== 22 || triggers.length !== 46) {
     throw new Error(
       `Operations bootstrap statement inventory changed: structures=${structuralStatements.length}, indexes=${indexes.length}, triggers=${triggers.length}.`,
     );
   }
 
   const phases = [
-    [...structuralStatements, ...indexes.slice(0, 10)],
-    [...indexes.slice(10), ...triggers.slice(0, 23)],
-    triggers.slice(23),
+    [...structuralStatements, ...indexes.slice(0, 9)],
+    [...indexes.slice(9), ...triggers.slice(0, 20)],
+    triggers.slice(20),
   ] as const;
   for (const [index, phase] of phases.entries()) {
     // Each runtime phase adds one guard, one state update, and one guard delete.

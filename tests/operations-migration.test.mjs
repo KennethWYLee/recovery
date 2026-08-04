@@ -9,6 +9,7 @@ const migrationStatementCounts = new Map([
   ["../db/migrations/0002_continuity_ops_contract_upgrade.sql", 125],
   ["../db/migrations/0003_assignment_role_integrity.sql", 5],
   ["../db/migrations/0004_service_lifecycle_accountability.sql", 13],
+  ["../db/migrations/0005_request_observability.sql", 3],
 ]);
 
 function countTopLevelSqlStatements(migration) {
@@ -88,6 +89,14 @@ test("each recorded migration boundary contains one complete SQL statement", asy
   db.close();
 });
 
+test("Sites packages the exact reviewed 0005 forward migration", async () => {
+  const [canonical, packaged] = await Promise.all([
+    readFile(new URL("../db/migrations/0005_request_observability.sql", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0005_request_observability.sql", import.meta.url), "utf8"),
+  ]);
+  assert.equal(packaged.replace(/\r\n?/gu, "\n"), canonical.replace(/\r\n?/gu, "\n"));
+});
+
 async function migratedDatabase() {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
@@ -96,6 +105,7 @@ async function migratedDatabase() {
     "../db/migrations/0002_continuity_ops_contract_upgrade.sql",
     "../db/migrations/0003_assignment_role_integrity.sql",
     "../db/migrations/0004_service_lifecycle_accountability.sql",
+    "../db/migrations/0005_request_observability.sql",
   ]) {
     const migration = await readFile(new URL(file, import.meta.url), "utf8");
     db.exec(`BEGIN;\n${migration}\nCOMMIT;`);
@@ -115,6 +125,31 @@ async function databaseThrough0002() {
   }
   return db;
 }
+
+test("0005 stores bounded request telemetry and rejects unsafe values", async () => {
+  const db = await migratedDatabase();
+  const insert = db.prepare(`INSERT INTO ops_request_telemetry (
+    id, organization_id, request_id, route_template, method, status_code, problem_code,
+    latency_ms, api_version, schema_version, deployment_version, environment, source, occurred_at
+  ) VALUES (?, 'ops-singleton', ?, ?, ?, ?, ?, ?, '2.2.0', '0005', 'test-build', 'development', ?, ?)`);
+  try {
+    insert.run("telemetry-runtime", "req-runtime-0001", "/api/v1/incidents/:incidentId", "GET", 200, null, 42, "runtime", "2026-08-05T12:00:00.000Z");
+    insert.run("telemetry-simulated", "req-simulated-0001", "/api/v1/overview", "GET", 503, "OPERATIONS_DATABASE_UNAVAILABLE", 1750, "simulated", "2026-08-05T12:01:00.000Z");
+    assert.deepEqual(
+      db.prepare("SELECT source, status_code, problem_code FROM ops_request_telemetry ORDER BY id").all().map((row) => ({ ...row })),
+      [
+        { source: "runtime", status_code: 200, problem_code: null },
+        { source: "simulated", status_code: 503, problem_code: "OPERATIONS_DATABASE_UNAVAILABLE" },
+      ],
+    );
+    assert.throws(() => insert.run("bad-route", "req-invalid-0001", "/users/secret@example.com", "GET", 200, null, 10, "runtime", "2026-08-05T12:02:00.000Z"));
+    assert.throws(() => insert.run("bad-source", "req-invalid-0002", "/api/v1/overview", "GET", 200, null, 10, "external", "2026-08-05T12:02:00.000Z"));
+    assert.throws(() => insert.run("bad-latency", "req-invalid-0003", "/api/v1/overview", "GET", 200, null, -1, "runtime", "2026-08-05T12:02:00.000Z"));
+    assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+  } finally {
+    db.close();
+  }
+});
 
 function legacyDatabaseForUpgrade() {
   const db = new DatabaseSync(":memory:");
@@ -332,6 +367,7 @@ test("the complete v2.2 migration chain installs on an empty database with durab
     "ops_memberships",
     "ops_organizations",
     "ops_post_incident_reviews",
+    "ops_request_telemetry",
     "ops_service_lifecycle_events",
     "ops_services",
     "ops_users",

@@ -84,6 +84,7 @@ import {
   type TaskRow,
   type TimelineRow,
 } from "./_data";
+import { loadObservabilitySnapshot, OBSERVABILITY_WINDOWS, type ObservabilityWindow } from "@/db/operations-telemetry";
 
 const SERVICE_TIERS = ["tier_1", "tier_2", "tier_3", "tier_4"] as const;
 const SERVICE_STATUSES = ["active", "deprecated"] as const;
@@ -116,6 +117,7 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
     if (path.length === 1 && path[0] === "access" && request.method === "GET") return await access(context);
     if (path[0] === "access" && path[1] === "members") return await accessMembers(context, path.slice(2));
     if (path.length === 1 && path[0] === "overview" && request.method === "GET") return await overview(context);
+    if (path.length === 1 && path[0] === "observability" && request.method === "GET") return await observability(context);
     if (path[0] === "services") return await services(context, path.slice(1));
     if (path[0] === "incidents") return await incidents(context, path.slice(1));
     if (path.length === 1 && path[0] === "audit" && request.method === "GET") return await audit(context);
@@ -153,6 +155,21 @@ export async function dispatchOperationsApi(request: Request, path: string[], re
     }
     throw problem;
   }
+}
+
+async function observability(context: OperationsRequestContext): Promise<Response> {
+  requirePermission(context, "observability:read");
+  const url = new URL(context.request.url);
+  const ranges = url.searchParams.getAll("range");
+  if (ranges.length > 1) throw new ApiProblem(400, "INVALID_RANGE", "Provide at most one observability range.");
+  const requestedRange = ranges[0] ?? "24h";
+  if (!OBSERVABILITY_WINDOWS.includes(requestedRange as ObservabilityWindow)) {
+    throw new ApiProblem(400, "INVALID_RANGE", "range must be 24h, 7d, or 30d.");
+  }
+  return successResponse(
+    await loadObservabilitySnapshot(context.db, context.actor.organizationId, requestedRange as ObservabilityWindow),
+    context.requestId,
+  );
 }
 
 async function schoolSessionRole(context: OperationsRequestContext): Promise<Response> {

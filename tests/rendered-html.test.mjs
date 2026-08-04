@@ -36,6 +36,8 @@ test("production bundle exposes the professional operations product and security
   assert.match(worker, /frame-ancestors 'none'/);
   assert.match(worker, /strict-transport-security/);
   assert.match(worker, /ntub\.edu\.tw/i);
+  assert.match(worker, /Continuity Ops 手機登入 QR Code/);
+  assert.match(worker, /\/role-selection/);
   assert.doesNotMatch(worker, /FACILITATOR_KEY_NOT_CONFIGURED|trust-competence-draft/);
   assert.doesNotMatch(worker, /Building your site|react-loading-skeleton/);
   assert.doesNotMatch(worker, forbiddenProductCopy);
@@ -44,15 +46,17 @@ test("production bundle exposes the professional operations product and security
 test("client bundle contains the incident command workspace without teaching or grading copy", async () => {
   const assets = await readdir(new URL("../dist/client/assets/", import.meta.url));
   const operationsAsset = assets.find((name) => name.startsWith("OperationsApp-") && name.endsWith(".js"));
+  const observabilityAsset = assets.find((name) => name.startsWith("ObservabilityView-") && name.endsWith(".js"));
   const roleSelectionAsset = assets.find((name) => name.startsWith("RoleSelectionClient-") && name.endsWith(".js"));
   const cssAssets = assets.filter((name) => name.endsWith(".css"));
 
   assert.ok(operationsAsset, "OperationsApp client asset is missing");
+  assert.ok(observabilityAsset, "ObservabilityView client asset is missing");
   assert.ok(roleSelectionAsset, "RoleSelectionClient client asset is missing");
   assert.ok(cssAssets.length > 0, "compiled stylesheet is missing");
 
   const [operations, roleSelection, css] = await Promise.all([
-    readFile(new URL(`../dist/client/assets/${operationsAsset}`, import.meta.url), "utf8"),
+    Promise.all([operationsAsset, observabilityAsset].map((name) => readFile(new URL(`../dist/client/assets/${name}`, import.meta.url), "utf8"))).then((parts) => parts.join("\n")),
     readFile(new URL(`../dist/client/assets/${roleSelectionAsset}`, import.meta.url), "utf8"),
     Promise.all(cssAssets.map((name) => readFile(new URL(`../dist/client/assets/${name}`, import.meta.url), "utf8")))
       .then((parts) => parts.join("\n")),
@@ -62,8 +66,12 @@ test("client bundle contains the incident command workspace without teaching or 
   assert.match(operations, /營運總覽/);
   assert.match(operations, /服務目錄/);
   assert.match(operations, /稽核紀錄/);
+  assert.match(operations, /系統觀測/);
+  assert.match(operations, /請求與錯誤趨勢/);
+  assert.match(operations, /包含模擬資料/);
   assert.match(operations, /事後檢討/);
   assert.match(operations, /\/api\/v1\/overview/);
+  assert.match(operations, /\/api\/v1\/observability/);
   assert.match(operations, /Idempotency-Key|idempotencyKey/);
   assert.doesNotMatch(operations, forbiddenProductCopy);
   assert.match(roleSelection, /事件指揮/);
@@ -89,17 +97,13 @@ test("every textual deployment artifact excludes prompts, grading language, and 
   }
 });
 
-test("Sites artifact binds D1 without deployment-time SQL migrations", async () => {
+test("Sites build binds D1 and keeps deployment migration packaging separate", async () => {
   const hosting = JSON.parse(await readFile(new URL("../dist/.openai/hosting.json", import.meta.url), "utf8"));
   assert.equal(hosting.d1, "DB");
   assert.equal(hosting.r2, null);
   assert.deepEqual(Object.keys(hosting).sort(), ["d1", "project_id", "r2"]);
 
-  await assert.rejects(
-    access(new URL("../dist/.openai/drizzle", import.meta.url)),
-    (error) => error && typeof error === "object" && error.code === "ENOENT",
-    "The Sites artifact must use the verified runtime schema path instead of deployment-time SQL migrations",
-  );
+  await access(new URL("../drizzle/0005_request_observability.sql", import.meta.url));
   await assert.rejects(
     access(new URL("../dist/server/.dev.vars", import.meta.url)),
     (error) => error && typeof error === "object" && error.code === "ENOENT",

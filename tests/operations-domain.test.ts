@@ -50,8 +50,11 @@ test("read and organization permissions preserve least privilege", () => {
   assert.equal(roleHasPermission("auditor", "audit:read"), true);
   assert.equal(roleHasPermission("responder", "audit:read"), false);
   assert.equal(roleHasPermission("observer", "incident:respond"), false);
-  assert.deepEqual(permissionsForRole("observer"), ["access:read", "service:read", "incident:read", "audit:read"]);
-  assert.deepEqual(permissionsForRole("auditor"), ["access:read", "service:read", "incident:read", "audit:read"]);
+  assert.deepEqual(permissionsForRole("observer"), ["access:read", "service:read", "incident:read", "audit:read", "observability:read"]);
+  assert.deepEqual(permissionsForRole("auditor"), ["access:read", "service:read", "incident:read", "audit:read", "observability:read"]);
+  for (const role of ["admin", "commander", "responder", "observer", "auditor"] as const) {
+    assert.equal(roleHasPermission(role, "observability:read"), true);
+  }
 });
 
 test("incident filters and service lifecycle agree with new-incident eligibility", () => {
@@ -170,6 +173,7 @@ test("request telemetry uses bounded route templates instead of record identifie
     operationsRouteTemplate(["incidents", "inc-sensitive-123", "assignments", "assign-sensitive-456"]),
     "/api/v1/incidents/:incidentId/assignments/:assignmentId",
   );
+  assert.equal(operationsRouteTemplate(["observability"]), "/api/v1/observability");
   assert.equal(
     operationsRouteTemplate(["incidents", "inc-sensitive-123", "tasks", "task-sensitive-456"]),
     "/api/v1/incidents/:incidentId/tasks/:taskId",

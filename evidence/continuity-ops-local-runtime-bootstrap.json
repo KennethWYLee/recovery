@@ -3,13 +3,13 @@
   "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-03T04:34:08.496Z",
+  "generatedAt": "2026-08-04T23:26:35.831Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "authenticated_fresh_d1_runtime_bootstrap_and_domain_role_selection",
   "result": "passed_with_documented_limits",
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "959d637638cf330a8a2968443667ce004cab51b084dd5ba3c736d50b7db6f713"
+    "sha256": "b9a7658cbd38033a82859e5755cb9912d7f74bc269f2e41ae285a6d159e18d26"
   },
   "environment": {
     "runtime": "v24.15.0",
@@ -27,32 +27,32 @@
       "phase": 1,
       "status": "initializing",
       "queryCount": 39,
-      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+      "planDigest": "d375830a0de59dec1d0a29a4ec5b0356e636b72e458ffb0bb888de57225059a3"
     },
     {
       "phase": 2,
       "status": "initializing",
       "queryCount": 39,
-      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+      "planDigest": "d375830a0de59dec1d0a29a4ec5b0356e636b72e458ffb0bb888de57225059a3"
     },
     {
       "phase": 3,
       "status": "ready",
-      "queryCount": 33,
-      "planDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3"
+      "queryCount": 36,
+      "planDigest": "d375830a0de59dec1d0a29a4ec5b0356e636b72e458ffb0bb888de57225059a3"
     }
   ],
   "finalState": {
-    "schemaVersion": "0004",
+    "schemaVersion": "0005",
     "phase": 3,
     "status": "ready",
-    "schemaDigest": "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3",
+    "schemaDigest": "d375830a0de59dec1d0a29a4ec5b0356e636b72e458ffb0bb888de57225059a3",
     "inventory": {
-      "tables": 14,
-      "indexes": 20,
+      "tables": 15,
+      "indexes": 22,
       "triggers": 46
     },
-    "fingerprint": "415323881a3ddc7d27764c2b51b5ce6101bde9ef6b6b5460383e37453635bfc9",
+    "fingerprint": "8308c078945d82ca0abd6703f331e5b57ef978d149c0877152926126592cca9e",
     "foreignKeyViolations": 0,
     "activeAdministratorCount": 1,
     "wranglerMigrationTablePresent": false
@@ -122,7 +122,7 @@
     "nonMemberOtherDomainStatus": 403,
     "suspendedMembershipStatus": 403
   },
-  "totalDurationMs": 24191,
+  "totalDurationMs": 26493,
   "temporaryStateCleanup": "scheduled_after_runner_exit",
   "limitations": [
     "This is a local Wrangler and synthetic D1 exercise; it is not evidence that Sites production identity forwarding or hosted D1 initialization succeeded.",

@@ -344,6 +344,29 @@ export const opsAuditEvents = sqliteTable("ops_audit_events", {
   index("ops_audit_actor_idx").on(table.actorUserId, table.occurredAt),
 ]);
 
+export const opsRequestTelemetry = sqliteTable("ops_request_telemetry", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull().references(() => opsOrganizations.id),
+  requestId: text("request_id").notNull().unique(),
+  routeTemplate: text("route_template").notNull(),
+  method: text("method", { enum: ["GET", "POST", "PUT", "PATCH", "DELETE"] }).notNull(),
+  statusCode: integer("status_code").notNull(),
+  problemCode: text("problem_code"),
+  latencyMs: integer("latency_ms").notNull(),
+  apiVersion: text("api_version").notNull(),
+  schemaVersion: text("schema_version").notNull(),
+  deploymentVersion: text("deployment_version").notNull(),
+  environment: text("environment", { enum: ["development", "staging", "production", "unknown"] }).notNull(),
+  source: text("source", { enum: ["runtime", "simulated"] }).notNull(),
+  occurredAt: text("occurred_at").notNull(),
+}, (table) => [
+  index("ops_request_telemetry_time_idx").on(table.organizationId, table.occurredAt),
+  index("ops_request_telemetry_status_time_idx").on(table.organizationId, table.statusCode, table.occurredAt),
+  check("ops_request_telemetry_status_check", sql`${table.statusCode} BETWEEN 100 AND 599`),
+  check("ops_request_telemetry_latency_check", sql`${table.latencyMs} BETWEEN 0 AND 3600000`),
+  check("ops_request_telemetry_route_check", sql`${table.routeTemplate} LIKE '/api/v1/%' AND length(${table.routeTemplate}) BETWEEN 9 AND 160`),
+]);
+
 export const opsIdempotencyReceipts = sqliteTable("ops_idempotency_receipts", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id").notNull().references(() => opsOrganizations.id),

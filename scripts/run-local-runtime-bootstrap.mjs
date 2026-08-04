@@ -340,7 +340,7 @@ try {
   assert.match(schoolDisplayName, /^校內訪客 [A-Z0-9]{4}-[A-Z0-9]{4}$/u);
   assert.deepEqual(
     schoolAccessBodies[0].permissions,
-    ["access:read", "service:read", "incident:read", "audit:read"],
+    ["access:read", "service:read", "incident:read", "audit:read", "observability:read"],
   );
   assert.ok(schoolAccessBodies[0].policies.some((policy) => policy.id === "ntub-role-selection" && policy.status === "enforced"));
 
@@ -501,7 +501,7 @@ try {
     `SELECT schema_version, schema_digest, phase, status, completed_at
      FROM ${OPERATIONS_BOOTSTRAP_STATE_TABLE} WHERE singleton = 1`,
   );
-  assert.equal(state.schema_version, "0004");
+  assert.equal(state.schema_version, "0005");
   assert.match(state.schema_digest, /^[a-f0-9]{64}$/u);
   assert.equal(state.phase, 3);
   assert.equal(state.status, "ready");
@@ -519,7 +519,7 @@ try {
     indexes: rows.filter((row) => row.type === "index").length,
     triggers: rows.filter((row) => row.type === "trigger").length,
   };
-  assert.deepEqual(inventory, { tables: 14, indexes: 20, triggers: 46 });
+  assert.deepEqual(inventory, { tables: 15, indexes: 22, triggers: 46 });
   fingerprint = schemaFingerprint(rows);
   assert.equal(fingerprint, OPERATIONS_FINAL_SCHEMA_FINGERPRINT);
   assert.deepEqual(d1Query("PRAGMA foreign_key_check"), []);
