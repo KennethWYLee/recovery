@@ -3,15 +3,15 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-05T00:41:59.905Z",
+  "generatedAt": "2026-08-05T02:21:40.389Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
     "status": "source_tree_has_uncommitted_changes",
     "repositoryRelativePath": ".",
-    "head": "e5755d9f3f717ce18901f21c4915c7567c1bf90c",
-    "shortHead": "e5755d9f3f71",
-    "sourceDirtyEntryCount": 11,
+    "head": "534adf3079b2a63a2c3c552467601695d4249616",
+    "shortHead": "534adf3079b2",
+    "sourceDirtyEntryCount": 18,
     "limitation": "The project contains uncommitted changes, so this manifest does not describe a clean commit rebuild."
   },
   "runtime": {
@@ -26,17 +26,17 @@
     "aligned": true
   },
   "source": {
-    "fileCount": 115,
+    "fileCount": 129,
     "files": [
       {
         "path": ".dev.vars.example",
-        "bytes": 1051,
-        "sha256": "4cd99749fca05449f953c353fea8c5e3f55b39207ec3b08d2245bb1ca9d7e26f"
+        "bytes": 1169,
+        "sha256": "73902479dd168ea5c25ed1d60d5b110267503d7861b140b050b4eee71647041c"
       },
       {
         "path": ".env.example",
-        "bytes": 1481,
-        "sha256": "cf3ab7ae10fd817cca7ae21b29e0aa0e7219ee1e68268c9a24b142071148f18d"
+        "bytes": 1600,
+        "sha256": "e89aedb89452c78bc96ce5987e7872f3c8e8cfd7fb9602f01a90509642cb75a1"
       },
       {
         "path": ".github/workflows/ci.yml",
@@ -52,6 +52,21 @@
         "path": ".openai/hosting.json",
         "bytes": 91,
         "sha256": "cd3a5d1bd928361fdd21a22745570476ecb3daebe1d1ff34a2249378ee01dd03"
+      },
+      {
+        "path": "app/api/classroom/_shared.ts",
+        "bytes": 3328,
+        "sha256": "f9c19a9c79f42229c7a93e43272379abe80680452be93c4e8fc0d62bbe574166"
+      },
+      {
+        "path": "app/api/classroom/courses/[courseId]/route.ts",
+        "bytes": 2786,
+        "sha256": "4f81d596a011c7bb30965d9606f6f9b08dd3787552be4798e545ef4477149efa"
+      },
+      {
+        "path": "app/api/classroom/courses/route.ts",
+        "bytes": 1137,
+        "sha256": "d82bc9550bfefdd13842c16e3de4267ca578594b9bf36ea64efbf67cc8b46b46"
       },
       {
         "path": "app/api/v1/_data.ts",
@@ -79,14 +94,39 @@
         "sha256": "1407f614cc83d7049fdb08cd713d2516866ba58e24e820f7f4fd9d718b9d3007"
       },
       {
+        "path": "app/courses/[courseId]/CourseWorkspace.tsx",
+        "bytes": 3220,
+        "sha256": "f87cb3bf73ff8752a307efa4b2fdd201ecc1e70e313f07d5769ea8a8ebdc7439"
+      },
+      {
+        "path": "app/courses/[courseId]/page.tsx",
+        "bytes": 1000,
+        "sha256": "a58e544f8bb2c9b09e8541bc5f04da2bdf7f144918c69e5830684dc4837849c5"
+      },
+      {
+        "path": "app/courses/classroom-page-identity.ts",
+        "bytes": 1366,
+        "sha256": "331e7d9b7d3df33987eb2bf23eafd9735773ee77b99b4ccb533a620a1b7f362f"
+      },
+      {
+        "path": "app/courses/CoursesApp.tsx",
+        "bytes": 11293,
+        "sha256": "d02c5000809b5d004e03424c369bdc783b1ae4e16f12125e7899a8c201689b1f"
+      },
+      {
+        "path": "app/courses/page.tsx",
+        "bytes": 1181,
+        "sha256": "072ffc723dbed73317d66c6202d358c9666461aa446269ecc9459e0c5ac9c6fd"
+      },
+      {
         "path": "app/globals.css",
-        "bytes": 81802,
-        "sha256": "6672e6143ec4f067f8ddc79ca0ac927a6f2ac0e4fcff370f7da5249ddf0bf05c"
+        "bytes": 92474,
+        "sha256": "e04734db1b2daf2a266eed63a10b9ae11376e8deefcce0c40eb5267759ba6db9"
       },
       {
         "path": "app/layout.tsx",
-        "bytes": 1999,
-        "sha256": "dc3f2b0b3d3e656b2bdb72da7f2caf5da1f07a69ede8ee7493be715f2dc3d0aa"
+        "bytes": 2113,
+        "sha256": "14f3cbfc48aad311fc1c836cc8e3061a48b7faaf84d602bb2ecc882fd5f18838"
       },
       {
         "path": "app/operations/ObservabilityView.tsx",
@@ -105,8 +145,8 @@
       },
       {
         "path": "app/page.tsx",
-        "bytes": 107,
-        "sha256": "ac2169b4dcb33c3c603f195ae33e4944d4d0fec57a20880baab637fa51e75c0b"
+        "bytes": 104,
+        "sha256": "d78f1a6e16f3db06b000ec8623a1d0d4dabe12d93446742e6e4159c23ebf8179"
       },
       {
         "path": "app/role-selection/page.tsx",
@@ -125,8 +165,18 @@
       },
       {
         "path": "cloudflare-env.d.ts",
-        "bytes": 833,
-        "sha256": "30506a54dda2b5e3be503767cfd227e6ef656e8d1f713e2cf1ab845e01c904a7"
+        "bytes": 870,
+        "sha256": "76b87f2b73026657a1818524f7486b086799be26ce8ce28f240715a5469aa95b"
+      },
+      {
+        "path": "db/classroom-schema.ts",
+        "bytes": 3097,
+        "sha256": "e6ed646951fde443a62ac132ac21f93ee345d3df0c97d66344234c1ae9264579"
+      },
+      {
+        "path": "db/classroom.ts",
+        "bytes": 11498,
+        "sha256": "2b63db847c5810ab1b6c7842facd6f73d9174c944f33048df3282a657b93b067"
       },
       {
         "path": "db/migrations/0001_continuity_ops_v2.sql",
@@ -299,6 +349,11 @@
         "sha256": "e36c8f443eca96cabb1464cae6bbe9984d0db6ace1672b39da43b4999826961e"
       },
       {
+        "path": "lib/classroom-domain.ts",
+        "bytes": 1684,
+        "sha256": "9605a293ea20057b97c0ec65c8e40bd1d22e8998f78675efad9eb8d88bbf1221"
+      },
+      {
         "path": "lib/observability-client.ts",
         "bytes": 5394,
         "sha256": "de2da9dadb627c96f8027341716e39dd446ec9ab2da9f0e3478bb294c63fc278"
@@ -360,8 +415,8 @@
       },
       {
         "path": "package.json",
-        "bytes": 5536,
-        "sha256": "399924649430ace57a865d5ed2825d2c3fbd743e81dc873aa9fadaff85d346d9"
+        "bytes": 5668,
+        "sha256": "d40e2890455d64ddb73ef58966bf1af203ebd51c775d0a34b99cf1a375343048"
       },
       {
         "path": "postcss.config.mjs",
@@ -370,13 +425,18 @@
       },
       {
         "path": "PROJECT.md",
-        "bytes": 11927,
-        "sha256": "fdda57f00614b9ddee9a5b5cf110eadb7cdef179f29f5b32dfcf5f8442722431"
+        "bytes": 14415,
+        "sha256": "a8b29ac4da23b135335aa8445394e4091d514a25f25b6c358403326407a8abf6"
       },
       {
         "path": "public/continuity-ops-social-preview-v2.png",
         "bytes": 1750173,
         "sha256": "22a280603722e971b098e93c9a58b51e100b98f6530d7192834d595774e6a7ff"
+      },
+      {
+        "path": "public/og-classroom.png",
+        "bytes": 1884914,
+        "sha256": "821e4e711316b49d84881b9d954874ab04cd9288484d600e05dc928614ada807"
       },
       {
         "path": "public/og.png",
@@ -385,8 +445,8 @@
       },
       {
         "path": "README.md",
-        "bytes": 16904,
-        "sha256": "a8e48e811e1a54afb75d172d073b09121d98e3f3711f344411d2ee0a351efe29"
+        "bytes": 17842,
+        "sha256": "fc232d30df27e586c4ee9e12139080b7a76cd7cbf84c192069504a1fe43fb52b"
       },
       {
         "path": "scripts/analyze-request-telemetry.mjs",
@@ -499,6 +559,16 @@
         "sha256": "d2526af096cec6083a550d08cdb5acb5ab3d362ab80f8ded4b7bb769e4e915fe"
       },
       {
+        "path": "tests/classroom-domain.test.ts",
+        "bytes": 1327,
+        "sha256": "33fad424b9a577b25d5a75da879e4272b18242727b127d0701b7bbd259bb3058"
+      },
+      {
+        "path": "tests/classroom-migration.test.mjs",
+        "bytes": 2724,
+        "sha256": "1588482e5df94fb2ec1c69b333cabc184e1d390bba84da188ab9eb2710336350"
+      },
+      {
         "path": "tests/d1-restore-drill.test.mjs",
         "bytes": 2943,
         "sha256": "8c6f93d217179e68c7ab7c5c57638675aa8b552c24eeba9840d0f014e3997d8e"
@@ -560,8 +630,8 @@
       },
       {
         "path": "tests/rendered-html.test.mjs",
-        "bytes": 6873,
-        "sha256": "b396a1a96363e470ba932093ffeabc7234b50246b5a95a5647cda37a14bb1ca3"
+        "bytes": 7954,
+        "sha256": "489a54c776f7edf8ebe956ffe0dcf7eb9a499aef7ba773ab5699c0c7a5980fc2"
       },
       {
         "path": "tests/repository-secret-scan.test.mjs",
@@ -607,8 +677,8 @@
   },
   "build": {
     "status": "local_build_present",
-    "fileCount": 38,
-    "aggregateSha256": "5e72cb013c118453a2fde62cb2a09653d3cc807002d304334e08981cdcd27623",
+    "fileCount": 47,
+    "aggregateSha256": "66b2e4a88efb92e646f0ae1b1f1ad679e45d5c7d3cbb8521b1eb89987197cf6b",
     "files": [
       {
         "path": "dist/.openai/hosting.json",
@@ -627,8 +697,28 @@
       },
       {
         "path": "dist/client/.vite/manifest.json",
-        "bytes": 3221,
-        "sha256": "05bba1a65adae96279ad990c07d5a18de37693897bd65b11948f986ef86fe96a"
+        "bytes": 4680,
+        "sha256": "14045bec4f173f709b719f089b8af7545d0957668e5b0f2dfd240534fbb90bb4"
+      },
+      {
+        "path": "dist/client/assets/classroom-domain-D2DgpIiN.js",
+        "bytes": 540,
+        "sha256": "f4f5f810de6f9b88d76e0130a34bbabe4b5a35394afa9447a61e42e95ac13e0b"
+      },
+      {
+        "path": "dist/client/assets/CoursesApp-BIPVLWQX.js",
+        "bytes": 9470,
+        "sha256": "bdaf20f927d647813db6333b6df3c9bc0ee18ac450777b337aa41b6a41d4cc5a"
+      },
+      {
+        "path": "dist/client/assets/CourseWorkspace-D6FNmHCa.js",
+        "bytes": 3799,
+        "sha256": "84399cf89baed5ba515cb4a80fbc1abffcb52f9882459ece613d31b9ab665c80"
+      },
+      {
+        "path": "dist/client/assets/createLucideIcon-DOS7muNh.js",
+        "bytes": 1427,
+        "sha256": "0f6079de236a2a0289a46099c513533351c879816050252def8d7f2487a94a57"
       },
       {
         "path": "dist/client/assets/framework-ItqtACJ4.js",
@@ -636,24 +726,24 @@
         "sha256": "0f090d029de3ee820dc427b1594a9ca10ca7043a46855b67535d6265141d0f05"
       },
       {
-        "path": "dist/client/assets/index-D-sdTYs5.css",
-        "bytes": 74047,
-        "sha256": "35c770c68ca89a888814d78ea6c1e892166d29e1d52ff268b6dcee1dd7b8124d"
+        "path": "dist/client/assets/index-BFtF0IlO.js",
+        "bytes": 81965,
+        "sha256": "87ad904253cabb7b872b414d3cc83b374a8148320623de8a0f54c8030e606dbf"
       },
       {
-        "path": "dist/client/assets/index-DVC705sw.js",
-        "bytes": 81400,
-        "sha256": "2989bac785913cea0e32290192be18051948ce20df3d053b7999c9cfc606f4d6"
+        "path": "dist/client/assets/index-ya50nv0d.css",
+        "bytes": 83236,
+        "sha256": "c7be7db41fe462a48911d874754bdd5c3b825d6330ee4a1aa18cf8b5abed6967"
       },
       {
-        "path": "dist/client/assets/layout-segment-context-pzXcYFKa.js",
+        "path": "dist/client/assets/layout-segment-context-DaBIYC99.js",
         "bytes": 288,
-        "sha256": "a4e0153faa81b533f9711fa1046da9df71cc186e06f015c50031061ab04c3273"
+        "sha256": "d2e0aeecd04202098de2d328b3b29d2c1c790cfe76d2108c657889b504d76131"
       },
       {
-        "path": "dist/client/assets/link-cINgW9As.js",
-        "bytes": 8132,
-        "sha256": "bcd6691aa6c61c55ab68870a05d45890363fa2987f20460dc7a756995598dc89"
+        "path": "dist/client/assets/link-Bi34wRtG.js",
+        "bytes": 9615,
+        "sha256": "64b7968363b461f1abd7f4684e26a0a9f242e9405570ee3786c3ae08ce2158f2"
       },
       {
         "path": "dist/client/assets/ObservabilityView-XHP8WhnR.js",
@@ -661,14 +751,9 @@
         "sha256": "eda611eda22dfc8f03c3e011885a27a92d5885e077dcdff5b8df89c25b410580"
       },
       {
-        "path": "dist/client/assets/OperationsApp-BdeUdTOW.js",
-        "bytes": 200380,
-        "sha256": "a222a35b7a7eb0d107dfef050095182d3363027cae477136d286f3b2298fe3c5"
-      },
-      {
-        "path": "dist/client/assets/query-DNQgy4xD.js",
-        "bytes": 1564,
-        "sha256": "5e3ecc5fd4f80c9c8228cef75d2d4a8bb5f8f95ca267e7a4e62923aad52b5db8"
+        "path": "dist/client/assets/OperationsApp-BZAQR2md.js",
+        "bytes": 198869,
+        "sha256": "e3db1f7e2e09ded3ac0cdfe688fda93a8f22d70cfe2188edde64b0590f689f73"
       },
       {
         "path": "dist/client/assets/RoleSelectionClient-CWHvoQ0v.js",
@@ -681,14 +766,24 @@
         "sha256": "5db5ba82eef00d1dee7e86e663098c9427d01183a88d357437daff295aec3e75"
       },
       {
-        "path": "dist/client/assets/router-BdZcPRYo.js",
-        "bytes": 9065,
-        "sha256": "903ad9b265086aa49196680c8f14e422808c162bcdf9ab1e1b3e6e4b4a26f752"
+        "path": "dist/client/assets/router-ByqBcUqL.js",
+        "bytes": 9064,
+        "sha256": "e1cc0ea83e31799b2d46d83e91a09b9190fb78cda5970ac6e80ebbd81fcc6961"
+      },
+      {
+        "path": "dist/client/assets/x-KXRj3zG2.js",
+        "bytes": 356,
+        "sha256": "848f646e9ca7a93b7c2a37811f0f900951e698662e7c15fc01bc7d24868fb770"
       },
       {
         "path": "dist/client/continuity-ops-social-preview-v2.png",
         "bytes": 1750173,
         "sha256": "22a280603722e971b098e93c9a58b51e100b98f6530d7192834d595774e6a7ff"
+      },
+      {
+        "path": "dist/client/og-classroom.png",
+        "bytes": 1884914,
+        "sha256": "821e4e711316b49d84881b9d954874ab04cd9288484d600e05dc928614ada807"
       },
       {
         "path": "dist/client/og.png",
@@ -697,18 +792,18 @@
       },
       {
         "path": "dist/server/__vite_rsc_assets_manifest.js",
-        "bytes": 1632,
-        "sha256": "2ebd4cbb45a0a79b1ce30d255fb5206bbc1e7955344a9ed8811b5accb7ee3ecb"
+        "bytes": 2448,
+        "sha256": "54aaac15ee0b3fd7322d7a2290933f727e94a80d17984b380f889f598499aad9"
       },
       {
         "path": "dist/server/.vite/manifest.json",
         "bytes": 282,
-        "sha256": "5ac2e30dd1f4f0357a9fc99ece32b4d2331cce6cfe84a300762f827694a355d4"
+        "sha256": "1a3397ce8fc37de490843d012449a6bfbd8931042a119c8b4b1362d607ee00a6"
       },
       {
-        "path": "dist/server/assets/index-D-sdTYs5.css",
-        "bytes": 74047,
-        "sha256": "35c770c68ca89a888814d78ea6c1e892166d29e1d52ff268b6dcee1dd7b8124d"
+        "path": "dist/server/assets/index-ya50nv0d.css",
+        "bytes": 83236,
+        "sha256": "c7be7db41fe462a48911d874754bdd5c3b825d6330ee4a1aa18cf8b5abed6967"
       },
       {
         "path": "dist/server/image-config.json",
@@ -717,13 +812,33 @@
       },
       {
         "path": "dist/server/index.js",
-        "bytes": 913349,
-        "sha256": "280a96ee5bb9cefe1fb21db994e0276e90e3800f417e8dc054f22e421cee6c4c"
+        "bytes": 941443,
+        "sha256": "934fc875eef34b5723297d7f1a45e91f95193962b492be1c8a21c410f4c1ef27"
       },
       {
         "path": "dist/server/ssr/__vite_rsc_assets_manifest.js",
-        "bytes": 1632,
-        "sha256": "2ebd4cbb45a0a79b1ce30d255fb5206bbc1e7955344a9ed8811b5accb7ee3ecb"
+        "bytes": 2448,
+        "sha256": "54aaac15ee0b3fd7322d7a2290933f727e94a80d17984b380f889f598499aad9"
+      },
+      {
+        "path": "dist/server/ssr/assets/classroom-domain-D-oyK65E.js",
+        "bytes": 1197,
+        "sha256": "fea568349bc57b38a9dbd250aaab70a882b4226bfdb0085ec0a9caf1dfec4481"
+      },
+      {
+        "path": "dist/server/ssr/assets/CoursesApp-CtvRMs-n.js",
+        "bytes": 17983,
+        "sha256": "2fb0c83a3b8f75582a6efc657527cc32569a616ddff4e6b9eef8fbe61f269b73"
+      },
+      {
+        "path": "dist/server/ssr/assets/CourseWorkspace-DKVghA04.js",
+        "bytes": 7405,
+        "sha256": "ba26353aa73ad9f108ae464b129cd6d2fe26636cb59235188d6de6439f6c69f4"
+      },
+      {
+        "path": "dist/server/ssr/assets/createLucideIcon-DwCXUUKs.js",
+        "bytes": 4999,
+        "sha256": "2ff7ed70b893a17638eccd3187ea67c7e34a3de73a699548c0b6768bd15653c8"
       },
       {
         "path": "dist/server/ssr/assets/error-boundary-DJC2VtEY.js",
@@ -736,9 +851,9 @@
         "sha256": "f9f22359d57bf1b9cc341f50f6099893f57f5d2ff6e061fca8d7131cde9d6065"
       },
       {
-        "path": "dist/server/ssr/assets/link-8t91HEFW.js",
-        "bytes": 20320,
-        "sha256": "45b8ba915d0f9611e84e04149b0e247bf0a23478641547c07e8bdc0d9a25275b"
+        "path": "dist/server/ssr/assets/link-CZhhT6mO.js",
+        "bytes": 24723,
+        "sha256": "c73bb7935455d28880f661c409ac5a19aa56bdf4008f2c6bdefd09251b68349a"
       },
       {
         "path": "dist/server/ssr/assets/ObservabilityView-DrpCGXYD.js",
@@ -746,14 +861,9 @@
         "sha256": "14a533c81aeed57d00ab57c61557c88057232e91e7f5f73926e19c92c0eb2d89"
       },
       {
-        "path": "dist/server/ssr/assets/OperationsApp-Cp_oM_Jx.js",
-        "bytes": 366169,
-        "sha256": "df8af95255692af9a5706998aef5f09675fd1c1388348570a7444ed6e31bda1e"
-      },
-      {
-        "path": "dist/server/ssr/assets/query-Du9M2EWL.js",
-        "bytes": 4554,
-        "sha256": "fe244d72ebd5c9a0a54b4e796d8ab563b5ac18242873dee89491c097725a447f"
+        "path": "dist/server/ssr/assets/OperationsApp-BK3Xa3Re.js",
+        "bytes": 360645,
+        "sha256": "58294a4139197a50c8cb593d9c23eb580b220c8811cb037ee6e7873e49219715"
       },
       {
         "path": "dist/server/ssr/assets/react-DHKGyG9G.js",
@@ -766,9 +876,9 @@
         "sha256": "318bdc22e07a1867ab2eea23cc5dcb16467614eb3b97fa866a3a49ad9132acf3"
       },
       {
-        "path": "dist/server/ssr/assets/router-DHnoDhF3.js",
-        "bytes": 23324,
-        "sha256": "77bc1511678029d38aa220152c6d28fb0fbc1cd4c851147826320efa58c4b673"
+        "path": "dist/server/ssr/assets/router-DmMcNkvM.js",
+        "bytes": 23323,
+        "sha256": "2da15ee98019d67a4f889fcb14eb5eb7d8fd227f4fd0e8984f9c7cf613762ff7"
       },
       {
         "path": "dist/server/ssr/assets/url-utils-GEhRtWpk.js",
@@ -776,14 +886,19 @@
         "sha256": "a5708b26a787433ebd5134b74f3f6b0f706e27e9fed331cb5ae808e32e941565"
       },
       {
+        "path": "dist/server/ssr/assets/x-CBZ68F8H.js",
+        "bytes": 1042,
+        "sha256": "ecd3028ea3efa28f2502227ed74312748b13399b83be2789e50ef41a39d5ca81"
+      },
+      {
         "path": "dist/server/ssr/index.js",
-        "bytes": 565531,
-        "sha256": "4af14f6df0de10eb7bc819a243af4e061666df7e8fc59d2b90b8de1841738c4f"
+        "bytes": 565870,
+        "sha256": "f11f82217d4040b9a373f35fd3cee19f6aebad153cc5d633e624e40459293fcb"
       },
       {
         "path": "dist/server/ssr/vinext-server.json",
         "bytes": 86,
-        "sha256": "7ad9e962c06adb805dbc421f07b240d25e300a54974d41af43f2ade61011b15a"
+        "sha256": "24ec402d3667b556af2c5838c845bf2e8e450f928c012a6d0ece26f94ae9b70a"
       },
       {
         "path": "dist/server/vinext-externals.json",
@@ -793,7 +908,7 @@
       {
         "path": "dist/server/vinext-server.json",
         "bytes": 86,
-        "sha256": "7ad9e962c06adb805dbc421f07b240d25e300a54974d41af43f2ade61011b15a"
+        "sha256": "24ec402d3667b556af2c5838c845bf2e8e450f928c012a6d0ece26f94ae9b70a"
       },
       {
         "path": "dist/server/wrangler.json",
@@ -813,13 +928,13 @@
     {
       "path": "evidence/continuity-ops-gherkin-acceptance.json",
       "bytes": 2056,
-      "sha256": "03b2968c88f7f167105ca7eaa2351e12539dfac47bb8cc816802cca7057458b7",
+      "sha256": "383cc59639fcbeadced26ec6e8a37b5bd12446a9c9d0c7fddeab618446900e40",
       "present": true,
       "evidenceId": "CO-VRF-GHERKIN-001",
       "evidenceStatus": "verified_local",
       "result": "passed_with_documented_limits",
       "verificationType": "executable_gherkin_domain_acceptance",
-      "generatedAt": "2026-08-05T00:41:10.147Z",
+      "generatedAt": "2026-08-05T02:20:51.405Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -829,13 +944,13 @@
     {
       "path": "evidence/continuity-ops-gherkin-fault-injection.json",
       "bytes": 15402,
-      "sha256": "52bc8ca8647e5780bff539ec974b8babdfb4ae85c623226e36a8ad240070beb5",
+      "sha256": "2d6378478cbd001884a5ebc6101084c1f4103b6d98d8550cf54687b5ecd141b3",
       "present": true,
       "evidenceId": "CO-VRF-GHERKIN-FAULT-001",
       "evidenceStatus": "verified_local",
       "result": "passed",
       "verificationType": "risk_oriented_gherkin_fault_injection",
-      "generatedAt": "2026-08-05T00:41:15.016Z",
+      "generatedAt": "2026-08-05T02:20:56.442Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -845,13 +960,13 @@
     {
       "path": "evidence/continuity-ops-quality-metrics.json",
       "bytes": 10208,
-      "sha256": "322047bc0830f7e327aadd08d4a2ed03a7bfbd26320b1026c37859363600e8f6",
+      "sha256": "f307b75598e0b3daa4252233f4ae003b2724fb811f80f99f09294f8b0cdf0141",
       "present": true,
       "evidenceId": "CO-VRF-QUALITY-001",
       "evidenceStatus": "verified_local",
       "result": "coverage_passed_with_complexity_findings",
       "verificationType": "unit_coverage_and_static_complexity_diagnostics",
-      "generatedAt": "2026-08-05T00:41:26.886Z",
+      "generatedAt": "2026-08-05T02:21:08.626Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -860,14 +975,14 @@
     },
     {
       "path": "evidence/continuity-ops-fault-injection.json",
-      "bytes": 67176,
-      "sha256": "9836e153d167570529e783dc8e65eab783a9e21461cf8955c1feb34230df043f",
+      "bytes": 67175,
+      "sha256": "14d9d7f9fbf8401032a57b052af9a7bbc72c4f5fb9c8f68c5dd6ead571e0aafa",
       "present": true,
       "evidenceId": "CO-VRF-FAULT-001",
       "evidenceStatus": "verified_local",
       "result": "passed",
       "verificationType": "risk_oriented_targeted_fault_injection",
-      "generatedAt": "2026-08-05T00:41:23.423Z",
+      "generatedAt": "2026-08-05T02:21:05.016Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -973,15 +1088,15 @@
     {
       "path": "evidence/continuity-ops-local-runtime-bootstrap.json",
       "bytes": 4269,
-      "sha256": "7d2d60d688166bb417a88eb5fc03e68eeba82188a5a4382eb66816355ce87fcb",
+      "sha256": "08ca23a8b933f26f374ccb006ec9ac95719fd9f2e2ace99a9c815a7b967ab502",
       "present": true,
       "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
       "evidenceStatus": "verified_local_controlled",
       "result": "passed_with_documented_limits",
       "verificationType": "authenticated_fresh_d1_runtime_bootstrap_and_domain_role_selection",
-      "generatedAt": "2026-08-05T00:41:59.343Z",
+      "generatedAt": "2026-08-05T02:21:39.815Z",
       "limitationCount": 4,
-      "associatedBuildSha256": "280a96ee5bb9cefe1fb21db994e0276e90e3800f417e8dc054f22e421cee6c4c",
+      "associatedBuildSha256": "934fc875eef34b5723297d7f1a45e91f95193962b492be1c8a21c410f4c1ef27",
       "matchesCurrentWorkerBuild": true,
       "bindingScope": "current_worker_artifact",
       "bindingEvaluation": "matches_current_worker"
@@ -1037,13 +1152,13 @@
     {
       "path": "evidence/continuity-ops-sbom.cdx.json",
       "bytes": 734766,
-      "sha256": "e0320be7829ecedc30687ddf806eeacb5d3c3d2ca51cc86d5e8bbe677b949b2f",
+      "sha256": "46651a8f5ba3ad8bf9420766bd7c5c88657de508716d36fa2c6fd2e3fd58d806",
       "present": true,
       "evidenceId": null,
       "evidenceStatus": "inventory_generated",
       "result": "not_applicable",
       "verificationType": "cyclonedx_dependency_inventory",
-      "generatedAt": "2026-08-05T00:40:54.481Z",
+      "generatedAt": "2026-08-05T02:20:35.334Z",
       "limitationCount": 0,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,

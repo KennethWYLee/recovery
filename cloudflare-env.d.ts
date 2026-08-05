@@ -13,6 +13,7 @@ interface CloudflareEnv {
   CONTINUITY_OPS_LOCAL_OPERATOR_NAME?: string;
   CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL?: string;
   CONTINUITY_OPS_LOCAL_OPERATOR_ROLE?: "admin" | "commander" | "responder" | "observer" | "auditor";
+  CLASSROOM_TEACHER_EMAILS?: string;
 }
 
 declare module "cloudflare:workers" {

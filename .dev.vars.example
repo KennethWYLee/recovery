@@ -15,3 +15,5 @@ CONTINUITY_OPS_LOCAL_OPERATOR_ID=local-operator
 CONTINUITY_OPS_LOCAL_OPERATOR_NAME=Local Operator
 CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL=local-operator@example.invalid
 CONTINUITY_OPS_LOCAL_OPERATOR_ROLE=admin
+# Comma-separated verified accounts allowed to create and manage courses.
+CLASSROOM_TEACHER_EMAILS=wy.lee@ntub.edu.tw
