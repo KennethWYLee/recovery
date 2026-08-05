@@ -27,10 +27,12 @@ export function sites(): Plugin {
       const outputDirectory = resolve(root, "dist", ".openai");
       const localVariables = resolve(root, "dist", "server", ".dev.vars");
       const hostingConfig = resolve(root, ".openai", "hosting.json");
+      const migrations = resolve(root, "drizzle");
       await rm(localVariables, { force: true });
       await rm(outputDirectory, { recursive: true, force: true });
       await mkdir(outputDirectory, { recursive: true });
       if (await exists(hostingConfig)) await cp(hostingConfig, resolve(outputDirectory, "hosting.json"));
+      if (await exists(migrations)) await cp(migrations, resolve(outputDirectory, "drizzle"), { recursive: true });
     },
   };
 }
