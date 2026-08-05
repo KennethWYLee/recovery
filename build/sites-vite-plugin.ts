@@ -13,9 +13,8 @@ async function exists(path: string): Promise<boolean> {
 }
 
 // Packages only the Sites binding metadata after Vite finishes compiling.
-// The hosted fresh-D1 schema is initialized by the authenticated runtime
-// bootstrap. This avoids relying on deployment-time SQL parsing after two
-// Sites attempts failed while processing these trigger-heavy migrations.
+// Database migrations live in drizzle/ and are applied during deployment;
+// the runtime verifies the schema and fails clearly when it is incomplete.
 export function sites(): Plugin {
   let root = process.cwd();
   return {

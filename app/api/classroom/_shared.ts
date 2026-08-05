@@ -1,9 +1,11 @@
 import {
   ClassroomAccessError,
   classroomDb,
+  enforceClassroomMutationRateLimit,
   loadOrProvisionClassroomActor,
   type ClassroomActor,
 } from "@/db/classroom";
+import { ClassroomWorkflowError } from "@/db/classroom-live";
 import { requestIsSameOrigin } from "@/lib/classroom-auth";
 import {
   ClassroomRequestBodyError,
@@ -48,7 +50,12 @@ export async function classroomApiContext(request: Request, adminOnly = false): 
   if (adminOnly && !actor.isAdmin) {
     throw new ClassroomApiError(403, "SYSTEM_ADMIN_PERMISSION_REQUIRED", "只有系統管理員可以執行這項操作。");
   }
-  return { actor, db: classroomDb() };
+  const db = classroomDb();
+  if (!["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) {
+    const allowed = await enforceClassroomMutationRateLimit(db, actor, new URL(request.url).pathname);
+    if (!allowed) throw new ClassroomApiError(429, "RATE_LIMITED", "操作次數過於頻繁，請稍候再試。");
+  }
+  return { actor, db };
 }
 
 export async function classroomJsonBody(request: Request): Promise<Record<string, unknown>> {
@@ -78,6 +85,24 @@ export function classroomAccessRequestId(value: unknown): string {
   return /^access-request-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
 }
 
+export function classroomSessionId(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const id = value.trim();
+  return /^session-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
+}
+
+export function classroomParticipantId(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const id = value.trim();
+  return /^participant-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
+}
+
+export function classroomGroupId(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const id = value.trim();
+  return /^group-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
+}
+
 export function expectedVersion(value: unknown): number {
   return Number.isSafeInteger(value) && Number(value) >= 1 ? Number(value) : 0;
 }
@@ -87,6 +112,9 @@ export function classroomData<T>(data: T, init?: ResponseInit): Response {
 }
 
 export function classroomProblem(error: unknown): Response {
+  if (error instanceof ClassroomWorkflowError) {
+    return Response.json({ error: { code: error.code, message: error.message } }, { status: error.status });
+  }
   if (error instanceof ClassroomApiError) {
     return Response.json({ error: { code: error.code, message: error.message } }, { status: error.status });
   }

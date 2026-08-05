@@ -6,6 +6,7 @@ import test from "node:test";
 const migrationUrls = [
   new URL("../drizzle/0001_classroom_courses.sql", import.meta.url),
   new URL("../drizzle/0002_classroom_access_approval.sql", import.meta.url),
+  new URL("../drizzle/0003_classroom_live_sessions.sql", import.meta.url),
 ];
 
 async function classroomDatabase() {
@@ -29,9 +30,38 @@ test("classroom migration creates the reviewed course boundary", async () => {
     "classroom_audit_events",
     "classroom_course_members",
     "classroom_courses",
+    "classroom_group_responses",
+    "classroom_groups",
+    "classroom_ranking_items",
+    "classroom_ranking_submissions",
+    "classroom_rate_limits",
     "classroom_seed_state",
+    "classroom_session_participants",
+    "classroom_sessions",
     "classroom_users",
   ]);
+  db.close();
+});
+
+test("a course has only one active session and each student can check in once", async () => {
+  const db = await classroomDatabase();
+  const now = "2026-08-05T00:00:00.000Z";
+  db.prepare("INSERT INTO classroom_users VALUES (?, ?, ?, 'teacher', 'active', ?, ?)").run("teacher-1", "teacher@ntub.edu.tw", "教師", now, now);
+  db.prepare("INSERT INTO classroom_users VALUES (?, ?, ?, 'student', 'active', ?, ?)").run("student-1", "student@ntub.edu.tw", "學生", now, now);
+  db.prepare(`INSERT INTO classroom_courses
+    (id, owner_user_id, name, name_key, academic_year, term, status, version, created_at, updated_at, deleted_at)
+    VALUES ('course-1', 'teacher-1', '資料庫', '資料庫', 115, '1', 'active', 1, ?, ?, NULL)`).run(now, now);
+  const insertSession = db.prepare(`INSERT INTO classroom_sessions
+    (id, course_id, title, question, ranking_criteria, join_code, phase, group_capacity,
+     effective_group_capacity, anonymous_groups, allow_ranking_edits, version, created_by_user_id, created_at, updated_at)
+    VALUES (?, 'course-1', '課堂活動', '如何設計資料庫？', '請依正確性與理由排序。', ?, 'check_in', 6, 6, 1, 1, 1, 'teacher-1', ?, ?)`);
+  insertSession.run("session-1", "ABC234", now, now);
+  assert.throws(() => insertSession.run("session-2", "ABC235", now, now), /UNIQUE/iu);
+  const insertParticipant = db.prepare(`INSERT INTO classroom_session_participants
+    (id, session_id, user_id, group_id, attendance, joined_phase, can_rank, checked_in_at, grouped_at, updated_at)
+    VALUES (?, 'session-1', 'student-1', NULL, 'on_time', 'check_in', 1, ?, NULL, ?)`);
+  insertParticipant.run("participant-1", now, now);
+  assert.throws(() => insertParticipant.run("participant-2", now, now), /UNIQUE/iu);
   db.close();
 });
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
-  CalendarDays,
+  CheckCircle2,
   Clock3,
   LogOut,
   Pencil,
@@ -14,8 +14,15 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { courseTermLabel, type ClassroomCourse, type ClassroomRole } from "@/lib/classroom-domain";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  courseTermLabel,
+  currentAcademicTerm,
+  SESSION_PHASE_LABELS,
+  type AcademicTerm,
+  type ClassroomCourse,
+  type ClassroomRole,
+} from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "./classroom-page-identity";
 
 type Actor = { id: string; email: string; displayName: string; role: ClassroomRole; isAdmin: boolean };
@@ -23,53 +30,35 @@ type CoursePayload = { actor: Actor; courses: ClassroomCourse[] };
 type ApiEnvelope<T> = { data?: T; error?: { code?: string; message?: string } };
 
 class ClassroomClientError extends Error {
-  readonly code: string;
-
-  constructor(code: string, message: string) {
-    super(message);
-    this.code = code;
-  }
+  constructor(readonly code: string, message: string) { super(message); }
 }
 
 async function apiData<T>(response: Response): Promise<T> {
-  const payload = await response.json().catch(() => null) as ApiEnvelope<T> | null;
-  if (!response.ok || payload?.data === undefined) {
-    throw new ClassroomClientError(payload?.error?.code ?? "UNKNOWN_ERROR", payload?.error?.message ?? "目前無法取得課程資料。");
+  const body = await response.json().catch(() => null) as ApiEnvelope<T> | null;
+  if (!response.ok || body?.data === undefined) {
+    throw new ClassroomClientError(body?.error?.code ?? "UNKNOWN_ERROR", body?.error?.message ?? "目前無法取得課程資料。");
   }
-  return payload.data;
+  return body.data;
 }
 
-function CourseDialog({
-  open,
-  title,
-  description,
-  confirmLabel,
-  destructive = false,
-  pending,
-  error,
-  children,
-  onClose,
-  onConfirm,
-}: {
+function CourseDialog({ open, title, description, pending, error, confirmLabel, destructive = false, children, onClose, onConfirm }: {
   open: boolean;
   title: string;
   description: string;
-  confirmLabel: string;
-  destructive?: boolean;
   pending: boolean;
   error: string | null;
+  confirmLabel: string;
+  destructive?: boolean;
   children?: React.ReactNode;
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const ref = useRef<HTMLDialogElement | null>(null);
+  const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (open && !ref.current?.open) ref.current?.showModal();
+    if (!open && ref.current?.open) ref.current.close();
   }, [open]);
-  return <dialog ref={ref} className="course-dialog" onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }} onClose={() => { if (open && !pending) onClose(); }}>
+  return <dialog ref={ref} className="course-dialog" onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }}>
     <form method="dialog" onSubmit={(event) => event.preventDefault()}>
       <header><div><h2>{title}</h2><p>{description}</p></div><button type="button" className="course-icon-button" aria-label="關閉" disabled={pending} onClick={onClose}><X /></button></header>
       {children}
@@ -80,161 +69,115 @@ function CourseDialog({
 }
 
 export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
+  const defaults = currentAcademicTerm();
   const [actor, setActor] = useState<Actor | null>(null);
   const [courses, setCourses] = useState<ClassroomCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [loadErrorCode, setLoadErrorCode] = useState<string | null>(null);
+  const [loadCode, setLoadCode] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"create" | "rename" | "delete" | null>(null);
   const [target, setTarget] = useState<ClassroomCourse | null>(null);
   const [name, setName] = useState("");
+  const [academicYear, setAcademicYear] = useState(defaults.academicYear);
+  const [term, setTerm] = useState<AcademicTerm>(defaults.term);
+  const [capacity, setCapacity] = useState(6);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  async function loadCourses() {
+  const loadCourses = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
-    setLoadErrorCode(null);
     try {
       const data = await apiData<CoursePayload>(await fetch("/api/classroom/courses", { cache: "no-store", headers: { accept: "application/json" } }));
       setActor(data.actor);
       setCourses(data.courses);
+      setLoadCode(null);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "目前無法取得課程資料。");
-      setLoadErrorCode(error instanceof ClassroomClientError ? error.code : "UNKNOWN_ERROR");
+      setLoadCode(error instanceof ClassroomClientError ? error.code : "UNKNOWN_ERROR");
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    let active = true;
-    void fetch("/api/classroom/courses", { cache: "no-store", headers: { accept: "application/json" } })
-      .then((response) => apiData<CoursePayload>(response))
-      .then((data) => {
-        if (!active) return;
-        setActor(data.actor);
-        setCourses(data.courses);
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        setLoadError(error instanceof Error ? error.message : "目前無法取得課程資料。");
-        setLoadErrorCode(error instanceof ClassroomClientError ? error.code : "UNKNOWN_ERROR");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
   }, []);
 
-  function closeDialog(force = false) {
-    if (pending && !force) return;
-    setDialog(null);
-    setTarget(null);
-    setName("");
-    setFormError(null);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadCourses(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadCourses]);
+
+  function closeDialog() {
+    if (pending) return;
+    setDialog(null); setTarget(null); setName(""); setFormError(null);
   }
 
   function openCreate() {
-    setName("");
-    setFormError(null);
-    setDialog("create");
-  }
-
-  function openRename(course: ClassroomCourse) {
-    setTarget(course);
-    setName(course.name);
-    setFormError(null);
-    setDialog("rename");
-  }
-
-  function openDelete(course: ClassroomCourse) {
-    setTarget(course);
-    setFormError(null);
-    setDialog("delete");
+    setName(""); setAcademicYear(defaults.academicYear); setTerm(defaults.term); setCapacity(6); setFormError(null); setDialog("create");
   }
 
   async function saveCourse() {
     const normalized = name.normalize("NFKC").replace(/\s+/gu, " ").trim();
-    if (normalized.length < 2 || normalized.length > 80) {
-      setFormError("課程名稱須為2至80個字元。");
-      return;
-    }
-    setPending(true);
-    setFormError(null);
+    if (normalized.length < 2 || normalized.length > 80) { setFormError("課程名稱須為 2 至 80 個字元。"); return; }
+    setPending(true); setFormError(null);
     try {
       if (dialog === "create") {
         const result = await apiData<{ course: ClassroomCourse }>(await fetch("/api/classroom/courses", {
-          method: "POST",
-          headers: { accept: "application/json", "content-type": "application/json" },
-          body: JSON.stringify({ name: normalized }),
+          method: "POST", headers: { accept: "application/json", "content-type": "application/json" },
+          body: JSON.stringify({ name: normalized, academicYear, term, defaultGroupCapacity: capacity }),
         }));
         setCourses((current) => [result.course, ...current]);
       } else if (dialog === "rename" && target) {
         const result = await apiData<{ course: ClassroomCourse }>(await fetch(`/api/classroom/courses/${encodeURIComponent(target.id)}`, {
-          method: "PATCH",
-          headers: { accept: "application/json", "content-type": "application/json" },
+          method: "PATCH", headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify({ name: normalized, expectedVersion: target.version }),
         }));
-        setCourses((current) => current.map((course) => course.id === result.course.id ? result.course : course));
+        setCourses((current) => current.map((course) => course.id === target.id ? result.course : course));
       }
-      closeDialog(true);
+      setPending(false); setDialog(null); setTarget(null); setName("");
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "目前無法儲存課程。");
-    } finally {
-      setPending(false);
+      setPending(false); setFormError(error instanceof Error ? error.message : "目前無法儲存課程。");
     }
   }
 
   async function removeCourse() {
     if (!target) return;
-    setPending(true);
-    setFormError(null);
+    setPending(true); setFormError(null);
     try {
-      await apiData<{ deleted: boolean; courseId: string }>(await fetch(`/api/classroom/courses/${encodeURIComponent(target.id)}`, {
-        method: "DELETE",
-        headers: { accept: "application/json", "content-type": "application/json" },
+      await apiData(await fetch(`/api/classroom/courses/${encodeURIComponent(target.id)}`, {
+        method: "DELETE", headers: { accept: "application/json", "content-type": "application/json" },
         body: JSON.stringify({ expectedVersion: target.version }),
       }));
       setCourses((current) => current.filter((course) => course.id !== target.id));
-      closeDialog(true);
+      setPending(false); setDialog(null); setTarget(null);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "目前無法刪除課程。");
-    } finally {
-      setPending(false);
+      setPending(false); setFormError(error instanceof Error ? error.message : "目前無法刪除課程。");
     }
   }
 
-  const administrator = actor?.isAdmin === true;
-  const displayName = actor?.displayName ?? identity.displayName;
+  if (loadCode === "ACCESS_APPROVAL_PENDING" || loadCode === "ACCESS_APPROVAL_REJECTED") {
+    const rejected = loadCode === "ACCESS_APPROVAL_REJECTED";
+    return <div className="course-shell"><header className="course-topbar"><span className="course-brand"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></span><div className="course-account"><span><strong>{identity.displayName}</strong><small>{identity.email}</small></span><a href={identity.signOutPath}><LogOut />登出</a></div></header><main className="courses-main"><section className="courses-access-status"><span className={`access-status-icon ${rejected ? "denied" : "pending"}`}>{rejected ? <ShieldCheck /> : <Clock3 />}</span><p>帳號存取</p><h2>{rejected ? "目前未核准" : "正在等待核准"}</h2><span>{loadError}</span><dl><div><dt>帳號</dt><dd>{identity.email}</dd></div><div><dt>下一步</dt><dd>{rejected ? "請聯絡系統管理員" : "核准後重新載入即可進入"}</dd></div></dl><button type="button" className="button secondary" onClick={() => void loadCourses()}>重新確認</button></section></main></div>;
+  }
+
   return <div className="course-shell">
-    <header className="course-topbar">
-      <Link href="/courses" className="course-brand" aria-label="回到我的課程"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link>
-      <div className="course-topbar-actions">{administrator && <Link className="course-admin-link" href="/access-review"><ShieldCheck aria-hidden="true" />登入審核</Link>}<div className="course-account"><span><strong>{displayName}</strong><small>{administrator ? "系統管理員" : "學生"}</small></span><a href={identity.signOutPath}><LogOut aria-hidden="true" />登出</a></div></div>
-    </header>
-    <main id="main-content" className="courses-main">
-      <section className="courses-heading">
-        <div><p>115學年度 第1學期</p><h1>我的課程</h1><span>{administrator ? "選擇今天要進行的課程，或建立一門新課程。" : "選擇要進入的課程。"}</span></div>
-        {administrator && <button type="button" className="button primary" onClick={openCreate}><Plus aria-hidden="true" />新增課程</button>}
-      </section>
-
-      {loading ? <div className="courses-loading" role="status"><span className="spinner" />正在整理您的課程…</div> : loadErrorCode === "ACCESS_APPROVAL_PENDING" || loadErrorCode === "ACCESS_APPROVAL_REJECTED" || loadErrorCode === "EMAIL_DOMAIN_NOT_ALLOWED" ? <section className="courses-access-status" role="status"><span className={`access-status-icon ${loadErrorCode === "ACCESS_APPROVAL_PENDING" ? "pending" : "denied"}`}><Clock3 aria-hidden="true" /></span><p>帳號存取狀態</p><h2>{loadErrorCode === "ACCESS_APPROVAL_PENDING" ? "登入申請等待核准" : loadErrorCode === "ACCESS_APPROVAL_REJECTED" ? "登入申請尚未獲准" : "此帳號不符合登入資格"}</h2><span>{loadError}</span><dl><div><dt>登入帳號</dt><dd>{identity.email}</dd></div><div><dt>可使用條件</dt><dd>系統管理員核准的 @ntub.edu.tw 帳號</dd></div></dl><a className="button secondary" href={identity.signOutPath}>改用其他帳號</a></section> : loadError ? <div className="courses-error" role="alert"><strong>無法取得課程</strong><span>{loadError}</span><button className="button secondary" type="button" onClick={() => void loadCourses()}>重新載入</button></div> : courses.length === 0 ? <section className="courses-empty"><BookOpen aria-hidden="true" /><h2>{administrator ? "建立第一門課程" : "目前還沒有可進入的課程"}</h2><p>{administrator ? "課程建立後，就能安排課堂場次、學生與分組。" : "掃描教師提供的課堂QR Code後，課程會出現在這裡。"}</p>{administrator && <button className="button primary" type="button" onClick={openCreate}><Plus />新增課程</button>}</section> : <section className="course-grid" aria-label="課程列表">
-        {courses.map((course, index) => <article className="course-card" key={course.id} style={{ "--course-sequence": index } as React.CSSProperties}>
-          <div className="course-card-accent" aria-hidden="true" />
-          <header><span><BookOpen aria-hidden="true" /></span>{administrator && <div className="course-card-actions"><button type="button" aria-label={`修改${course.name}名稱`} onClick={() => openRename(course)}><Pencil /></button><button type="button" className="delete" aria-label={`刪除${course.name}`} onClick={() => openDelete(course)}><Trash2 /></button></div>}</header>
-          <div className="course-card-copy"><small>{courseTermLabel(course)}</small><h2>{course.name}</h2><p>尚未建立今天的課堂</p></div>
-          <dl><div><dt><CalendarDays />課堂活動</dt><dd>0</dd></div><div><dt><UsersRound />學生</dt><dd>0</dd></div></dl>
-          <Link href={`/courses/${encodeURIComponent(course.id)}`}><span>進入課程</span><ArrowRight aria-hidden="true" /></Link>
+    <header className="course-topbar"><Link href="/courses" className="course-brand"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link><div className="course-topbar-actions">{actor?.isAdmin && <Link href="/access-review" className="course-admin-link"><ShieldCheck />帳號審核</Link>}<div className="course-account"><span><strong>{actor?.displayName ?? identity.displayName}</strong><small>{actor?.isAdmin ? "系統管理員" : "學生"}</small></span><a href={identity.signOutPath}><LogOut />登出</a></div></div></header>
+    <main className="courses-main">
+      <section className="courses-heading"><div><p>課程中心</p><h1>選擇今天的課程</h1><span>開啟一門課後，再建立本次問題、QR Code 與分組。</span></div>{actor?.isAdmin && <button className="button primary" type="button" onClick={openCreate}><Plus />建立課程</button>}</section>
+      {loading ? <div className="courses-loading" role="status"><span className="spinner" />正在取得課程…</div> : loadError ? <div className="courses-error" role="alert"><strong>無法取得課程</strong><span>{loadError}</span><button className="button secondary" type="button" onClick={() => void loadCourses()}>重新載入</button></div> : courses.length === 0 ? <div className="courses-empty"><BookOpen /><h2>尚未建立課程</h2><p>{actor?.isAdmin ? "建立第一門課程，即可開始今日活動。" : "請掃描教師提供的今日課堂 QR Code。"}</p></div> : <div className="course-list" role="list">
+        {courses.map((course) => <article className="course-list-row" role="listitem" key={course.id}>
+          <span className="course-list-icon"><BookOpen /></span>
+          <div className="course-list-copy"><small>{courseTermLabel(course)}</small><h2>{course.name}</h2><p><UsersRound />{course.studentCount} 位學生 <span aria-hidden="true">·</span> 每組預設 {course.defaultGroupCapacity} 人 <span aria-hidden="true">·</span> {course.sessionCount} 次課堂</p></div>
+          <div className="course-list-status">{course.activeSessionPhase ? <span className="status-live"><i />{SESSION_PHASE_LABELS[course.activeSessionPhase]}</span> : <span><CheckCircle2 />沒有進行中活動</span>}</div>
+          {actor?.isAdmin && <div className="course-list-actions"><button type="button" aria-label={`修改 ${course.name} 名稱`} onClick={() => { setTarget(course); setName(course.name); setFormError(null); setDialog("rename"); }}><Pencil /></button><button className="delete" type="button" aria-label={`刪除 ${course.name}`} onClick={() => { setTarget(course); setFormError(null); setDialog("delete"); }}><Trash2 /></button></div>}
+          <Link href={`/courses/${encodeURIComponent(course.id)}`}>開啟課程<ArrowRight /></Link>
         </article>)}
-      </section>}
+      </div>}
     </main>
-
-    <CourseDialog open={dialog === "create"} title="新增課程" description="建立後會加入目前學期的課程列表。" confirmLabel="建立課程" pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void saveCourse()}>
-      <label className="course-field"><span>課程名稱</span><input autoFocus value={name} maxLength={80} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void saveCourse(); } }} placeholder="例如：資料視覺化" /></label>
+    <CourseDialog open={dialog === "create"} title="建立課程" description="設定學期與平均分組時使用的每組人數上限。" confirmLabel="建立課程" pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void saveCourse()}>
+      <label className="course-field"><span>課程名稱</span><input value={name} maxLength={80} autoFocus onChange={(event) => setName(event.target.value)} placeholder="例如：資料庫" /></label>
+      <div className="course-field-row"><label className="course-field"><span>學年</span><input type="number" min={100} max={999} value={academicYear} onChange={(event) => setAcademicYear(Number(event.target.value))} /></label><label className="course-field"><span>學期</span><select value={term} onChange={(event) => setTerm(event.target.value as AcademicTerm)}><option value="1">第 1 學期</option><option value="2">第 2 學期</option><option value="summer">暑期</option></select></label></div>
+      <label className="course-field"><span>每組人數上限</span><input type="number" min={2} max={20} value={capacity} onChange={(event) => setCapacity(Number(event.target.value))} /><small>例如 50 人、上限 6 人，系統會建立 9 組並盡量平均分配。</small></label>
     </CourseDialog>
-    <CourseDialog open={dialog === "rename"} title="修改課程名稱" description="新的名稱會同步顯示在課程入口及後續課堂活動。" confirmLabel="儲存名稱" pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void saveCourse()}>
-      <label className="course-field"><span>課程名稱</span><input autoFocus value={name} maxLength={80} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void saveCourse(); } }} /></label>
-    </CourseDialog>
-    <CourseDialog open={dialog === "delete"} title={`刪除「${target?.name ?? ""}」？`} description="課程會從列表移除；系統仍保留操作紀錄，不會以刪除方式掩蓋歷史異動。" confirmLabel="刪除課程" destructive pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void removeCourse()} />
+    <CourseDialog open={dialog === "rename"} title="修改課程名稱" description="只會修改名稱，不影響已有學生與課堂紀錄。" confirmLabel="儲存名稱" pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void saveCourse()}><label className="course-field"><span>課程名稱</span><input value={name} maxLength={80} onChange={(event) => setName(event.target.value)} /></label></CourseDialog>
+    <CourseDialog open={dialog === "delete"} title={`刪除「${target?.name ?? ""}」？`} description="課程會從清單移除，系統仍保留操作紀錄。" confirmLabel="刪除課程" destructive pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void removeCourse()} />
   </div>;
 }

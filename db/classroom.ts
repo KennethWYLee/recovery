@@ -1,5 +1,3 @@
-import migration0001 from "@/drizzle/0001_classroom_courses.sql?raw";
-import migration0002 from "@/drizzle/0002_classroom_access_approval.sql?raw";
 import { env } from "cloudflare:workers";
 import { classroomIdentityKind, normalizeClassroomEmail } from "@/lib/classroom-access";
 import { resolveClassroomIdentity, type ClassroomEnvironment } from "@/lib/classroom-auth";
@@ -8,6 +6,7 @@ import {
   courseNameKey,
   currentAcademicTerm,
   normalizeCourseName,
+  type AcademicTerm,
   type ClassroomCourse,
   type ClassroomRole,
 } from "@/lib/classroom-domain";
@@ -53,7 +52,6 @@ export class ClassroomAccessError extends Error {
   }
 }
 
-const STATEMENT_BREAKPOINT = "--> statement-breakpoint";
 let schemaReady: Promise<void> | null = null;
 
 export function classroomEnvironment(): CloudflareEnv & ClassroomEnvironment {
@@ -74,27 +72,40 @@ export function classroomNow(): string {
   return new Date().toISOString();
 }
 
+export async function enforceClassroomMutationRateLimit(
+  db: D1Database,
+  actor: ClassroomActor,
+  pathname: string,
+  limit = 120,
+  windowSeconds = 60,
+): Promise<boolean> {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const threshold = nowSeconds - windowSeconds;
+  const scopeKey = `${actor.id}:${pathname.slice(0, 120)}`;
+  const row = await db.prepare(
+    `INSERT INTO classroom_rate_limits (scope_key, window_started_at, request_count, updated_at)
+     VALUES (?, ?, 1, ?)
+     ON CONFLICT(scope_key) DO UPDATE SET
+       window_started_at = CASE WHEN classroom_rate_limits.window_started_at <= ? THEN excluded.window_started_at ELSE classroom_rate_limits.window_started_at END,
+       request_count = CASE WHEN classroom_rate_limits.window_started_at <= ? THEN 1 ELSE classroom_rate_limits.request_count + 1 END,
+       updated_at = excluded.updated_at
+     RETURNING request_count`,
+  ).bind(scopeKey, nowSeconds, classroomNow(), threshold, threshold).first<{ request_count: number }>();
+  return Boolean(row && row.request_count <= limit);
+}
+
 async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function migrationStatements(): string[] {
-  return [migration0001, migration0002]
-    .join(`\n${STATEMENT_BREAKPOINT}\n`)
-    .split(STATEMENT_BREAKPOINT)
-    .map((statement) => statement.trim())
-    .filter(Boolean);
-}
-
 export async function ensureClassroomSchema(db = classroomDb()): Promise<void> {
   if (!schemaReady) {
     schemaReady = (async () => {
-      await db.batch(migrationStatements().map((statement) => db.prepare(statement)));
       const tables = await db.prepare(
-        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_seed_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist') ORDER BY name",
+        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_seed_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist', 'classroom_sessions', 'classroom_groups', 'classroom_session_participants', 'classroom_group_responses', 'classroom_ranking_submissions', 'classroom_ranking_items', 'classroom_rate_limits') ORDER BY name",
       ).all<{ name: string }>();
-      if (tables.results.length !== 7) throw new Error("The classroom database schema is incomplete.");
+      if (tables.results.length !== 14) throw new Error("The classroom database schema is incomplete.");
       await db.prepare("PRAGMA optimize").run();
     })().catch((error) => {
       schemaReady = null;
@@ -122,18 +133,28 @@ export async function loadOrProvisionClassroomActor(request: Request): Promise<C
   const id = `class-user-${(await sha256(email)).slice(0, 24)}`;
   const now = classroomNow();
   const displayName = (identity.displayName.trim() || email).slice(0, 120);
-  await db.prepare(
-    `INSERT INTO classroom_users (id, email, display_name, role, status, created_at, last_seen_at)
-     VALUES (?, ?, ?, ?, 'active', ?, ?)
-     ON CONFLICT(email) DO UPDATE SET
-       display_name = excluded.display_name,
-       role = CASE WHEN classroom_users.role = 'teacher' THEN 'teacher' ELSE excluded.role END,
-       last_seen_at = excluded.last_seen_at`,
-  ).bind(id, email, displayName, provisionedRole, now, now).run();
-
-  const actor = await db.prepare(
-    "SELECT id, email, display_name, role FROM classroom_users WHERE email = ? AND status = 'active'",
-  ).bind(email).first<{ id: string; email: string; display_name: string; role: string }>();
+  let actor = await db.prepare(
+    "SELECT id, email, display_name, role, last_seen_at FROM classroom_users WHERE email = ? AND status = 'active'",
+  ).bind(email).first<{ id: string; email: string; display_name: string; role: string; last_seen_at: string }>();
+  if (!actor) {
+    await db.prepare(
+      `INSERT INTO classroom_users (id, email, display_name, role, status, created_at, last_seen_at)
+       VALUES (?, ?, ?, ?, 'active', ?, ?)`,
+    ).bind(id, email, displayName, provisionedRole, now, now).run();
+    actor = { id, email, display_name: displayName, role: provisionedRole, last_seen_at: now };
+  } else {
+    const lastSeen = Date.parse(actor.last_seen_at);
+    const stale = !Number.isFinite(lastSeen) || Date.now() - lastSeen >= 5 * 60 * 1000;
+    const roleNeedsPromotion = isAdmin && actor.role !== "teacher";
+    if (stale || actor.display_name !== displayName || roleNeedsPromotion) {
+      await db.prepare(
+        `UPDATE classroom_users
+         SET display_name = ?, role = CASE WHEN role = 'teacher' THEN 'teacher' ELSE ? END, last_seen_at = ?
+         WHERE id = ?`,
+      ).bind(displayName, provisionedRole, now, actor.id).run();
+      actor = { ...actor, display_name: displayName, role: roleNeedsPromotion ? "teacher" : actor.role, last_seen_at: now };
+    }
+  }
   if (!actor || (actor.role !== "teacher" && actor.role !== "student")) return null;
   const result: ClassroomActor = {
     id: actor.id,
@@ -209,6 +230,11 @@ function mapCourse(row: {
   name: string;
   academic_year: number;
   term: string;
+  default_group_capacity: number;
+  student_count: number;
+  session_count: number;
+  active_session_id: string | null;
+  active_session_phase: string | null;
   version: number;
   created_at: string;
   updated_at: string;
@@ -221,18 +247,29 @@ function mapCourse(row: {
     name: row.name,
     academicYear: row.academic_year,
     term: row.term,
+    defaultGroupCapacity: row.default_group_capacity,
+    studentCount: row.student_count,
+    sessionCount: row.session_count,
+    activeSessionId: row.active_session_id,
+    activeSessionPhase: row.active_session_phase as ClassroomCourse["activeSessionPhase"],
     version: row.version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-const MEMBER_COURSE_SELECT = `SELECT c.id, c.name, c.academic_year, c.term, c.version, c.created_at, c.updated_at
+const COURSE_SELECT_COLUMNS = `c.id, c.name, c.academic_year, c.term, c.default_group_capacity, c.version, c.created_at, c.updated_at,
+  (SELECT COUNT(*) FROM classroom_course_members cm WHERE cm.course_id = c.id AND cm.role = 'student' AND cm.status = 'active') AS student_count,
+  (SELECT COUNT(*) FROM classroom_sessions cs WHERE cs.course_id = c.id) AS session_count,
+  (SELECT cs.id FROM classroom_sessions cs WHERE cs.course_id = c.id AND cs.phase != 'archived' ORDER BY cs.created_at DESC LIMIT 1) AS active_session_id,
+  (SELECT cs.phase FROM classroom_sessions cs WHERE cs.course_id = c.id AND cs.phase != 'archived' ORDER BY cs.created_at DESC LIMIT 1) AS active_session_phase`;
+
+const MEMBER_COURSE_SELECT = `SELECT ${COURSE_SELECT_COLUMNS}
   FROM classroom_courses c
   JOIN classroom_course_members m ON m.course_id = c.id
   WHERE m.user_id = ? AND m.status = 'active' AND c.status = 'active'`;
 
-const ADMIN_COURSE_SELECT = `SELECT c.id, c.name, c.academic_year, c.term, c.version, c.created_at, c.updated_at
+const ADMIN_COURSE_SELECT = `SELECT ${COURSE_SELECT_COLUMNS}
   FROM classroom_courses c
   WHERE c.status = 'active'`;
 
@@ -254,20 +291,24 @@ export async function getClassroomCourse(db: D1Database, actor: ClassroomActor, 
   return row ? mapCourse(row) : null;
 }
 
-export async function createClassroomCourse(db: D1Database, actor: ClassroomActor, nameValue: unknown): Promise<ClassroomCourse> {
-  const name = normalizeCourseName(nameValue);
+export async function createClassroomCourse(
+  db: D1Database,
+  actor: ClassroomActor,
+  values: { name: unknown; academicYear: number; term: AcademicTerm; defaultGroupCapacity: number },
+): Promise<ClassroomCourse> {
+  const name = normalizeCourseName(values.name);
   const nameKey = courseNameKey(name);
   const now = classroomNow();
-  const { academicYear, term } = currentAcademicTerm(new Date(now));
+  const { academicYear, term, defaultGroupCapacity } = values;
   const courseId = classroomId("course");
   const memberId = classroomId("course-member");
   const auditId = classroomId("class-audit");
   await db.batch([
     db.prepare(
       `INSERT INTO classroom_courses
-        (id, owner_user_id, name, name_key, academic_year, term, status, version, created_at, updated_at, deleted_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'active', 1, ?, ?, NULL)`,
-    ).bind(courseId, actor.id, name, nameKey, academicYear, term, now, now),
+        (id, owner_user_id, name, name_key, academic_year, term, default_group_capacity, status, version, created_at, updated_at, deleted_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?, NULL)`,
+    ).bind(courseId, actor.id, name, nameKey, academicYear, term, defaultGroupCapacity, now, now),
     db.prepare(
       `INSERT INTO classroom_course_members
         (id, course_id, user_id, role, status, joined_at, updated_at)
@@ -277,7 +318,7 @@ export async function createClassroomCourse(db: D1Database, actor: ClassroomActo
       `INSERT INTO classroom_audit_events
         (id, actor_user_id, action, resource_type, resource_id, details_json, occurred_at)
        VALUES (?, ?, 'course.create', 'course', ?, ?, ?)`,
-    ).bind(auditId, actor.id, courseId, JSON.stringify({ name }), now),
+    ).bind(auditId, actor.id, courseId, JSON.stringify({ name, academicYear, term, defaultGroupCapacity }), now),
   ]);
   const course = await getClassroomCourse(db, actor, courseId);
   if (!course) throw new Error("The created course could not be read.");
