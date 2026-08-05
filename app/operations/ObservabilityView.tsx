@@ -7,12 +7,14 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import type { ObservabilitySnapshot, ObservabilityWindow } from "@/db/operations-telemetry";
+import type { GuidedTourScenario } from "@/lib/operations-guided-tour";
 import { observabilityRoleFocus } from "@/lib/observability-role-focus";
 
 export type ObservabilityDisplayError = { message: string; requestId?: string };
@@ -56,6 +58,7 @@ export function ObservabilityView({
   retry,
   timeZone,
   role,
+  tourScenario,
 }: {
   data: ObservabilitySnapshot | null;
   loading: boolean;
@@ -65,6 +68,7 @@ export function ObservabilityView({
   retry: () => void;
   timeZone: string;
   role: string;
+  tourScenario?: GuidedTourScenario | null;
 }) {
   const focus = observabilityRoleFocus(role);
   const chartData = data?.timeSeries.map((point) => ({
@@ -73,6 +77,9 @@ export function ObservabilityView({
   })) ?? [];
   const maxRouteRequests = Math.max(1, ...(data?.routes.map((item) => item.requests) ?? [1]));
   const totalStatuses = Math.max(1, ...(data ? [data.summary.totalRequests] : [1]));
+  const deploymentLabel = tourScenario && data
+    ? formatBucket(tourScenario.deployment.occurredAt, timeZone, data.bucketUnit)
+    : null;
   return (
     <div className="view-stack observability-view">
       <header className="page-header observability-heading">
@@ -94,6 +101,10 @@ export function ObservabilityView({
 
       {error && <div className="error-banner" role="alert"><div><strong>無法取得系統觀測資料</strong><span>{error.message}</span>{error.requestId && <code>Request ID: {error.requestId}</code>}</div><button className="button secondary compact" type="button" onClick={retry}>重試</button></div>}
       {data?.coverage.hasSimulatedData && <div className="simulation-notice" role="status"><strong>包含模擬資料</strong><span>{data.coverage.simulatedEvents.toLocaleString("zh-TW")}筆資料只用於操作演練與圖表測試，不代表正式環境監控結果。</span></div>}
+      {tourScenario && <section className="tour-update-signal" data-tour="update-signal" aria-labelledby="tour-update-signal-title">
+        <div><span>模擬情境 · 更新紀錄</span><h2 id="tour-update-signal-title">{tourScenario.deployment.version}</h2><p>{formatDateTime(tourScenario.deployment.occurredAt, timeZone)} 完成更新；第一批異常在 18 分鐘後出現。</p></div>
+        <dl><div><dt>更新時間</dt><dd>{formatDateTime(tourScenario.deployment.occurredAt, timeZone)}</dd></div><div><dt>異常開始</dt><dd>{formatDateTime(tourScenario.opening.occurredAt, timeZone)}</dd></div><div><dt>判讀原則</dt><dd>時間接近是線索，仍須比對錯誤與延遲。</dd></div></dl>
+      </section>}
 
       {loading && !data ? <div className="workspace-loading" role="status"><span className="spinner" />正在整理系統觀測資料…</div> : !data || data.summary.totalRequests === 0 ? (
         <section className="panel observability-empty"><h2>尚未累積可分析的請求紀錄</h2><p>系統會從後續API請求開始保存不含內容與身分資料的結構化紀錄。模擬資料必須透過受控的本機資料產生程序加入。</p></section>
@@ -106,7 +117,7 @@ export function ObservabilityView({
             <article><span>拒絕請求</span><strong>{data.summary.deniedRequests.toLocaleString("zh-TW")}</strong><small>HTTP 403，不等同系統故障</small></article>
           </section>
 
-          <section className="observability-chart-grid">
+          <section className="observability-chart-grid" data-tour={tourScenario ? "trend-comparison" : undefined}>
             <article className="panel chart-panel">
               <header><div><p className="eyebrow">TRAFFIC & ERRORS</p><h2>請求與錯誤趨勢</h2></div><span>{formatDateTime(data.from, timeZone)}至{formatDateTime(data.to, timeZone)}</span></header>
               <div className="chart-frame" role="img" aria-label={`${WINDOW_LABEL[data.window]}共${data.summary.totalRequests}筆請求、${data.summary.clientErrors}筆4xx、${data.summary.serverErrors}筆5xx`}>
@@ -118,6 +129,7 @@ export function ObservabilityView({
                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6c665e" }} />
                     <Tooltip />
                     <Legend />
+                    {deploymentLabel && <ReferenceLine x={deploymentLabel} stroke="#6941c6" strokeDasharray="4 4" label={{ value: "系統更新", fill: "#6941c6", fontSize: 11, position: "insideTopRight" }} />}
                     <Area name="全部請求" type="monotone" dataKey="requests" stroke="#256f68" fill="url(#traffic-fill)" strokeWidth={2} isAnimationActive={false} />
                     <Line name="4xx" type="monotone" dataKey="clientErrors" stroke="#b7791f" strokeWidth={2} strokeDasharray="6 4" dot={false} isAnimationActive={false} />
                     <Line name="5xx" type="monotone" dataKey="serverErrors" stroke="#c2413b" strokeWidth={2.5} dot={false} isAnimationActive={false} />
@@ -134,6 +146,7 @@ export function ObservabilityView({
                     <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6c665e" }} minTickGap={24} />
                     <YAxis unit="ms" tick={{ fontSize: 11, fill: "#6c665e" }} />
                     <Tooltip />
+                    {deploymentLabel && <ReferenceLine x={deploymentLabel} stroke="#6941c6" strokeDasharray="4 4" label={{ value: "系統更新", fill: "#6941c6", fontSize: 11, position: "insideTopRight" }} />}
                     <Line name="平均延遲" type="monotone" dataKey="averageLatencyMs" connectNulls stroke="#4a5d8f" strokeWidth={2.5} dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -141,6 +154,7 @@ export function ObservabilityView({
             </article>
           </section>
 
+          <div className="observability-investigation-stack" data-tour={tourScenario ? "problem-scope" : undefined}>
           <section className="observability-detail-grid">
             <article className="panel route-analysis-panel">
               <header><div><p className="eyebrow">ROUTE ANALYSIS</p><h2>主要API路徑</h2></div><span>依請求量排序</span></header>
@@ -160,8 +174,18 @@ export function ObservabilityView({
 
           <section className="panel telemetry-log-panel" aria-labelledby="recent-errors-title">
             <header><div><p className="eyebrow">REQUEST LOG</p><h2 id="recent-errors-title">最近錯誤請求</h2></div><span>以request ID連結後續查核</span></header>
-            {data.recentErrors.length > 0 ? <div className="table-scroll" role="region" aria-label="最近錯誤請求，可水平捲動" tabIndex={0}><table className="data-table telemetry-table"><thead><tr><th>時間</th><th>路徑</th><th>結果</th><th>問題代碼</th><th>延遲</th><th>Request ID</th><th>來源</th></tr></thead><tbody>{data.recentErrors.map((item) => <tr key={item.requestId}><td>{formatDateTime(item.occurredAt, timeZone)}</td><td><code>{item.method} {item.route}</code></td><td><span className={`result-badge ${item.status >= 500 ? "failure" : "denied"}`}>{item.status}</span></td><td><code>{item.problemCode ?? "—"}</code></td><td>{item.latencyMs} ms</td><td><code>{item.requestId}</code></td><td>{item.source === "simulated" ? <span className="simulation-badge">模擬</span> : "系統"}</td></tr>)}</tbody></table></div> : <p className="no-error-copy">目前期間沒有4xx或5xx紀錄。</p>}
+            {data.recentErrors.length > 0 ? <div className="table-scroll" role="region" aria-label="最近錯誤請求，可水平捲動" tabIndex={0}><table className="data-table telemetry-table"><thead><tr><th>時間</th><th>路徑</th><th>結果</th><th>問題代碼</th><th>延遲</th><th>版本</th><th>Request ID</th><th>來源</th></tr></thead><tbody>{data.recentErrors.map((item) => <tr key={item.requestId}><td>{formatDateTime(item.occurredAt, timeZone)}</td><td><code>{item.method} {item.route}</code></td><td><span className={`result-badge ${item.status >= 500 ? "failure" : "denied"}`}>{item.status}</span></td><td><code>{item.problemCode ?? "—"}</code></td><td>{item.latencyMs} ms</td><td><code>{item.deploymentVersion}</code></td><td><code>{item.requestId}</code></td><td>{item.source === "simulated" ? <span className="simulation-badge">模擬</span> : "系統"}</td></tr>)}</tbody></table></div> : <p className="no-error-copy">目前期間沒有4xx或5xx紀錄。</p>}
           </section>
+          </div>
+          {tourScenario && <section className="tour-recovery-decision panel" data-tour="recovery-decision" aria-labelledby="tour-recovery-title">
+            <header><div><p className="eyebrow">RECOVERY CHECK</p><h2 id="tour-recovery-title">處理與恢復判定</h2></div><span>受控模擬結論</span></header>
+            <div className="tour-decision-grid">
+              <article><span>採取的處理</span><p>{tourScenario.response.action}</p></article>
+              <article><span>怎樣才算恢復</span><p>{tourScenario.response.verification}</p></article>
+              <article><span>目前可以怎麼判斷</span><p>{tourScenario.response.conclusion}</p></article>
+            </div>
+            <p className="tour-causality-note">更新時間本身不足以證明原因；結論必須同時符合時間、錯誤範圍、版本與處理後結果。</p>
+          </section>}
         </>
       )}
     </div>

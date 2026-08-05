@@ -3,13 +3,13 @@
   "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-05T00:07:24.869Z",
+  "generatedAt": "2026-08-05T00:41:59.343Z",
   "evidenceStatus": "verified_local_controlled",
   "verificationType": "authenticated_fresh_d1_runtime_bootstrap_and_domain_role_selection",
   "result": "passed_with_documented_limits",
   "buildArtifact": {
     "path": "dist/server/index.js",
-    "sha256": "1ab8a44f379b388f728c0dd229f8b65ec3e594b11b633f9876fc2bd6e6b521e8"
+    "sha256": "280a96ee5bb9cefe1fb21db994e0276e90e3800f417e8dc054f22e421cee6c4c"
   },
   "environment": {
     "runtime": "v24.15.0",
@@ -122,7 +122,7 @@
     "nonMemberOtherDomainStatus": 403,
     "suspendedMembershipStatus": 403
   },
-  "totalDurationMs": 23889,
+  "totalDurationMs": 25252,
   "temporaryStateCleanup": "scheduled_after_runner_exit",
   "limitations": [
     "This is a local Wrangler and synthetic D1 exercise; it is not evidence that Sites production identity forwarding or hosted D1 initialization succeeded.",

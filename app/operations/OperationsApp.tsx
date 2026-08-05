@@ -8,6 +8,7 @@ import {
   Boxes,
   Check,
   Clock3,
+  Compass,
   LayoutDashboard,
   Menu,
   Plus,
@@ -19,8 +20,14 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { driver, type Driver } from "driver.js";
 import type { ObservabilitySnapshot, ObservabilityWindow } from "@/db/operations-telemetry";
 import { normalizeObservabilitySnapshot } from "@/lib/observability-client";
+import {
+  GUIDED_TOUR_SCENARIOS,
+  UPDATE_REGRESSION_OBSERVABILITY,
+  type GuidedTourScenario,
+} from "@/lib/operations-guided-tour";
 import {
   canApproveIncidentCommunication,
   canDraftIncidentCommunication,
@@ -1024,7 +1031,7 @@ function auditResourceLabel(resourceType: string): string {
   return labels[resourceType] ?? resourceType;
 }
 
-type IconName = "grid" | "pulse" | "incident" | "service" | "audit" | "access" | "search" | "refresh" | "plus" | "menu" | "close" | "clock" | "check" | "arrow";
+type IconName = "grid" | "pulse" | "incident" | "service" | "audit" | "access" | "search" | "refresh" | "plus" | "menu" | "close" | "clock" | "check" | "arrow" | "compass";
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const glyphs: Record<IconName, LucideIcon> = {
@@ -1042,6 +1049,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     clock: Clock3,
     check: Check,
     arrow: ArrowRight,
+    compass: Compass,
   };
   const Glyph = glyphs[name];
   return <Glyph className={`icon icon-${name}`} size={size} strokeWidth={2} aria-hidden="true" />;
@@ -1086,6 +1094,30 @@ function writeNavigationUrl(state: NavigationState, mode: "push" | "replace") {
   else window.history.replaceState(null, "", next);
 }
 
+function waitForTourTarget(selector: string, timeoutMs = 5000): Promise<boolean> {
+  const startedAt = performance.now();
+  return new Promise((resolve) => {
+    const check = () => {
+      if (document.querySelector(selector)) {
+        resolve(true);
+        return;
+      }
+      if (performance.now() - startedAt >= timeoutMs) {
+        resolve(false);
+        return;
+      }
+      window.requestAnimationFrame(check);
+    };
+    check();
+  });
+}
+
+function waitForUiCommit(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+  });
+}
+
 export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIdentity }) {
   const [snapshot, setSnapshot] = useState<OperationsSnapshot | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);
@@ -1127,12 +1159,17 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   const [mutationPending, setMutationPending] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<DisplayError | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [tourPickerOpen, setTourPickerOpen] = useState(false);
+  const [activeTourId, setActiveTourId] = useState<string | null>(null);
   const overviewAbortRef = useRef<AbortController | null>(null);
   const detailAbortRef = useRef<AbortController | null>(null);
   const detailRequestIncidentRef = useRef<string | null>(null);
   const mutationKeysRef = useRef(new Map<string, string>());
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileNavWasOpenRef = useRef(false);
+  const tourDriverRef = useRef<Driver | null>(null);
+  const tourNavigationRef = useRef<NavigationState | null>(null);
+  const tourTransitionPendingRef = useRef(false);
 
   useEffect(() => {
     const restoreNavigation = window.setTimeout(() => {
@@ -1507,6 +1544,8 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
   const visibleNavItems = useMemo(() => NAV_ITEMS.filter((item) => viewAllowed(item.id, actorPermissions)), [actorPermissions]);
   const renderedView = viewAllowed(activeView, actorPermissions) ? activeView : "overview";
   const organizationTimeZone = resolveOrganizationTimeZone(snapshot?.organization.timezone);
+  const activeTourScenario = GUIDED_TOUR_SCENARIOS.find((scenario) => scenario.id === activeTourId) ?? null;
+  const canStartGuidedTour = Boolean(snapshot && viewAllowed("observability", actorPermissions));
 
   const filteredIncidents = useMemo(() => {
     const query = incidentQuery.trim().toLocaleLowerCase("zh-Hant");
@@ -1548,6 +1587,106 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
     setMobileNavOpen(false);
     setSecondaryError(null);
     writeNavigationUrl({ view, incidentId: selectedIncidentId, tab: workspaceTab }, "push");
+  }
+
+  function restoreAfterGuidedTour() {
+    const previous = tourNavigationRef.current;
+    tourDriverRef.current = null;
+    tourNavigationRef.current = null;
+    tourTransitionPendingRef.current = false;
+    setActiveTourId(null);
+    if (!previous) return;
+    setActiveView(previous.view);
+    setSelectedIncidentId(previous.incidentId);
+    setWorkspaceTab(previous.tab);
+    writeNavigationUrl(previous, "replace");
+  }
+
+  async function moveGuidedTourTo(scenario: GuidedTourScenario, stepIndex: number, tour: Driver) {
+    if (tourTransitionPendingRef.current) return;
+    const nextStep = scenario.steps[stepIndex];
+    if (!nextStep) {
+      tour.destroy();
+      return;
+    }
+    tourTransitionPendingRef.current = true;
+    try {
+      setActiveView(nextStep.view);
+      if (nextStep.view === "observability") setObservabilityRange("24h");
+      writeNavigationUrl({ view: nextStep.view, incidentId: selectedIncidentId, tab: workspaceTab }, "replace");
+      const targetReady = await waitForTourTarget(nextStep.target);
+      if (!targetReady) {
+        setToast("導覽目標未能載入，已返回原本畫面。請更新資料後重試。");
+        tour.destroy();
+        return;
+      }
+      tour.moveTo(stepIndex);
+    } finally {
+      tourTransitionPendingRef.current = false;
+    }
+  }
+
+  async function startGuidedTour(scenario: GuidedTourScenario) {
+    if (!canStartGuidedTour) return;
+    setTourPickerOpen(false);
+    tourNavigationRef.current = { view: activeView, incidentId: selectedIncidentId, tab: workspaceTab };
+    setActiveTourId(scenario.id);
+    setActiveView(scenario.steps[0].view);
+    setObservabilityRange("24h");
+    writeNavigationUrl({ view: scenario.steps[0].view, incidentId: selectedIncidentId, tab: workspaceTab }, "replace");
+    await waitForUiCommit();
+    const targetReady = await waitForTourTarget(scenario.steps[0].target);
+    if (!targetReady) {
+      setToast("導覽情境未能載入。請更新資料後再試一次。");
+      restoreAfterGuidedTour();
+      return;
+    }
+    const tour = driver({
+      animate: true,
+      smoothScroll: true,
+      allowClose: true,
+      allowScroll: true,
+      allowKeyboardControl: true,
+      disableActiveInteraction: true,
+      overlayColor: "#0f1f1d",
+      overlayOpacity: 0.66,
+      stagePadding: 10,
+      stageRadius: 14,
+      popoverClass: "continuity-tour-popover",
+      showProgress: true,
+      progressText: "第 {{current}} 步，共 {{total}} 步",
+      prevBtnText: "上一步",
+      nextBtnText: "下一步",
+      doneBtnText: "完成導覽",
+      onPopoverRender: (popover) => popover.closeButton.setAttribute("aria-label", "結束導覽"),
+      steps: scenario.steps.map((step) => ({
+        element: step.target,
+        waitForElement: 5000,
+        popover: {
+          title: step.title,
+          description: step.description,
+          side: step.side,
+          align: step.align,
+        },
+      })),
+      onNextClick: (_element, _step, options) => {
+        const currentIndex = options.driver.getActiveIndex() ?? 0;
+        if (currentIndex >= scenario.steps.length - 1) {
+          options.driver.destroy();
+          return;
+        }
+        void moveGuidedTourTo(scenario, currentIndex + 1, options.driver);
+      },
+      onPrevClick: (_element, _step, options) => {
+        const currentIndex = options.driver.getActiveIndex() ?? 0;
+        if (currentIndex <= 0) return;
+        void moveGuidedTourTo(scenario, currentIndex - 1, options.driver);
+      },
+      onCloseClick: (_element, _step, options) => options.driver.destroy(),
+      onDestroyed: restoreAfterGuidedTour,
+    });
+    tourDriverRef.current = tour;
+    tour.drive(0);
   }
 
   const loadAuditView = useCallback(async () => {
@@ -2092,6 +2231,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
           <div className="topbar-actions">
             <SystemHealth health={health} timeZone={organizationTimeZone} />
             <button className="button ghost compact" type="button" disabled={loading || detailLoading} onClick={() => void refreshOperations()}><Icon name="refresh" />更新</button>
+            <button className="button secondary compact tour-launch" type="button" aria-label="開啟情境導覽" disabled={!canStartGuidedTour || Boolean(activeTourScenario)} onClick={() => setTourPickerOpen(true)}><Icon name="compass" /><span>導覽</span></button>
             {canCreateIncident && <button className="button primary compact declare-action" type="button" aria-label="宣告事件" onClick={() => { setMutationError(null); setDeclareOpen(true); }}><Icon name="plus" /><span className="button-label">宣告事件</span></button>}
               <div className="identity-menu">
               <Avatar name={actor.displayName} />
@@ -2105,6 +2245,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
 
         <main id="main-content" className="content" tabIndex={-1}>
           {readOnlyAccess && <div className="read-only-notice" role="status"><Icon name="access" /><div><strong>目前為唯讀存取</strong><span>你可以查閱所有營運頁面；新增、編輯、指派、發布與刪除功能均未開放。</span></div></div>}
+          {activeTourScenario && <TourScenarioOpening scenario={activeTourScenario} timeZone={organizationTimeZone} />}
           {overviewError && <ErrorBanner
             title={snapshot ? "資料更新失敗，正在顯示最後成功快照" : "無法取得營運資料"}
             error={snapshot && overviewLastUpdatedAt
@@ -2118,7 +2259,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
           ) : (
             <>
               {renderedView === "overview" && <OverviewView snapshot={snapshot} lastUpdatedAt={overviewLastUpdatedAt} stale={Boolean(overviewError)} timeZone={organizationTimeZone} selectIncident={selectIncident} openIncidents={() => changeView("incidents")} />}
-              {renderedView === "observability" && <Suspense fallback={<div className="workspace-loading" role="status"><span className="spinner" />正在載入系統觀測圖表…</div>}><ObservabilityView data={observabilityData} loading={secondaryLoading} error={secondaryError} range={observabilityRange} onRangeChange={(nextRange) => { setObservabilityRange(nextRange); setObservabilityData(null); setSecondaryError(null); }} retry={() => void loadObservabilityView()} timeZone={organizationTimeZone} role={organizationRole ?? "observer"} /></Suspense>}
+              {renderedView === "observability" && <Suspense fallback={<div className="workspace-loading" role="status"><span className="spinner" />正在載入系統觀測圖表…</div>}><ObservabilityView data={activeTourScenario ? UPDATE_REGRESSION_OBSERVABILITY : observabilityData} loading={activeTourScenario ? false : secondaryLoading} error={activeTourScenario ? null : secondaryError} range={activeTourScenario ? "24h" : observabilityRange} onRangeChange={(nextRange) => { if (activeTourScenario) return; setObservabilityRange(nextRange); setObservabilityData(null); setSecondaryError(null); }} retry={() => void loadObservabilityView()} timeZone={organizationTimeZone} role={organizationRole ?? "observer"} tourScenario={activeTourScenario} /></Suspense>}
               {renderedView === "incidents" && (
                 <IncidentsView
                   incidents={filteredIncidents}
@@ -2169,6 +2310,7 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
       </div>
 
       {canCreateIncident && <DeclareIncidentDialog open={declareOpen} services={snapshot?.services ?? []} pending={mutationPending === "declare"} error={mutationError} onClose={() => { resetMutationIntent("declare"); setDeclareOpen(false); }} onSubmit={declareIncident} />}
+      <GuidedTourPicker open={tourPickerOpen} scenarios={GUIDED_TOUR_SCENARIOS} onClose={() => setTourPickerOpen(false)} onStart={(scenario) => void startGuidedTour(scenario)} />
       {canCreateService && <CreateServiceDialog open={serviceOpen} pending={mutationPending === "service-create"} error={mutationError} onClose={() => { resetMutationIntent("service-create"); setServiceOpen(false); }} onSubmit={createService} />}
       {canCreateService && serviceEditTarget && <ServiceEditDialog key={serviceEditTarget.id} open service={serviceEditTarget} timeZone={organizationTimeZone} pending={mutationPending === `service-update-${serviceEditTarget.id}`} error={mutationError} recoverConflict={reloadLatestAfterConflict} onClose={() => { resetMutationIntents(`service-update-${serviceEditTarget.id}`); setServiceEditTarget(null); }} onSubmit={updateService} />}
       {canAddTimeline && <TimelineDialog open={updateOpen} allowedKinds={allowedTimelineKinds} timeZone={organizationTimeZone} pending={mutationPending === "timeline-add"} error={mutationError} onClose={() => { resetMutationIntent("timeline-add"); setUpdateOpen(false); }} onSubmit={addTimelineEntry} />}
@@ -2183,6 +2325,35 @@ export function OperationsApp({ initialIdentity }: { initialIdentity: InitialIde
       {canRespondToIncident && <TransitionDialog key={transitionTarget ?? "none"} incident={currentIncident} target={transitionTarget} pending={mutationPending === "transition"} error={mutationError} recoverConflict={reloadLatestAfterConflict} onClose={() => { resetMutationIntent("transition"); setTransitionTarget(null); }} onSubmit={transitionIncident} />}
     </div>
   );
+}
+
+function GuidedTourPicker({ open, scenarios, onClose, onStart }: {
+  open: boolean;
+  scenarios: readonly GuidedTourScenario[];
+  onClose: () => void;
+  onStart: (scenario: GuidedTourScenario) => void;
+}) {
+  return <Modal open={open} title="選擇導覽情境" description="每條導覽只處理一個問題；過程使用受控模擬資料，不會修改正式營運紀錄。" onClose={onClose}>
+    <div className="tour-scenario-list">
+      {scenarios.map((scenario, index) => <button key={scenario.id} className="tour-scenario-card" type="button" onClick={() => onStart(scenario)}>
+        <span className="tour-scenario-number">{String(index + 1).padStart(2, "0")}</span>
+        <span className="tour-scenario-copy"><strong>{scenario.title}</strong><small>{scenario.summary}</small><em>{scenario.duration} · {scenario.sourceLabel}</em></span>
+        <Icon name="arrow" />
+      </button>)}
+    </div>
+    <p className="tour-picker-note">後續可加入其他情境；每條導覽會維持短步驟與單一判斷目標。</p>
+  </Modal>;
+}
+
+function TourScenarioOpening({ scenario, timeZone }: { scenario: GuidedTourScenario; timeZone: string }) {
+  return <section className="tour-scenario-opening" data-tour="scenario-opening" aria-labelledby="tour-scenario-opening-title">
+    <div className="tour-opening-copy"><span>模擬導覽情境</span><h2 id="tour-scenario-opening-title">{scenario.title}</h2><p>{formatLongTimestamp(scenario.opening.occurredAt, timeZone)}，監控顯示錯誤與回應時間同時升高。以下資料只用於操作演練。</p></div>
+    <dl>
+      <div><dt>受影響服務</dt><dd>{scenario.opening.affectedServices}</dd></div>
+      <div><dt>5xx 錯誤</dt><dd>{scenario.opening.serverErrors}</dd></div>
+      <div><dt>P95 回應時間</dt><dd>{scenario.opening.p95LatencyMs.toLocaleString("zh-TW")} ms</dd></div>
+    </dl>
+  </section>;
 }
 
 function OverviewView({ snapshot, lastUpdatedAt, stale, timeZone, selectIncident, openIncidents }: {

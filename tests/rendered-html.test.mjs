@@ -69,6 +69,9 @@ test("client bundle contains the incident command workspace without teaching or 
   assert.match(operations, /系統觀測/);
   assert.match(operations, /請求與錯誤趨勢/);
   assert.match(operations, /包含模擬資料/);
+  assert.match(operations, /選擇導覽情境/);
+  assert.match(operations, /系統更新後，部分功能變慢或出錯/);
+  assert.match(operations, /完成導覽/);
   assert.match(operations, /事後檢討/);
   assert.match(operations, /\/api\/v1\/overview/);
   assert.match(operations, /\/api\/v1\/observability/);
@@ -83,6 +86,7 @@ test("client bundle contains the incident command workspace without teaching or 
   assert.doesNotMatch(roleSelection, forbiddenProductCopy);
   assert.match(css, /focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /continuity-tour-popover/);
   assert.match(css, /@media/);
 });
 

@@ -3,15 +3,15 @@
   "evidenceId": "CO-VRF-MANIFEST-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-05T00:07:25.459Z",
+  "generatedAt": "2026-08-05T00:41:59.905Z",
   "evidenceStatus": "generated_local",
   "verificationType": "source_and_build_integrity_manifest",
   "sourceControl": {
     "status": "source_tree_has_uncommitted_changes",
     "repositoryRelativePath": ".",
-    "head": "97955af73bc86b6a52bf78c19b8e5d68dd015cbf",
-    "shortHead": "97955af73bc8",
-    "sourceDirtyEntryCount": 3,
+    "head": "e5755d9f3f717ce18901f21c4915c7567c1bf90c",
+    "shortHead": "e5755d9f3f71",
+    "sourceDirtyEntryCount": 11,
     "limitation": "The project contains uncommitted changes, so this manifest does not describe a clean commit rebuild."
   },
   "runtime": {
@@ -26,7 +26,7 @@
     "aligned": true
   },
   "source": {
-    "fileCount": 113,
+    "fileCount": 115,
     "files": [
       {
         "path": ".dev.vars.example",
@@ -80,23 +80,23 @@
       },
       {
         "path": "app/globals.css",
-        "bytes": 74163,
-        "sha256": "8fe19e817e3ad268c07052d759fa8cf117cd179f81a492fc6bab9d75b551f345"
+        "bytes": 81802,
+        "sha256": "6672e6143ec4f067f8ddc79ca0ac927a6f2ac0e4fcff370f7da5249ddf0bf05c"
       },
       {
         "path": "app/layout.tsx",
-        "bytes": 1963,
-        "sha256": "e18751e7eeeb4d600d5aa31990fab3fe8bd82fc959cc5a4dbb11452ebc433c4e"
+        "bytes": 1999,
+        "sha256": "dc3f2b0b3d3e656b2bdb72da7f2caf5da1f07a69ede8ee7493be715f2dc3d0aa"
       },
       {
         "path": "app/operations/ObservabilityView.tsx",
-        "bytes": 11417,
-        "sha256": "3696c655867383b62046f7d01b8e1deea22dc41a7b9f0fc95efb16ae7779f914"
+        "bytes": 13999,
+        "sha256": "1fa296ff9ec66ffa4d82331cf494b378a7f2977ac031e6361c65eafb5ab39a33"
       },
       {
         "path": "app/operations/OperationsApp.tsx",
-        "bytes": 242027,
-        "sha256": "4c262391057023fdf7f20b00904296c61a59b8552e6d6dfcc2f2a5f69629638f"
+        "bytes": 249750,
+        "sha256": "1cf810c87bac2a7830fddcdf44decad2fd9b8f29ec146434c00d5c918b7c796d"
       },
       {
         "path": "app/operations/page.tsx",
@@ -319,6 +319,11 @@
         "sha256": "67e7f49e799b32e71ae91db9a418cf18ed78c75bf8549efa59302465e51d3425"
       },
       {
+        "path": "lib/operations-guided-tour.ts",
+        "bytes": 7473,
+        "sha256": "0ed697ca2dee8c34fdff8d81e1ccc36e55cb4c5957e349b92241d664d5be18a9"
+      },
+      {
         "path": "lib/operations-input.ts",
         "bytes": 3667,
         "sha256": "c9721d36d74aa31dcce6983b8f14a8fef8253922901e743a88fd3f6dc4d0426a"
@@ -350,13 +355,13 @@
       },
       {
         "path": "package-lock.json",
-        "bytes": 402138,
-        "sha256": "4416b7731ddc07c7c843f0ebb8246ef86c54bc814e97d1f7afb02f1a144c984c"
+        "bytes": 402462,
+        "sha256": "de001703c3c3ada0f2b90bac2fa5ab7b5a1f4a79cd89d7312fab9c9666bd7f89"
       },
       {
         "path": "package.json",
-        "bytes": 5425,
-        "sha256": "02cfb2919add9f70519381e98c77ff0a90f6dbc82808769a679b208f111cbfb3"
+        "bytes": 5536,
+        "sha256": "399924649430ace57a865d5ed2825d2c3fbd743e81dc873aa9fadaff85d346d9"
       },
       {
         "path": "postcss.config.mjs",
@@ -365,8 +370,8 @@
       },
       {
         "path": "PROJECT.md",
-        "bytes": 12006,
-        "sha256": "4871c3e43fb59e5e1e53e0e184ea6055a2d7c20517730bfadb7c053e566bf248"
+        "bytes": 11927,
+        "sha256": "fdda57f00614b9ddee9a5b5cf110eadb7cdef179f29f5b32dfcf5f8442722431"
       },
       {
         "path": "public/continuity-ops-social-preview-v2.png",
@@ -380,8 +385,8 @@
       },
       {
         "path": "README.md",
-        "bytes": 16621,
-        "sha256": "6a8d85f8955ba6105cbb2bd27824628dd3342e3e44071c2c48e77d9d4e677a8d"
+        "bytes": 16904,
+        "sha256": "a8e48e811e1a54afb75d172d073b09121d98e3f3711f344411d2ee0a351efe29"
       },
       {
         "path": "scripts/analyze-request-telemetry.mjs",
@@ -529,6 +534,11 @@
         "sha256": "2ce68967e0420fdb5c8ad772e7caa922b36e9e220ad4ae73924148016e7723b2"
       },
       {
+        "path": "tests/operations-guided-tour.test.ts",
+        "bytes": 2271,
+        "sha256": "ece15f24fa001598bd7a85ecb6dfb40019daa52173e497fadd4f5f270b7224f7"
+      },
+      {
         "path": "tests/operations-input.test.ts",
         "bytes": 3431,
         "sha256": "7e48c10f891a8653389240ebff31fd73312aaa24a45223611518d8ee0f2831de"
@@ -550,8 +560,8 @@
       },
       {
         "path": "tests/rendered-html.test.mjs",
-        "bytes": 6654,
-        "sha256": "4364207e75ba290a6de757255ab92d322d3132036898b021cb93894f6534d5bf"
+        "bytes": 6873,
+        "sha256": "b396a1a96363e470ba932093ffeabc7234b50246b5a95a5647cda37a14bb1ca3"
       },
       {
         "path": "tests/repository-secret-scan.test.mjs",
@@ -598,7 +608,7 @@
   "build": {
     "status": "local_build_present",
     "fileCount": 38,
-    "aggregateSha256": "644e9f6ef8d394b69486aab67838d274980df6a7e789ee434e33fefb36345a27",
+    "aggregateSha256": "5e72cb013c118453a2fde62cb2a09653d3cc807002d304334e08981cdcd27623",
     "files": [
       {
         "path": "dist/.openai/hosting.json",
@@ -618,7 +628,7 @@
       {
         "path": "dist/client/.vite/manifest.json",
         "bytes": 3221,
-        "sha256": "0032a613e9c4d3bc372e2bbb24741ecc72adf4c039476f1f74817cde25056526"
+        "sha256": "05bba1a65adae96279ad990c07d5a18de37693897bd65b11948f986ef86fe96a"
       },
       {
         "path": "dist/client/assets/framework-ItqtACJ4.js",
@@ -626,34 +636,34 @@
         "sha256": "0f090d029de3ee820dc427b1594a9ca10ca7043a46855b67535d6265141d0f05"
       },
       {
-        "path": "dist/client/assets/index-Bzi9ArZO.css",
-        "bytes": 64377,
-        "sha256": "d191d0ea1d3a13a03ca89b10d88aabf50e550f7b809b35b85bfd609fdfd6dc92"
+        "path": "dist/client/assets/index-D-sdTYs5.css",
+        "bytes": 74047,
+        "sha256": "35c770c68ca89a888814d78ea6c1e892166d29e1d52ff268b6dcee1dd7b8124d"
       },
       {
-        "path": "dist/client/assets/index-DJ8dAPjT.js",
+        "path": "dist/client/assets/index-DVC705sw.js",
         "bytes": 81400,
-        "sha256": "32dee0703803a97ce3027544472af8ad03ba7969b5f2284ad78b156e4c1d24c2"
+        "sha256": "2989bac785913cea0e32290192be18051948ce20df3d053b7999c9cfc606f4d6"
       },
       {
-        "path": "dist/client/assets/layout-segment-context-D3VSVK_R.js",
+        "path": "dist/client/assets/layout-segment-context-pzXcYFKa.js",
         "bytes": 288,
-        "sha256": "4c422b1b2d1016b1fb854ffa0731424f0c92061d245c68904eb739a53f60bdcc"
+        "sha256": "a4e0153faa81b533f9711fa1046da9df71cc186e06f015c50031061ab04c3273"
       },
       {
-        "path": "dist/client/assets/link-DNa6BUB8.js",
+        "path": "dist/client/assets/link-cINgW9As.js",
         "bytes": 8132,
-        "sha256": "860b85c2dbd881744ce800c6ca4587603a9167b30430d1b29b5dd6b217c55a72"
+        "sha256": "bcd6691aa6c61c55ab68870a05d45890363fa2987f20460dc7a756995598dc89"
       },
       {
-        "path": "dist/client/assets/ObservabilityView-QLKATlGP.js",
-        "bytes": 390684,
-        "sha256": "058083184a2378300a292689da43e98bc46818a45c15d6f9d64252c2ed6dd29c"
+        "path": "dist/client/assets/ObservabilityView-XHP8WhnR.js",
+        "bytes": 397519,
+        "sha256": "eda611eda22dfc8f03c3e011885a27a92d5885e077dcdff5b8df89c25b410580"
       },
       {
-        "path": "dist/client/assets/OperationsApp-CPHkNR5t.js",
-        "bytes": 164866,
-        "sha256": "573bbccb23d03d5fa0c2a083313743af854e4efda1615cdd44f6156d9da99038"
+        "path": "dist/client/assets/OperationsApp-BdeUdTOW.js",
+        "bytes": 200380,
+        "sha256": "a222a35b7a7eb0d107dfef050095182d3363027cae477136d286f3b2298fe3c5"
       },
       {
         "path": "dist/client/assets/query-DNQgy4xD.js",
@@ -671,9 +681,9 @@
         "sha256": "5db5ba82eef00d1dee7e86e663098c9427d01183a88d357437daff295aec3e75"
       },
       {
-        "path": "dist/client/assets/router-OTGZ2Uj-.js",
+        "path": "dist/client/assets/router-BdZcPRYo.js",
         "bytes": 9065,
-        "sha256": "0e48447aa04638d79364e801af3a81b950727e289b38115a66399f3c4b7ff27b"
+        "sha256": "903ad9b265086aa49196680c8f14e422808c162bcdf9ab1e1b3e6e4b4a26f752"
       },
       {
         "path": "dist/client/continuity-ops-social-preview-v2.png",
@@ -688,17 +698,17 @@
       {
         "path": "dist/server/__vite_rsc_assets_manifest.js",
         "bytes": 1632,
-        "sha256": "d2ce59c149f1d9088b1bad5e80f87366ea23be08f1341928e73a98317657b490"
+        "sha256": "2ebd4cbb45a0a79b1ce30d255fb5206bbc1e7955344a9ed8811b5accb7ee3ecb"
       },
       {
         "path": "dist/server/.vite/manifest.json",
         "bytes": 282,
-        "sha256": "f7b8c336e644f59f9938ee7cb6005fa2df828ea7158e56b7567e01f0173f81a3"
+        "sha256": "5ac2e30dd1f4f0357a9fc99ece32b4d2331cce6cfe84a300762f827694a355d4"
       },
       {
-        "path": "dist/server/assets/index-Bzi9ArZO.css",
-        "bytes": 64377,
-        "sha256": "d191d0ea1d3a13a03ca89b10d88aabf50e550f7b809b35b85bfd609fdfd6dc92"
+        "path": "dist/server/assets/index-D-sdTYs5.css",
+        "bytes": 74047,
+        "sha256": "35c770c68ca89a888814d78ea6c1e892166d29e1d52ff268b6dcee1dd7b8124d"
       },
       {
         "path": "dist/server/image-config.json",
@@ -708,12 +718,12 @@
       {
         "path": "dist/server/index.js",
         "bytes": 913349,
-        "sha256": "1ab8a44f379b388f728c0dd229f8b65ec3e594b11b633f9876fc2bd6e6b521e8"
+        "sha256": "280a96ee5bb9cefe1fb21db994e0276e90e3800f417e8dc054f22e421cee6c4c"
       },
       {
         "path": "dist/server/ssr/__vite_rsc_assets_manifest.js",
         "bytes": 1632,
-        "sha256": "d2ce59c149f1d9088b1bad5e80f87366ea23be08f1341928e73a98317657b490"
+        "sha256": "2ebd4cbb45a0a79b1ce30d255fb5206bbc1e7955344a9ed8811b5accb7ee3ecb"
       },
       {
         "path": "dist/server/ssr/assets/error-boundary-DJC2VtEY.js",
@@ -731,14 +741,14 @@
         "sha256": "45b8ba915d0f9611e84e04149b0e247bf0a23478641547c07e8bdc0d9a25275b"
       },
       {
-        "path": "dist/server/ssr/assets/ObservabilityView-D0HOyIdx.js",
-        "bytes": 967350,
-        "sha256": "d895c9a4d45c743976f71db29d7e3c926e8902c9aba3377a4b0d01d17333d56b"
+        "path": "dist/server/ssr/assets/ObservabilityView-DrpCGXYD.js",
+        "bytes": 983320,
+        "sha256": "14a533c81aeed57d00ab57c61557c88057232e91e7f5f73926e19c92c0eb2d89"
       },
       {
-        "path": "dist/server/ssr/assets/OperationsApp-BXRUQRTb.js",
-        "bytes": 319632,
-        "sha256": "9afbcd81de6d52324f3de2527f0cb559d307c192a39db947ae38b78886af5c9d"
+        "path": "dist/server/ssr/assets/OperationsApp-Cp_oM_Jx.js",
+        "bytes": 366169,
+        "sha256": "df8af95255692af9a5706998aef5f09675fd1c1388348570a7444ed6e31bda1e"
       },
       {
         "path": "dist/server/ssr/assets/query-Du9M2EWL.js",
@@ -768,12 +778,12 @@
       {
         "path": "dist/server/ssr/index.js",
         "bytes": 565531,
-        "sha256": "c1456cf00bf528e2d229cf1ac629bff6698e023ef049a2b6a12cfbeb9f5280b2"
+        "sha256": "4af14f6df0de10eb7bc819a243af4e061666df7e8fc59d2b90b8de1841738c4f"
       },
       {
         "path": "dist/server/ssr/vinext-server.json",
         "bytes": 86,
-        "sha256": "258385aec18b139e03b1c8f7e11d860ad41b3167daf8afd86edece4f759dce52"
+        "sha256": "7ad9e962c06adb805dbc421f07b240d25e300a54974d41af43f2ade61011b15a"
       },
       {
         "path": "dist/server/vinext-externals.json",
@@ -783,7 +793,7 @@
       {
         "path": "dist/server/vinext-server.json",
         "bytes": 86,
-        "sha256": "258385aec18b139e03b1c8f7e11d860ad41b3167daf8afd86edece4f759dce52"
+        "sha256": "7ad9e962c06adb805dbc421f07b240d25e300a54974d41af43f2ade61011b15a"
       },
       {
         "path": "dist/server/wrangler.json",
@@ -803,13 +813,13 @@
     {
       "path": "evidence/continuity-ops-gherkin-acceptance.json",
       "bytes": 2056,
-      "sha256": "43d947ae73787ee5c788e92d3fc23a727b60cc5d9691d5abb505c05dd5d219d7",
+      "sha256": "03b2968c88f7f167105ca7eaa2351e12539dfac47bb8cc816802cca7057458b7",
       "present": true,
       "evidenceId": "CO-VRF-GHERKIN-001",
       "evidenceStatus": "verified_local",
       "result": "passed_with_documented_limits",
       "verificationType": "executable_gherkin_domain_acceptance",
-      "generatedAt": "2026-08-05T00:06:35.837Z",
+      "generatedAt": "2026-08-05T00:41:10.147Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -819,13 +829,13 @@
     {
       "path": "evidence/continuity-ops-gherkin-fault-injection.json",
       "bytes": 15402,
-      "sha256": "fdf03fbca3afd29f3a28b343eba5600089180af97b38e670ffddfba971016263",
+      "sha256": "52bc8ca8647e5780bff539ec974b8babdfb4ae85c623226e36a8ad240070beb5",
       "present": true,
       "evidenceId": "CO-VRF-GHERKIN-FAULT-001",
       "evidenceStatus": "verified_local",
       "result": "passed",
       "verificationType": "risk_oriented_gherkin_fault_injection",
-      "generatedAt": "2026-08-05T00:06:40.886Z",
+      "generatedAt": "2026-08-05T00:41:15.016Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -835,13 +845,13 @@
     {
       "path": "evidence/continuity-ops-quality-metrics.json",
       "bytes": 10208,
-      "sha256": "77265f060944d5222d0ffb4e2dbc4987f944aa1c41e490147b35c62f3c5dbe41",
+      "sha256": "322047bc0830f7e327aadd08d4a2ed03a7bfbd26320b1026c37859363600e8f6",
       "present": true,
       "evidenceId": "CO-VRF-QUALITY-001",
       "evidenceStatus": "verified_local",
       "result": "coverage_passed_with_complexity_findings",
       "verificationType": "unit_coverage_and_static_complexity_diagnostics",
-      "generatedAt": "2026-08-05T00:06:53.690Z",
+      "generatedAt": "2026-08-05T00:41:26.886Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -850,14 +860,14 @@
     },
     {
       "path": "evidence/continuity-ops-fault-injection.json",
-      "bytes": 67177,
-      "sha256": "2190f4c010ecd66733c5d54a4624068d86d0af38363d3d2ea0ba771122e02928",
+      "bytes": 67176,
+      "sha256": "9836e153d167570529e783dc8e65eab783a9e21461cf8955c1feb34230df043f",
       "present": true,
       "evidenceId": "CO-VRF-FAULT-001",
       "evidenceStatus": "verified_local",
       "result": "passed",
       "verificationType": "risk_oriented_targeted_fault_injection",
-      "generatedAt": "2026-08-05T00:06:50.048Z",
+      "generatedAt": "2026-08-05T00:41:23.423Z",
       "limitationCount": 3,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -963,15 +973,15 @@
     {
       "path": "evidence/continuity-ops-local-runtime-bootstrap.json",
       "bytes": 4269,
-      "sha256": "213636d9df5e2d20e3a649861f1a5347e258b359df4291983f7335d4f2536d25",
+      "sha256": "7d2d60d688166bb417a88eb5fc03e68eeba82188a5a4382eb66816355ce87fcb",
       "present": true,
       "evidenceId": "CO-VRF-RUNTIME-BOOTSTRAP-001",
       "evidenceStatus": "verified_local_controlled",
       "result": "passed_with_documented_limits",
       "verificationType": "authenticated_fresh_d1_runtime_bootstrap_and_domain_role_selection",
-      "generatedAt": "2026-08-05T00:07:24.869Z",
+      "generatedAt": "2026-08-05T00:41:59.343Z",
       "limitationCount": 4,
-      "associatedBuildSha256": "1ab8a44f379b388f728c0dd229f8b65ec3e594b11b633f9876fc2bd6e6b521e8",
+      "associatedBuildSha256": "280a96ee5bb9cefe1fb21db994e0276e90e3800f417e8dc054f22e421cee6c4c",
       "matchesCurrentWorkerBuild": true,
       "bindingScope": "current_worker_artifact",
       "bindingEvaluation": "matches_current_worker"
@@ -1026,14 +1036,14 @@
     },
     {
       "path": "evidence/continuity-ops-sbom.cdx.json",
-      "bytes": 733948,
-      "sha256": "7be6fb475bbe9f35d86daa488f13d382693ef4ef42e9a35ccfc1e97f3b2c3d22",
+      "bytes": 734766,
+      "sha256": "e0320be7829ecedc30687ddf806eeacb5d3c3d2ca51cc86d5e8bbe677b949b2f",
       "present": true,
       "evidenceId": null,
       "evidenceStatus": "inventory_generated",
       "result": "not_applicable",
       "verificationType": "cyclonedx_dependency_inventory",
-      "generatedAt": "2026-08-05T00:06:19.789Z",
+      "generatedAt": "2026-08-05T00:40:54.481Z",
       "limitationCount": 0,
       "associatedBuildSha256": null,
       "matchesCurrentWorkerBuild": null,
@@ -1042,7 +1052,7 @@
       "sbom": {
         "bomFormat": "CycloneDX",
         "specVersion": "1.5",
-        "componentCount": 739
+        "componentCount": 740
       }
     }
   ],
