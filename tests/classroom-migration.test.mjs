@@ -7,6 +7,7 @@ const migrationUrls = [
   new URL("../drizzle/0001_classroom_courses.sql", import.meta.url),
   new URL("../drizzle/0002_classroom_access_approval.sql", import.meta.url),
   new URL("../drizzle/0003_classroom_live_sessions.sql", import.meta.url),
+  new URL("../drizzle/0004_multi_question_classrooms.sql", import.meta.url),
 ];
 
 async function classroomDatabase() {
@@ -32,6 +33,11 @@ test("classroom migration creates the reviewed course boundary", async () => {
     "classroom_courses",
     "classroom_group_responses",
     "classroom_groups",
+    "classroom_question_memberships",
+    "classroom_question_ranking_items",
+    "classroom_question_ranking_submissions",
+    "classroom_question_responses",
+    "classroom_questions",
     "classroom_ranking_items",
     "classroom_ranking_submissions",
     "classroom_rate_limits",

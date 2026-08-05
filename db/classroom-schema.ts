@@ -22,6 +22,8 @@ export const classroomCourses = sqliteTable("classroom_courses", {
   academicYear: integer("academic_year").notNull(),
   term: text("term", { enum: ["1", "2", "summer"] }).notNull(),
   defaultGroupCapacity: integer("default_group_capacity").notNull().default(5),
+  defaultGroupCount: integer("default_group_count").notNull().default(6),
+  isDemo: integer("is_demo", { mode: "boolean" }).notNull().default(false),
   status: text("status", { enum: ["active", "deleted"] }).notNull().default("active"),
   version: integer("version").notNull().default(1),
   createdAt: text("created_at").notNull(),
@@ -31,6 +33,7 @@ export const classroomCourses = sqliteTable("classroom_courses", {
   index("classroom_courses_owner_status_idx").on(table.ownerUserId, table.status, table.updatedAt),
   check("classroom_courses_version_check", sql`${table.version} >= 1`),
   check("classroom_courses_group_capacity_check", sql`${table.defaultGroupCapacity} BETWEEN 2 AND 20`),
+  check("classroom_courses_group_count_check", sql`${table.defaultGroupCount} BETWEEN 2 AND 20`),
 ]);
 
 export const classroomCourseMembers = sqliteTable("classroom_course_members", {
@@ -103,6 +106,9 @@ export const classroomSessions = sqliteTable("classroom_sessions", {
   effectiveGroupCapacity: integer("effective_group_capacity").notNull(),
   anonymousGroups: integer("anonymous_groups", { mode: "boolean" }).notNull().default(true),
   allowRankingEdits: integer("allow_ranking_edits", { mode: "boolean" }).notNull().default(true),
+  groupCount: integer("group_count").notNull().default(6),
+  admissionOpen: integer("admission_open", { mode: "boolean" }).notNull().default(true),
+  qrEnabled: integer("qr_enabled", { mode: "boolean" }).notNull().default(false),
   version: integer("version").notNull().default(1),
   createdByUserId: text("created_by_user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
   createdAt: text("created_at").notNull(),
@@ -113,6 +119,81 @@ export const classroomSessions = sqliteTable("classroom_sessions", {
   index("classroom_sessions_course_created_idx").on(table.courseId, table.createdAt),
   check("classroom_sessions_capacity_check", sql`${table.groupCapacity} BETWEEN 2 AND 20 AND ${table.effectiveGroupCapacity} BETWEEN ${table.groupCapacity} AND 50`),
   check("classroom_sessions_version_check", sql`${table.version} >= 1`),
+  check("classroom_sessions_group_count_check", sql`${table.groupCount} BETWEEN 2 AND 20`),
+]);
+
+export const classroomQuestions = sqliteTable("classroom_questions", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").notNull().references(() => classroomSessions.id, { onDelete: "restrict" }),
+  questionText: text("question_text").notNull(),
+  rankingCriteria: text("ranking_criteria").notNull(),
+  phase: text("phase", { enum: ["draft", "answering", "presenting", "ranking", "locked", "published", "archived"] }).notNull().default("draft"),
+  position: integer("position").notNull(),
+  version: integer("version").notNull().default(1),
+  openedAt: text("opened_at"),
+  responsesLockedAt: text("responses_locked_at"),
+  rankingLockedAt: text("ranking_locked_at"),
+  publishedAt: text("published_at"),
+  createdByUserId: text("created_by_user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("classroom_questions_session_position_unique").on(table.sessionId, table.position),
+  uniqueIndex("classroom_questions_one_active_unique").on(table.sessionId).where(sql`${table.phase} IN ('answering','presenting','ranking','locked')`),
+  index("classroom_questions_session_phase_idx").on(table.sessionId, table.phase, table.position),
+]);
+
+export const classroomQuestionMemberships = sqliteTable("classroom_question_memberships", {
+  id: text("id").primaryKey(),
+  questionId: text("question_id").notNull().references(() => classroomQuestions.id, { onDelete: "restrict" }),
+  userId: text("user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  groupId: text("group_id").notNull().references(() => classroomGroups.id, { onDelete: "restrict" }),
+  canRank: integer("can_rank", { mode: "boolean" }).notNull().default(true),
+  capturedAt: text("captured_at").notNull(),
+}, (table) => [
+  uniqueIndex("classroom_question_memberships_question_user_unique").on(table.questionId, table.userId),
+  index("classroom_question_memberships_group_idx").on(table.questionId, table.groupId),
+]);
+
+export const classroomQuestionResponses = sqliteTable("classroom_question_responses", {
+  id: text("id").primaryKey(),
+  questionId: text("question_id").notNull().references(() => classroomQuestions.id, { onDelete: "restrict" }),
+  groupId: text("group_id").notNull().references(() => classroomGroups.id, { onDelete: "restrict" }),
+  content: text("content").notNull().default(""),
+  status: text("status", { enum: ["draft", "submitted", "locked"] }).notNull().default("draft"),
+  version: integer("version").notNull().default(1),
+  updatedByUserId: text("updated_by_user_id").references(() => classroomUsers.id, { onDelete: "restrict" }),
+  submittedAt: text("submitted_at"),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  uniqueIndex("classroom_question_responses_question_group_unique").on(table.questionId, table.groupId),
+  index("classroom_question_responses_question_status_idx").on(table.questionId, table.status),
+]);
+
+export const classroomQuestionRankingSubmissions = sqliteTable("classroom_question_ranking_submissions", {
+  id: text("id").primaryKey(),
+  questionId: text("question_id").notNull().references(() => classroomQuestions.id, { onDelete: "restrict" }),
+  userId: text("user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  version: integer("version").notNull(),
+  isCurrent: integer("is_current", { mode: "boolean" }).notNull().default(true),
+  status: text("status", { enum: ["valid", "invalid"] }).notNull().default("valid"),
+  invalidReason: text("invalid_reason"),
+  submittedAt: text("submitted_at").notNull(),
+}, (table) => [
+  uniqueIndex("classroom_question_rankings_user_version_unique").on(table.questionId, table.userId, table.version),
+  uniqueIndex("classroom_question_rankings_current_unique").on(table.questionId, table.userId).where(sql`${table.isCurrent} = 1`),
+  index("classroom_question_rankings_question_status_idx").on(table.questionId, table.isCurrent, table.status),
+]);
+
+export const classroomQuestionRankingItems = sqliteTable("classroom_question_ranking_items", {
+  id: text("id").primaryKey(),
+  submissionId: text("submission_id").notNull().references(() => classroomQuestionRankingSubmissions.id, { onDelete: "restrict" }),
+  groupId: text("group_id").notNull().references(() => classroomGroups.id, { onDelete: "restrict" }),
+  rank: integer("rank").notNull(),
+}, (table) => [
+  uniqueIndex("classroom_question_ranking_items_submission_group_unique").on(table.submissionId, table.groupId),
+  uniqueIndex("classroom_question_ranking_items_submission_rank_unique").on(table.submissionId, table.rank),
+  index("classroom_question_ranking_items_group_rank_idx").on(table.groupId, table.rank),
 ]);
 
 export const classroomGroups = sqliteTable("classroom_groups", {

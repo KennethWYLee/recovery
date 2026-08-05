@@ -24,7 +24,8 @@ export async function GET(request: Request, context: Context): Promise<Response>
     const courseId = await parsedCourseId(context);
     const course = await getClassroomCourse(api.db, api.actor, courseId);
     if (!course) throw new ClassroomApiError(404, "COURSE_NOT_FOUND", "找不到這門課程，或您沒有存取權限。");
-    const snapshot = await activeClassroomSession(api.db, api.actor, courseId);
+    const questionId = new URL(request.url).searchParams.get("questionId");
+    const snapshot = await activeClassroomSession(api.db, api.actor, courseId, questionId);
     return classroomData({ actor: api.actor, course, snapshot });
   });
 }
@@ -34,14 +35,13 @@ export async function POST(request: Request, context: Context): Promise<Response
     const api = await classroomApiContext(request, true);
     const courseId = await parsedCourseId(context);
     const body = await classroomJsonBody(request);
-    const groupCapacity = Number(body.groupCapacity);
+    const groupCount = Number(body.groupCount);
     const session = await createClassroomSession(api.db, api.actor, courseId, {
       title: body.title,
-      question: body.question,
-      rankingCriteria: body.rankingCriteria,
-      groupCapacity,
+      groupCount,
       anonymousGroups: body.anonymousGroups !== false,
       allowRankingEdits: body.allowRankingEdits !== false,
+      qrEnabled: body.qrEnabled === true,
     });
     return classroomData({ session }, { status: 201 });
   });

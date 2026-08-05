@@ -13,10 +13,8 @@ export type ClassroomSessionPhase =
   | "check_in"
   | "grouping"
   | "answering"
-  | "presenting"
-  | "ranking"
-  | "results"
   | "archived";
+export type ClassroomQuestionPhase = "draft" | "answering" | "presenting" | "ranking" | "locked" | "published" | "archived";
 
 export type ClassroomCourse = {
   id: string;
@@ -24,6 +22,8 @@ export type ClassroomCourse = {
   academicYear: number;
   term: AcademicTerm;
   defaultGroupCapacity: number;
+  defaultGroupCount: number;
+  isDemo: boolean;
   studentCount: number;
   sessionCount: number;
   activeSessionId: string | null;
@@ -37,14 +37,14 @@ export type ClassroomSession = {
   id: string;
   courseId: string;
   title: string;
-  question: string;
-  rankingCriteria: string;
   joinCode: string;
   phase: ClassroomSessionPhase;
-  groupCapacity: number;
+  groupCount: number;
   effectiveGroupCapacity: number;
   anonymousGroups: boolean;
   allowRankingEdits: boolean;
+  admissionOpen: boolean;
+  qrEnabled: boolean;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -78,6 +78,25 @@ export type ClassroomGroup = {
   response: ClassroomGroupResponse;
 };
 
+export type ClassroomQuestion = {
+  id: string;
+  sessionId: string;
+  text: string;
+  rankingCriteria: string;
+  phase: ClassroomQuestionPhase;
+  position: number;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ClassroomQuestionSummary = ClassroomQuestion & {
+  submittedGroups: number;
+  rankedStudents: number;
+  leaderLabel: string | null;
+  leaderAverageRank: number | null;
+};
+
 export type ClassroomRankingResult = {
   groupId: string;
   label: string;
@@ -90,6 +109,8 @@ export type ClassroomRankingResult = {
 
 export type ClassroomSessionSnapshot = {
   session: ClassroomSession;
+  questions: ClassroomQuestionSummary[];
+  question: ClassroomQuestion | null;
   participants: ClassroomParticipant[];
   groups: ClassroomGroup[];
   completion: {
@@ -118,10 +139,7 @@ export type ClassroomSessionSnapshot = {
 export const SESSION_PHASE_LABELS: Record<ClassroomSessionPhase, string> = {
   check_in: "學生報到",
   grouping: "確認分組",
-  answering: "小組作答",
-  presenting: "展示回答",
-  ranking: "個人排序",
-  results: "公布結果",
+  answering: "課堂進行中",
   archived: "已封存",
 };
 
@@ -129,10 +147,21 @@ export const SESSION_PHASE_ORDER: ClassroomSessionPhase[] = [
   "check_in",
   "grouping",
   "answering",
-  "presenting",
-  "ranking",
-  "results",
   "archived",
+];
+
+export const QUESTION_PHASE_LABELS: Record<ClassroomQuestionPhase, string> = {
+  draft: "尚未開放",
+  answering: "小組作答中",
+  presenting: "答案展示中",
+  ranking: "個人排序中",
+  locked: "排序已鎖定",
+  published: "結果已公布",
+  archived: "已封存",
+};
+
+export const QUESTION_PHASE_ORDER: ClassroomQuestionPhase[] = [
+  "draft", "answering", "presenting", "ranking", "locked", "published", "archived",
 ];
 
 export function normalizeCourseName(value: unknown): string {
@@ -166,6 +195,10 @@ export function validGroupCapacity(value: unknown): value is number {
   return Number.isInteger(value) && Number(value) >= 2 && Number(value) <= 20;
 }
 
+export function validGroupCount(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) >= 2 && Number(value) <= 20;
+}
+
 export function validSessionPhase(value: unknown): value is ClassroomSessionPhase {
   return typeof value === "string" && SESSION_PHASE_ORDER.includes(value as ClassroomSessionPhase);
 }
@@ -196,6 +229,17 @@ export function balancedGroupSizes(participantCount: number, capacity: number): 
   return Array.from({ length: groupCount }, (_, index) => minimum + (index < remainder ? 1 : 0));
 }
 
+export function balancedGroupSizesByCount(participantCount: number, groupCount: number): number[] {
+  if (!Number.isSafeInteger(participantCount) || participantCount <= 0) return [];
+  if (!Number.isSafeInteger(groupCount) || groupCount < 2 || groupCount > 20) {
+    throw new Error("Group count is outside the supported range.");
+  }
+  if (groupCount > participantCount) throw new Error("Group count exceeds participant count.");
+  const minimum = Math.floor(participantCount / groupCount);
+  const remainder = participantCount % groupCount;
+  return Array.from({ length: groupCount }, (_, index) => minimum + (index < remainder ? 1 : 0));
+}
+
 export function nextSessionPhase(phase: ClassroomSessionPhase): ClassroomSessionPhase | null {
   const index = SESSION_PHASE_ORDER.indexOf(phase);
   return index >= 0 && index < SESSION_PHASE_ORDER.length - 1 ? SESSION_PHASE_ORDER[index + 1] : null;
@@ -204,6 +248,11 @@ export function nextSessionPhase(phase: ClassroomSessionPhase): ClassroomSession
 export function previousSessionPhase(phase: ClassroomSessionPhase): ClassroomSessionPhase | null {
   const index = SESSION_PHASE_ORDER.indexOf(phase);
   return index > 0 ? SESSION_PHASE_ORDER[index - 1] : null;
+}
+
+export function nextQuestionPhase(phase: ClassroomQuestionPhase): ClassroomQuestionPhase | null {
+  const index = QUESTION_PHASE_ORDER.indexOf(phase);
+  return index >= 0 && index < QUESTION_PHASE_ORDER.length - 1 ? QUESTION_PHASE_ORDER[index + 1] : null;
 }
 
 export function rankResults(

@@ -103,6 +103,12 @@ export function classroomGroupId(value: unknown): string {
   return /^group-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
 }
 
+export function classroomQuestionId(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const id = value.trim();
+  return /^question-[a-z0-9-]{6,100}$/u.test(id) ? id : "";
+}
+
 export function expectedVersion(value: unknown): number {
   return Number.isSafeInteger(value) && Number(value) >= 1 ? Number(value) : 0;
 }

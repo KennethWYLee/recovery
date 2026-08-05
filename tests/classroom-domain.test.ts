@@ -6,6 +6,8 @@ import {
   courseTermLabel,
   currentAcademicTerm,
   balancedGroupSizes,
+  balancedGroupSizesByCount,
+  nextQuestionPhase,
   nextSessionPhase,
   normalizeCourseName,
   normalizeSessionText,
@@ -15,6 +17,7 @@ import {
   validAcademicYear,
   validCourseName,
   validGroupCapacity,
+  validGroupCount,
   validSessionPhase,
 } from "../lib/classroom-domain.ts";
 
@@ -39,14 +42,22 @@ test("session validators reject values outside the supported classroom contract"
   assert.equal(validAcademicTerm("3"), false);
   assert.equal(validGroupCapacity(6), true);
   assert.equal(validGroupCapacity(21), false);
-  assert.equal(validSessionPhase("ranking"), true);
+  assert.equal(validGroupCount(6), true);
+  assert.equal(validSessionPhase("answering"), true);
+  assert.equal(validSessionPhase("ranking"), false);
   assert.equal(validSessionPhase("unknown"), false);
   assert.equal(nextSessionPhase("check_in"), "grouping");
+  assert.equal(nextSessionPhase("grouping"), "answering");
   assert.equal(nextSessionPhase("archived"), null);
-  assert.equal(previousSessionPhase("results"), "ranking");
+  assert.equal(previousSessionPhase("answering"), "grouping");
   assert.equal(previousSessionPhase("check_in"), null);
   assert.deepEqual(balancedGroupSizes(0, 6), []);
   assert.throws(() => balancedGroupSizes(10, 1), /supported range/iu);
+  assert.deepEqual(balancedGroupSizesByCount(30, 6), [5, 5, 5, 5, 5, 5]);
+  assert.deepEqual(balancedGroupSizesByCount(31, 6), [6, 5, 5, 5, 5, 5]);
+  assert.throws(() => balancedGroupSizesByCount(3, 4), /exceeds/iu);
+  assert.equal(nextQuestionPhase("ranking"), "locked");
+  assert.equal(nextQuestionPhase("locked"), "published");
 });
 
 test("balanced grouping keeps the requested capacity and differs by at most one student", () => {

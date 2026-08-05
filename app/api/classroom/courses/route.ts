@@ -6,7 +6,7 @@ import {
   validAcademicTerm,
   validAcademicYear,
   validCourseName,
-  validGroupCapacity,
+  validGroupCount,
 } from "@/lib/classroom-domain";
 import {
   ClassroomApiError,
@@ -36,14 +36,14 @@ export async function POST(request: Request): Promise<Response> {
     if (!validAcademicYear(body.academicYear) || !validAcademicTerm(body.term)) {
       throw new ClassroomApiError(400, "INVALID_ACADEMIC_TERM", "請選擇正確的學年與學期。");
     }
-    if (!validGroupCapacity(body.defaultGroupCapacity)) {
-      throw new ClassroomApiError(400, "INVALID_GROUP_CAPACITY", "每組人數上限必須介於 2 至 20 人。");
+    if (!validGroupCount(body.defaultGroupCount)) {
+      throw new ClassroomApiError(400, "INVALID_GROUP_COUNT", "預設組數必須介於 2 至 20 組。");
     }
     const course = await createClassroomCourse(context.db, context.actor, {
       name: body.name,
       academicYear: body.academicYear,
       term: body.term,
-      defaultGroupCapacity: body.defaultGroupCapacity,
+      defaultGroupCount: body.defaultGroupCount,
     });
     return classroomData({ course }, { status: 201 });
   });

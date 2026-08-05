@@ -56,6 +56,7 @@ test("production bundle exposes only the classroom product and preserves securit
   assert.match(worker, /\/api\/classroom\/courses/);
   assert.match(worker, /\/api\/classroom\/access-requests/);
   assert.match(worker, /\/api\/classroom\/sessions/);
+  assert.match(worker, /\/questions/);
   assert.match(worker, /\/api\/classroom\/join/);
   assert.match(worker, /wy\.lee@ntub\.edu\.tw/);
   assert.match(worker, /kenneth\.wy\.lee21@gmail\.com/);
@@ -122,15 +123,18 @@ test("Sites build binds D1 and packages only classroom migrations", async () => 
   await access(new URL("../drizzle/0001_classroom_courses.sql", import.meta.url));
   await access(new URL("../drizzle/0002_classroom_access_approval.sql", import.meta.url));
   await access(new URL("../drizzle/0003_classroom_live_sessions.sql", import.meta.url));
+  await access(new URL("../drizzle/0004_multi_question_classrooms.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0001_classroom_courses.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0002_classroom_access_approval.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0003_classroom_live_sessions.sql", import.meta.url));
+  await access(new URL("../dist/.openai/drizzle/0004_multi_question_classrooms.sql", import.meta.url));
   const migrations = (await readdir(new URL("../drizzle/", import.meta.url)))
     .filter((name) => name.endsWith(".sql"));
   assert.deepEqual(migrations.sort(), [
     "0001_classroom_courses.sql",
     "0002_classroom_access_approval.sql",
     "0003_classroom_live_sessions.sql",
+    "0004_multi_question_classrooms.sql",
   ]);
 
   await assert.rejects(

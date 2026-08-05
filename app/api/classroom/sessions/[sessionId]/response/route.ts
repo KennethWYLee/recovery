@@ -4,6 +4,7 @@ import {
   classroomApiContext,
   classroomData,
   classroomJsonBody,
+  classroomQuestionId,
   classroomSessionId,
   expectedVersion,
   withClassroomApi,
@@ -18,12 +19,15 @@ export async function PUT(request: Request, context: Context): Promise<Response>
     const sessionId = classroomSessionId((await context.params).sessionId);
     if (!sessionId) throw new ClassroomApiError(404, "SESSION_NOT_FOUND", "找不到這次課堂。");
     const body = await classroomJsonBody(request);
+    const questionId = classroomQuestionId(body.questionId);
+    if (!questionId) throw new ClassroomApiError(400, "QUESTION_REQUIRED", "請選擇要回答的問題。");
     const version = expectedVersion(body.expectedVersion);
     if (!version) throw new ClassroomApiError(400, "EXPECTED_VERSION_REQUIRED", "缺少目前的回答版本。");
     const snapshot = await saveClassroomGroupResponse(
       api.db,
       api.actor,
       sessionId,
+      questionId,
       body.content,
       version,
       body.submit === true,
