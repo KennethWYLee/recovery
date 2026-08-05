@@ -94,6 +94,7 @@ test("client bundles contain course management and access review without removed
 
   assert.match(client, /\/api\/classroom\/courses/);
   assert.match(client, /\/api\/classroom\/access-requests/);
+  assert.match(client, /學生測試模式/);
   assert.match(css, /focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /@media/);

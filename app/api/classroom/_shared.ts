@@ -6,6 +6,11 @@ import {
   type ClassroomActor,
 } from "@/db/classroom";
 import { ClassroomWorkflowError } from "@/db/classroom-live";
+import {
+  demoStudentActorForCourse,
+  demoStudentActorForSession,
+} from "@/db/classroom-test-mode";
+import { validDemoStudentId } from "@/lib/classroom-domain";
 import { requestIsSameOrigin } from "@/lib/classroom-auth";
 import {
   ClassroomRequestBodyError,
@@ -27,6 +32,12 @@ export class ClassroomApiError extends Error {
 export type ClassroomApiContext = {
   actor: ClassroomActor;
   db: D1Database;
+};
+
+export type ClassroomEffectiveActor = {
+  actor: ClassroomActor;
+  viewer: ClassroomActor;
+  testMode: boolean;
 };
 
 export async function classroomApiContext(request: Request, adminOnly = false): Promise<ClassroomApiContext> {
@@ -56,6 +67,44 @@ export async function classroomApiContext(request: Request, adminOnly = false): 
     if (!allowed) throw new ClassroomApiError(429, "RATE_LIMITED", "操作次數過於頻繁，請稍候再試。");
   }
   return { actor, db };
+}
+
+async function classroomDemoActor(
+  context: ClassroomApiContext,
+  value: unknown,
+  resolve: (db: D1Database, viewer: ClassroomActor, scopeId: string, target: unknown) => Promise<ClassroomActor | null>,
+  scopeId: string,
+): Promise<ClassroomEffectiveActor> {
+  if (value === undefined || value === null || value === "") {
+    return { actor: context.actor, viewer: context.actor, testMode: false };
+  }
+  if (!context.actor.isAdmin) {
+    throw new ClassroomApiError(403, "TEST_MODE_ADMIN_REQUIRED", "只有系統管理員可以使用學生測試模式。");
+  }
+  if (!validDemoStudentId(value)) {
+    throw new ClassroomApiError(400, "INVALID_TEST_STUDENT", "指定的虛擬學生不正確。");
+  }
+  const actor = await resolve(context.db, context.actor, scopeId, value);
+  if (!actor) {
+    throw new ClassroomApiError(404, "TEST_STUDENT_NOT_FOUND", "這名虛擬學生不屬於目前的示範課程。");
+  }
+  return { actor, viewer: context.actor, testMode: true };
+}
+
+export function classroomDemoActorForCourse(
+  context: ClassroomApiContext,
+  courseId: string,
+  value: unknown,
+): Promise<ClassroomEffectiveActor> {
+  return classroomDemoActor(context, value, demoStudentActorForCourse, courseId);
+}
+
+export function classroomDemoActorForSession(
+  context: ClassroomApiContext,
+  sessionId: string,
+  value: unknown,
+): Promise<ClassroomEffectiveActor> {
+  return classroomDemoActor(context, value, demoStudentActorForSession, sessionId);
 }
 
 export async function classroomJsonBody(request: Request): Promise<Record<string, unknown>> {

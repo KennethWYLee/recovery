@@ -508,6 +508,30 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .join-code-panel small { color: var(--muted); }
 .join-code-panel input { min-height: 42px; padding: 8px 12px; color: var(--text-strong); background: #fff; border: 1px solid var(--border); border-radius: 8px; font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .workspace-heading-actions { display: flex; gap: 9px; }
+.student-test-banner { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; padding: 14px 16px; color: #17453f; background: #e2f4f0; border: 1px solid #9ed6cc; border-radius: 11px; }
+.student-test-banner > div, .student-test-banner > div > span { display: flex; align-items: center; gap: 10px; }
+.student-test-banner > div > span { align-items: flex-start; flex-direction: column; gap: 1px; }
+.student-test-banner svg { flex: none; width: 20px; }
+.student-test-banner small { color: #406b66; }
+.student-test-banner button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; color: #17453f; background: #fff; border: 1px solid #9ed6cc; border-radius: 8px; font-weight: 800; cursor: pointer; }
+.student-test-banner button svg { width: 16px; }
+.student-test-picker { margin-bottom: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.student-test-picker > header { display: flex; align-items: center; justify-content: space-between; padding: 17px 18px; border-bottom: 1px solid var(--border-soft); }
+.student-test-picker > header > div, .student-test-picker > header span { display: flex; align-items: center; gap: 10px; }
+.student-test-picker > header span { align-items: flex-start; flex-direction: column; gap: 1px; }
+.student-test-picker > header svg { width: 20px; color: var(--primary); }
+.student-test-picker > header strong { color: var(--text-strong); }
+.student-test-picker > header small, .student-test-picker > footer { color: var(--muted); }
+.student-test-picker > header > button { display: grid; place-items: center; width: 34px; height: 34px; color: var(--muted); background: transparent; border: 0; border-radius: 7px; cursor: pointer; }
+.student-test-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; padding: 16px 18px; }
+.student-test-grid > button { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; padding: 10px; color: inherit; background: var(--surface-subtle); border: 1px solid var(--border-soft); border-radius: 9px; text-align: left; cursor: pointer; }
+.student-test-grid > button:hover, .student-test-grid > button.selected { background: var(--primary-soft); border-color: #9ed6cc; }
+.student-test-grid > button > span { display: grid; place-items: center; width: 36px; height: 36px; color: #fff; background: var(--primary); border-radius: 9px; font-weight: 850; }
+.student-test-grid > button > div { display: grid; min-width: 0; }
+.student-test-grid strong { overflow: hidden; color: var(--text-strong); text-overflow: ellipsis; white-space: nowrap; }
+.student-test-grid small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.student-test-grid em { padding: 3px 6px; color: var(--primary); background: #fff; border-radius: 999px; font-size: 10px; font-style: normal; font-weight: 800; }
+.student-test-picker > footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; background: var(--surface-subtle); border-top: 1px solid var(--border-soft); font-size: 12px; }
 .session-settings-panel { display: grid; grid-template-columns: minmax(220px, 1.2fr) 160px repeat(4, minmax(140px, .8fr)) auto; align-items: end; gap: 10px; margin-bottom: 18px; padding: 17px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
 .session-settings-panel > header { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
 .session-settings-panel > header svg { width: 20px; color: var(--primary); }
@@ -586,6 +610,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .session-settings-panel > header { grid-column: 1 / -1; }
   .live-classroom-layout { grid-template-columns: 1fr; }
   .question-rail { position: static; }
+  .student-test-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 620px) {
   .course-topbar { min-height: 64px; padding-inline: 14px; }
@@ -622,6 +647,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .course-summary-strip { align-items: flex-start; flex-direction: column; }
   .workspace-heading-actions { width: 100%; }
   .workspace-heading-actions .button { flex: 1; }
+  .student-test-grid { grid-template-columns: 1fr; }
+  .student-test-picker > footer, .student-test-banner { align-items: stretch; flex-direction: column; }
+  .student-test-banner button { justify-content: center; }
   .session-settings-panel { grid-template-columns: 1fr; }
   .session-settings-panel > header { grid-column: auto; }
   .question-stage-header { flex-direction: column; }

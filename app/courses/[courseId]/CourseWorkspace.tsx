@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, CheckCircle2, ClipboardCheck,
   Clock3, Copy, Download, Eye, GripVertical, Hash, History, LockKeyhole, LogOut,
-  Plus, RefreshCw, Send, Settings2, UserCheck, UsersRound,
+  Plus, RefreshCw, RotateCcw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +15,7 @@ import {
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
 
 type Actor = { id: string; email: string; displayName: string; role: "teacher" | "student"; isAdmin: boolean };
-type WorkspacePayload = { actor: Actor; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot | null };
+type WorkspacePayload = { actor: Actor; viewer: Actor; testMode: boolean; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot | null };
 type Envelope<T> = { data?: T; error?: { message?: string } };
 
 async function apiData<T>(response: Response): Promise<T> {
@@ -85,15 +85,21 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const [questionCriteria, setQuestionCriteria] = useState("請依回答的正確性、解釋力及理由充分程度，將所有回答從最佳到相對較弱排列。");
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showStudentTestPicker, setShowStudentTestPicker] = useState(false);
+  const [testStudentId, setTestStudentId] = useState<string | null>(null);
   const responseKeyRef = useRef("");
   const rankingKeyRef = useRef("");
   const selectedQuestionRef = useRef<string | null>(null);
 
-  const load = useCallback(async (quiet = false, questionId?: string | null) => {
+  const load = useCallback(async (quiet = false, questionId?: string | null, testStudentOverride?: string | null) => {
     if (!quiet) setError(null);
     const selected = questionId === undefined ? selectedQuestionRef.current : questionId;
+    const activeTestStudent = testStudentOverride === undefined ? testStudentId : testStudentOverride;
     try {
-      const suffix = selected ? `?questionId=${encodeURIComponent(selected)}` : "";
+      const search = new URLSearchParams();
+      if (selected) search.set("questionId", selected);
+      if (activeTestStudent) search.set("testStudentId", activeTestStudent);
+      const suffix = search.size ? `?${search.toString()}` : "";
       const data = await apiData<WorkspacePayload>(await fetch(`/api/classroom/courses/${encodeURIComponent(courseId)}/session${suffix}`, { cache: "no-store", headers: { accept: "application/json" } }));
       selectedQuestionRef.current = data.snapshot?.question?.id ?? null;
       const currentGroup = data.snapshot?.groups.find((group) => group.id === data.snapshot?.currentUser.groupId);
@@ -106,7 +112,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
       }
       setPayload(data);
     } catch (cause) { if (!quiet) setError(cause instanceof Error ? cause.message : "目前無法取得課堂資料。"); }
-  }, [courseId]);
+  }, [courseId, testStudentId]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
   useEffect(() => { const timer = window.setInterval(() => { if (!pending) void load(true); }, 5000); return () => window.clearInterval(timer); }, [load, pending]);
@@ -146,7 +152,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     if (!snapshot || !question || !myGroup) return;
     await applySnapshot(fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/response`, {
       method: "PUT", headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ questionId: question.id, content: responseText, expectedVersion: myGroup.response.version, submit }),
+      body: JSON.stringify({ questionId: question.id, content: responseText, expectedVersion: myGroup.response.version, submit, testStudentId }),
     }), submit ? "小組回答已送出。" : "草稿已儲存。");
   }
 
@@ -154,7 +160,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     if (!snapshot || !question) return;
     await applySnapshot(fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/ranking`, {
       method: "PUT", headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ questionId: question.id, orderedGroupIds: rankingOrder }),
+      body: JSON.stringify({ questionId: question.id, orderedGroupIds: rankingOrder, testStudentId }),
     }), "完整排序已送出。");
   }
 
@@ -170,17 +176,52 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     setDragRank(null);
   }
 
+  function selectTestStudent(userId: string) {
+    responseKeyRef.current = "";
+    rankingKeyRef.current = "";
+    selectedQuestionRef.current = null;
+    setTestStudentId(userId);
+    setShowStudentTestPicker(false);
+    setNotice(null);
+  }
+
+  function exitStudentTestMode() {
+    responseKeyRef.current = "";
+    rankingKeyRef.current = "";
+    selectedQuestionRef.current = null;
+    setTestStudentId(null);
+    setShowStudentTestPicker(false);
+    setNotice("已回到系統管理員畫面。");
+  }
+
+  async function resetStudentTestData() {
+    if (!window.confirm("確定要重設示範課程嗎？虛擬學生在第三題的作答與排序變更將恢復原始狀態。")) return;
+    setPending(true); setError(null); setNotice(null);
+    try {
+      await apiData(await fetch(`/api/classroom/courses/${encodeURIComponent(courseId)}/test-mode`, {
+        method: "POST", headers: { accept: "application/json" },
+      }));
+      responseKeyRef.current = ""; rankingKeyRef.current = ""; selectedQuestionRef.current = null;
+      setTestStudentId(null); setShowStudentTestPicker(false);
+      await load(false, null, null);
+      setNotice("示範課程已恢復，可以重新測試不同學生情境。");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "目前無法重設示範課程。"); }
+    finally { setPending(false); }
+  }
+
   if (!payload) return <div className="course-shell"><main className="course-workspace-main">{error ? <div className="courses-error"><strong>無法開啟課程</strong><span>{error}</span><button className="button secondary" onClick={() => void load()}>重新載入</button></div> : <div className="courses-loading"><span className="spinner" />正在開啟課程…</div>}</main></div>;
 
-  const { actor, course } = payload;
+  const { actor, viewer, testMode, course } = payload;
   const joinUrl = snapshot && typeof window !== "undefined" ? `${window.location.origin}/join/${snapshot.session.joinCode}` : "";
   const questionAdvanceLabels: Record<string, string> = { draft: "開放小組作答", answering: "鎖定回答並開始展示", presenting: "開放個人排序", ranking: "結束並鎖定排序", locked: "公布正式排名", published: "封存這個問題" };
 
   return <div className="course-shell">
-    <header className="course-topbar"><Link href="/courses" className="course-brand"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link><div className="course-account"><span><strong>{actor.displayName}</strong><small>{actor.isAdmin ? "系統管理員" : "學生"}</small></span><a href={identity.signOutPath}><LogOut />登出</a></div></header>
+    <header className="course-topbar"><Link href="/courses" className="course-brand"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link><div className="course-account"><span><strong>{actor.displayName}</strong><small>{testMode ? "學生測試模式" : actor.isAdmin ? "系統管理員" : "學生"}</small></span><a href={identity.signOutPath}><LogOut />登出</a></div></header>
     <main className="course-workspace-main">
       <Link className="course-back" href="/courses"><ArrowLeft />所有課程</Link>
-      <section className="course-workspace-heading"><div><p>{courseTermLabel(course)}{course.isDemo ? " · 虛擬資料示範" : ""}</p><h1>{course.name}</h1><span>{snapshot?.session.title ?? "建立本次課堂後，再讓學生輸入代碼加入。"}</span></div>{snapshot && <div className="workspace-heading-actions">{actor.isAdmin && <button className="button secondary" onClick={() => setShowSettings((value) => !value)}><Settings2 />課堂設定</button>}<button className="button secondary" onClick={() => void load()}><RefreshCw />更新</button></div>}</section>
+      <section className="course-workspace-heading"><div><p>{courseTermLabel(course)}{course.isDemo ? " · 虛擬資料示範" : ""}</p><h1>{course.name}</h1><span>{snapshot?.session.title ?? "建立本次課堂後，再讓學生輸入代碼加入。"}</span></div>{snapshot && <div className="workspace-heading-actions">{viewer.isAdmin && course.isDemo && <button className="button secondary" onClick={() => setShowStudentTestPicker((value) => !value)}><UserRoundSearch />學生測試</button>}{actor.isAdmin && <button className="button secondary" onClick={() => setShowSettings((value) => !value)}><Settings2 />課堂設定</button>}<button className="button secondary" onClick={() => void load()}><RefreshCw />更新</button></div>}</section>
+      {testMode && snapshot && <section className="student-test-banner" role="status"><div><UserRoundSearch /><span><strong>學生測試模式</strong><small>目前以 {actor.displayName} 查看與操作；所有權限均依這名虛擬學生判定。</small></span></div><button type="button" onClick={exitStudentTestMode}><X />回到管理員</button></section>}
+      {showStudentTestPicker && viewer.isAdmin && course.isDemo && snapshot && <StudentTestPicker snapshot={snapshot} currentUserId={testMode ? actor.id : null} pending={pending} onSelect={selectTestStudent} onReset={() => void resetStudentTestData()} onClose={() => setShowStudentTestPicker(false)} />}
       {error && <div className="workspace-alert error" role="alert">{error}</div>}{notice && <div className="workspace-alert success" role="status">{notice}</div>}
       {!snapshot ? actor.isAdmin ? <EmptySession course={course} onCreated={() => void load()} /> : <div className="courses-empty"><Clock3 /><h2>今天尚未開放課堂</h2><p>請輸入教師提供的六位課堂代碼。</p></div> : <>
         {showSettings && actor.isAdmin && <SessionSettings snapshot={snapshot} pending={pending} onSave={(values) => void mutate({ action: "update_settings", expectedVersion: snapshot.session.version, ...values })} />}
@@ -204,6 +245,27 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
       </>}
     </main>
   </div>;
+}
+
+function StudentTestPicker({ snapshot, currentUserId, pending, onSelect, onReset, onClose }: {
+  snapshot: ClassroomSessionSnapshot;
+  currentUserId: string | null;
+  pending: boolean;
+  onSelect: (userId: string) => void;
+  onReset: () => void;
+  onClose: () => void;
+}) {
+  return <section className="student-test-picker" role="dialog" aria-label="選擇虛擬學生">
+    <header><div><UserRoundSearch /><span><strong>選擇學生情境</strong><small>進入後會使用該學生的真實作答與排序權限。</small></span></div><button type="button" aria-label="關閉學生測試選擇" onClick={onClose}><X /></button></header>
+    <div className="student-test-grid">{snapshot.participants.map((participant) => {
+      const group = snapshot.groups.find((item) => item.id === participant.groupId);
+      const representative = group?.representativeUserId === participant.userId;
+      return <button type="button" className={participant.userId === currentUserId ? "selected" : ""} key={participant.id} onClick={() => onSelect(participant.userId)}>
+        <span>{participant.displayName.slice(-2)}</span><div><strong>{participant.displayName}</strong><small>{group?.label ?? "尚未分組"} · {representative ? "指定代表" : "一般組員"}{participant.attendance === "late" ? " · 遲到加入" : ""}</small></div>{participant.userId === currentUserId && <em>目前</em>}
+      </button>;
+    })}</div>
+    <footer><span>重設只影響示範課程的第三題，不會處理正式課程資料。</span><button type="button" className="button secondary" disabled={pending} onClick={onReset}><RotateCcw />重設示範資料</button></footer>
+  </section>;
 }
 
 function SessionSettings({ snapshot, pending, onSave }: { snapshot: ClassroomSessionSnapshot; pending: boolean; onSave: (values: Record<string, unknown>) => void }) {

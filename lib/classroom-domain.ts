@@ -200,6 +200,11 @@ export function validGroupCount(value: unknown): value is number {
   return Number.isInteger(value) && Number(value) >= 2 && Number(value) <= 20;
 }
 
+export function validDemoStudentId(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  return /^demo-user-(?:[1-9]|1\d|2[0-4])$/u.test(value.trim());
+}
+
 export function validSessionPhase(value: unknown): value is ClassroomSessionPhase {
   return typeof value === "string" && SESSION_PHASE_ORDER.includes(value as ClassroomSessionPhase);
 }

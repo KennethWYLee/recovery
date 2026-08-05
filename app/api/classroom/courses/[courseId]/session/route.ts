@@ -5,6 +5,7 @@ import {
   classroomApiContext,
   classroomCourseId,
   classroomData,
+  classroomDemoActorForCourse,
   classroomJsonBody,
   withClassroomApi,
 } from "../../../_shared";
@@ -24,9 +25,10 @@ export async function GET(request: Request, context: Context): Promise<Response>
     const courseId = await parsedCourseId(context);
     const course = await getClassroomCourse(api.db, api.actor, courseId);
     if (!course) throw new ClassroomApiError(404, "COURSE_NOT_FOUND", "找不到這門課程，或您沒有存取權限。");
-    const questionId = new URL(request.url).searchParams.get("questionId");
-    const snapshot = await activeClassroomSession(api.db, api.actor, courseId, questionId);
-    return classroomData({ actor: api.actor, course, snapshot });
+    const search = new URL(request.url).searchParams;
+    const effective = await classroomDemoActorForCourse(api, courseId, search.get("testStudentId"));
+    const snapshot = await activeClassroomSession(api.db, effective.actor, courseId, search.get("questionId"));
+    return classroomData({ ...effective, course, snapshot });
   });
 }
 

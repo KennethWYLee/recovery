@@ -16,6 +16,7 @@ import {
   validAcademicTerm,
   validAcademicYear,
   validCourseName,
+  validDemoStudentId,
   validGroupCapacity,
   validGroupCount,
   validSessionPhase,
@@ -98,6 +99,14 @@ test("course names are normalized and bounded", () => {
   assert.equal(validCourseName("資料庫"), true);
   assert.equal(validCourseName("A"), false);
   assert.equal(validCourseName("課".repeat(81)), false);
+});
+
+test("student test mode accepts only the fixed synthetic student identifiers", () => {
+  assert.equal(validDemoStudentId("demo-user-1"), true);
+  assert.equal(validDemoStudentId("demo-user-24"), true);
+  assert.equal(validDemoStudentId("demo-user-25"), false);
+  assert.equal(validDemoStudentId("class-user-1"), false);
+  assert.equal(validDemoStudentId(null), false);
 });
 
 test("academic terms follow the Taiwan school-year boundary", () => {
