@@ -58,3 +58,33 @@ export const classroomAuditEvents = sqliteTable("classroom_audit_events", {
   detailsJson: text("details_json").notNull().default("{}"),
   occurredAt: text("occurred_at").notNull(),
 }, (table) => [index("classroom_audit_events_actor_time_idx").on(table.actorUserId, table.occurredAt)]);
+
+export const classroomAccessRequests = sqliteTable("classroom_access_requests", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  email: text("email").notNull(),
+  displayName: text("display_name").notNull(),
+  status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  version: integer("version").notNull().default(1),
+  requestedAt: text("requested_at").notNull(),
+  lastRequestedAt: text("last_requested_at").notNull(),
+  reviewedByUserId: text("reviewed_by_user_id").references(() => classroomUsers.id, { onDelete: "restrict" }),
+  reviewedAt: text("reviewed_at"),
+}, (table) => [
+  uniqueIndex("classroom_access_requests_user_unique").on(table.userId),
+  uniqueIndex("classroom_access_requests_email_unique").on(table.email),
+  index("classroom_access_requests_status_time_idx").on(table.status, table.lastRequestedAt),
+  check("classroom_access_requests_version_check", sql`${table.version} >= 1`),
+]);
+
+export const classroomAccessAllowlist = sqliteTable("classroom_access_allowlist", {
+  email: text("email").primaryKey(),
+  userId: text("user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  status: text("status", { enum: ["active", "revoked"] }).notNull().default("active"),
+  approvedByUserId: text("approved_by_user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  approvedAt: text("approved_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("classroom_access_allowlist_user_unique").on(table.userId),
+  index("classroom_access_allowlist_status_time_idx").on(table.status, table.approvedAt),
+]);

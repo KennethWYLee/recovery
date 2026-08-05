@@ -1,6 +1,15 @@
-import { classroomDb, loadOrProvisionClassroomActor, type ClassroomActor } from "@/db/classroom";
-import { requestIsSameOrigin } from "@/lib/operations-auth";
-import { RequestBodyError, drainOperationsRequestBody, readBoundedJsonObject } from "@/lib/operations-input";
+import {
+  ClassroomAccessError,
+  classroomDb,
+  loadOrProvisionClassroomActor,
+  type ClassroomActor,
+} from "@/db/classroom";
+import { requestIsSameOrigin } from "@/lib/classroom-auth";
+import {
+  ClassroomRequestBodyError,
+  drainClassroomRequestBody,
+  readBoundedClassroomJsonObject,
+} from "@/lib/classroom-input";
 
 export class ClassroomApiError extends Error {
   constructor(
@@ -18,14 +27,26 @@ export type ClassroomApiContext = {
   db: D1Database;
 };
 
-export async function classroomApiContext(request: Request, teacherOnly = false): Promise<ClassroomApiContext> {
+export async function classroomApiContext(request: Request, adminOnly = false): Promise<ClassroomApiContext> {
   if (!requestIsSameOrigin(request)) {
     throw new ClassroomApiError(403, "CROSS_ORIGIN_REQUEST_REJECTED", "這項操作必須從本系統送出。");
   }
-  const actor = await loadOrProvisionClassroomActor(request);
+  let actor: ClassroomActor | null;
+  try {
+    actor = await loadOrProvisionClassroomActor(request);
+  } catch (error) {
+    if (!(error instanceof ClassroomAccessError)) throw error;
+    if (error.reason === "approval_pending") {
+      throw new ClassroomApiError(403, "ACCESS_APPROVAL_PENDING", error.message);
+    }
+    if (error.reason === "approval_rejected") {
+      throw new ClassroomApiError(403, "ACCESS_APPROVAL_REJECTED", error.message);
+    }
+    throw new ClassroomApiError(403, "EMAIL_DOMAIN_NOT_ALLOWED", error.message);
+  }
   if (!actor) throw new ClassroomApiError(401, "AUTHENTICATION_REQUIRED", "請使用經驗證的校內帳號登入。");
-  if (teacherOnly && actor.role !== "teacher") {
-    throw new ClassroomApiError(403, "TEACHER_PERMISSION_REQUIRED", "只有教師可以管理課程。");
+  if (adminOnly && !actor.isAdmin) {
+    throw new ClassroomApiError(403, "SYSTEM_ADMIN_PERMISSION_REQUIRED", "只有系統管理員可以執行這項操作。");
   }
   return { actor, db: classroomDb() };
 }
@@ -33,13 +54,13 @@ export async function classroomApiContext(request: Request, teacherOnly = false)
 export async function classroomJsonBody(request: Request): Promise<Record<string, unknown>> {
   const type = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
   if (type !== "application/json") {
-    await drainOperationsRequestBody(request);
+    await drainClassroomRequestBody(request);
     throw new ClassroomApiError(415, "JSON_REQUIRED", "請使用JSON格式送出資料。");
   }
   try {
-    return await readBoundedJsonObject(request, 8_192);
+    return await readBoundedClassroomJsonObject(request, 8_192);
   } catch (error) {
-    if (!(error instanceof RequestBodyError)) throw error;
+    if (!(error instanceof ClassroomRequestBodyError)) throw error;
     if (error.kind === "too_large") throw new ClassroomApiError(413, "REQUEST_TOO_LARGE", "送出的資料超過系統限制。");
     throw new ClassroomApiError(400, "INVALID_JSON", "送出的資料格式不完整。");
   }
@@ -49,6 +70,12 @@ export function classroomCourseId(value: unknown): string {
   if (typeof value !== "string") return "";
   const id = value.trim();
   return /^course-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
+}
+
+export function classroomAccessRequestId(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const id = value.trim();
+  return /^access-request-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
 }
 
 export function expectedVersion(value: unknown): number {

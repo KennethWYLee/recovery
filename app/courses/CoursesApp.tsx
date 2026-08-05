@@ -5,9 +5,11 @@ import {
   ArrowRight,
   BookOpen,
   CalendarDays,
+  Clock3,
   LogOut,
   Pencil,
   Plus,
+  ShieldCheck,
   Trash2,
   UsersRound,
   X,
@@ -16,14 +18,23 @@ import { useEffect, useRef, useState } from "react";
 import { courseTermLabel, type ClassroomCourse, type ClassroomRole } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "./classroom-page-identity";
 
-type Actor = { id: string; email: string; displayName: string; role: ClassroomRole };
+type Actor = { id: string; email: string; displayName: string; role: ClassroomRole; isAdmin: boolean };
 type CoursePayload = { actor: Actor; courses: ClassroomCourse[] };
 type ApiEnvelope<T> = { data?: T; error?: { code?: string; message?: string } };
+
+class ClassroomClientError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
 
 async function apiData<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => null) as ApiEnvelope<T> | null;
   if (!response.ok || payload?.data === undefined) {
-    throw new Error(payload?.error?.message ?? "目前無法取得課程資料。");
+    throw new ClassroomClientError(payload?.error?.code ?? "UNKNOWN_ERROR", payload?.error?.message ?? "目前無法取得課程資料。");
   }
   return payload.data;
 }
@@ -73,6 +84,7 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
   const [courses, setCourses] = useState<ClassroomCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadErrorCode, setLoadErrorCode] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"create" | "rename" | "delete" | null>(null);
   const [target, setTarget] = useState<ClassroomCourse | null>(null);
   const [name, setName] = useState("");
@@ -82,12 +94,14 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
   async function loadCourses() {
     setLoading(true);
     setLoadError(null);
+    setLoadErrorCode(null);
     try {
       const data = await apiData<CoursePayload>(await fetch("/api/classroom/courses", { cache: "no-store", headers: { accept: "application/json" } }));
       setActor(data.actor);
       setCourses(data.courses);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "目前無法取得課程資料。");
+      setLoadErrorCode(error instanceof ClassroomClientError ? error.code : "UNKNOWN_ERROR");
     } finally {
       setLoading(false);
     }
@@ -103,7 +117,9 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
         setCourses(data.courses);
       })
       .catch((error: unknown) => {
-        if (active) setLoadError(error instanceof Error ? error.message : "目前無法取得課程資料。");
+        if (!active) return;
+        setLoadError(error instanceof Error ? error.message : "目前無法取得課程資料。");
+        setLoadErrorCode(error instanceof ClassroomClientError ? error.code : "UNKNOWN_ERROR");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -189,23 +205,23 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
     }
   }
 
-  const teacher = actor?.role === "teacher";
+  const administrator = actor?.isAdmin === true;
   const displayName = actor?.displayName ?? identity.displayName;
   return <div className="course-shell">
     <header className="course-topbar">
       <Link href="/courses" className="course-brand" aria-label="回到我的課程"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link>
-      <div className="course-account"><span><strong>{displayName}</strong><small>{actor?.role === "teacher" ? "教師" : "學生"}</small></span><a href={identity.signOutPath}><LogOut aria-hidden="true" />登出</a></div>
+      <div className="course-topbar-actions">{administrator && <Link className="course-admin-link" href="/access-review"><ShieldCheck aria-hidden="true" />登入審核</Link>}<div className="course-account"><span><strong>{displayName}</strong><small>{administrator ? "系統管理員" : "學生"}</small></span><a href={identity.signOutPath}><LogOut aria-hidden="true" />登出</a></div></div>
     </header>
     <main id="main-content" className="courses-main">
       <section className="courses-heading">
-        <div><p>115學年度 第1學期</p><h1>我的課程</h1><span>{teacher ? "選擇今天要進行的課程，或建立一門新課程。" : "選擇要進入的課程。"}</span></div>
-        {teacher && <button type="button" className="button primary" onClick={openCreate}><Plus aria-hidden="true" />新增課程</button>}
+        <div><p>115學年度 第1學期</p><h1>我的課程</h1><span>{administrator ? "選擇今天要進行的課程，或建立一門新課程。" : "選擇要進入的課程。"}</span></div>
+        {administrator && <button type="button" className="button primary" onClick={openCreate}><Plus aria-hidden="true" />新增課程</button>}
       </section>
 
-      {loading ? <div className="courses-loading" role="status"><span className="spinner" />正在整理您的課程…</div> : loadError ? <div className="courses-error" role="alert"><strong>無法取得課程</strong><span>{loadError}</span><button className="button secondary" type="button" onClick={() => void loadCourses()}>重新載入</button></div> : courses.length === 0 ? <section className="courses-empty"><BookOpen aria-hidden="true" /><h2>{teacher ? "建立第一門課程" : "目前還沒有可進入的課程"}</h2><p>{teacher ? "課程建立後，就能安排課堂場次、學生與分組。" : "掃描教師提供的課堂QR Code後，課程會出現在這裡。"}</p>{teacher && <button className="button primary" type="button" onClick={openCreate}><Plus />新增課程</button>}</section> : <section className="course-grid" aria-label="課程列表">
+      {loading ? <div className="courses-loading" role="status"><span className="spinner" />正在整理您的課程…</div> : loadErrorCode === "ACCESS_APPROVAL_PENDING" || loadErrorCode === "ACCESS_APPROVAL_REJECTED" || loadErrorCode === "EMAIL_DOMAIN_NOT_ALLOWED" ? <section className="courses-access-status" role="status"><span className={`access-status-icon ${loadErrorCode === "ACCESS_APPROVAL_PENDING" ? "pending" : "denied"}`}><Clock3 aria-hidden="true" /></span><p>帳號存取狀態</p><h2>{loadErrorCode === "ACCESS_APPROVAL_PENDING" ? "登入申請等待核准" : loadErrorCode === "ACCESS_APPROVAL_REJECTED" ? "登入申請尚未獲准" : "此帳號不符合登入資格"}</h2><span>{loadError}</span><dl><div><dt>登入帳號</dt><dd>{identity.email}</dd></div><div><dt>可使用條件</dt><dd>系統管理員核准的 @ntub.edu.tw 帳號</dd></div></dl><a className="button secondary" href={identity.signOutPath}>改用其他帳號</a></section> : loadError ? <div className="courses-error" role="alert"><strong>無法取得課程</strong><span>{loadError}</span><button className="button secondary" type="button" onClick={() => void loadCourses()}>重新載入</button></div> : courses.length === 0 ? <section className="courses-empty"><BookOpen aria-hidden="true" /><h2>{administrator ? "建立第一門課程" : "目前還沒有可進入的課程"}</h2><p>{administrator ? "課程建立後，就能安排課堂場次、學生與分組。" : "掃描教師提供的課堂QR Code後，課程會出現在這裡。"}</p>{administrator && <button className="button primary" type="button" onClick={openCreate}><Plus />新增課程</button>}</section> : <section className="course-grid" aria-label="課程列表">
         {courses.map((course, index) => <article className="course-card" key={course.id} style={{ "--course-sequence": index } as React.CSSProperties}>
           <div className="course-card-accent" aria-hidden="true" />
-          <header><span><BookOpen aria-hidden="true" /></span>{teacher && <div className="course-card-actions"><button type="button" aria-label={`修改${course.name}名稱`} onClick={() => openRename(course)}><Pencil /></button><button type="button" className="delete" aria-label={`刪除${course.name}`} onClick={() => openDelete(course)}><Trash2 /></button></div>}</header>
+          <header><span><BookOpen aria-hidden="true" /></span>{administrator && <div className="course-card-actions"><button type="button" aria-label={`修改${course.name}名稱`} onClick={() => openRename(course)}><Pencil /></button><button type="button" className="delete" aria-label={`刪除${course.name}`} onClick={() => openDelete(course)}><Trash2 /></button></div>}</header>
           <div className="course-card-copy"><small>{courseTermLabel(course)}</small><h2>{course.name}</h2><p>尚未建立今天的課堂</p></div>
           <dl><div><dt><CalendarDays />課堂活動</dt><dd>0</dd></div><div><dt><UsersRound />學生</dt><dd>0</dd></div></dl>
           <Link href={`/courses/${encodeURIComponent(course.id)}`}><span>進入課程</span><ArrowRight aria-hidden="true" /></Link>

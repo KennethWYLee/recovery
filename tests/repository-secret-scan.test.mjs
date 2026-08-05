@@ -52,7 +52,7 @@ test("known-good identifiers and explicit placeholders do not trigger entropy gu
 });
 
 test("repository scan inspects owned text and excludes dependencies, build output, and real env files", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "continuity-secret-scan-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "classroom-secret-scan-"));
   try {
     await mkdir(path.join(root, "app"), { recursive: true });
     await mkdir(path.join(root, "node_modules", "dependency"), { recursive: true });
@@ -77,7 +77,7 @@ test("repository scan inspects owned text and excludes dependencies, build outpu
 });
 
 test("repository scan fails closed when a scoped text file is not valid UTF-8", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "continuity-secret-scan-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "classroom-secret-scan-"));
   try {
     await mkdir(path.join(root, "scripts"), { recursive: true });
     await writeFile(path.join(root, "scripts", "invalid.mjs"), Buffer.from([0xc3, 0x28]));
@@ -91,4 +91,3 @@ test("repository scan fails closed when the requested root is unavailable", asyn
   const unavailable = path.join(os.tmpdir(), `missing-secret-scan-root-${process.pid}-${Date.now()}`);
   await assert.rejects(scanRepository(unavailable), /ENOENT/);
 });
-

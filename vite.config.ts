@@ -18,7 +18,7 @@ const localBindingConfig = {
     ? [
         {
           binding: d1,
-          database_name: "continuity-ops-local-d1",
+          database_name: "classroom-ranking-local-d1",
           database_id: LOCAL_PLACEHOLDER_DATABASE_ID,
         },
       ]
@@ -27,7 +27,7 @@ const localBindingConfig = {
     ? [
         {
           binding: r2,
-          bucket_name: "continuity-ops-local-r2",
+          bucket_name: "classroom-ranking-local-r2",
         },
       ]
     : [],

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { courseTermLabel, type ClassroomCourse, type ClassroomRole } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
 
-type Payload = { actor: { displayName: string; role: ClassroomRole }; course: ClassroomCourse };
+type Payload = { actor: { displayName: string; role: ClassroomRole; isAdmin: boolean }; course: ClassroomCourse };
 
 export function CourseWorkspace({ courseId, identity }: { courseId: string; identity: ClassroomPageIdentity }) {
   const [payload, setPayload] = useState<Payload | null>(null);
@@ -24,7 +24,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   }, [courseId]);
 
   return <div className="course-shell">
-    <header className="course-topbar"><Link href="/courses" className="course-brand"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link><div className="course-account"><span><strong>{payload?.actor.displayName ?? identity.displayName}</strong><small>{payload?.actor.role === "student" ? "學生" : "教師"}</small></span><a href={identity.signOutPath}><LogOut />登出</a></div></header>
+    <header className="course-topbar"><Link href="/courses" className="course-brand"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link><div className="course-account"><span><strong>{payload?.actor.displayName ?? identity.displayName}</strong><small>{payload?.actor.isAdmin ? "系統管理員" : "學生"}</small></span><a href={identity.signOutPath}><LogOut />登出</a></div></header>
     <main className="course-workspace-main">
       <Link className="course-back" href="/courses"><ArrowLeft />所有課程</Link>
       {error ? <div className="courses-error" role="alert"><strong>無法開啟課程</strong><span>{error}</span><Link className="button secondary" href="/courses">回到課程列表</Link></div> : !payload ? <div className="courses-loading" role="status"><span className="spinner" />正在開啟課程…</div> : <>

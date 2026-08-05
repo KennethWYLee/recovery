@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import "driver.js/dist/driver.css";
 import "./globals.css";
 
 function metadataForBase(metadataBase: URL): Metadata {

@@ -1,4 +1,4 @@
-name: Continuity Ops CI
+name: Classroom Response Ranking CI
 
 on:
   pull_request:
@@ -10,24 +10,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: continuity-ops-ci-${{ github.ref }}
+  group: classroom-response-ranking-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
     name: Verify source and build
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     env:
       CI: "true"
-      CONTINUITY_OPS_ENVIRONMENT: development
-      CONTINUITY_OPS_ORGANIZATION_NAME: Continuity Ops CI
-      CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL: ci-operator@example.invalid
-      CONTINUITY_OPS_LOCAL_OPERATOR_ID: ci-operator
-      CONTINUITY_OPS_LOCAL_OPERATOR_NAME: CI Operator
-      CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL: ci-operator@example.invalid
-      CONTINUITY_OPS_LOCAL_OPERATOR_ROLE: admin
-      CONTINUITY_OPS_CURSOR_HMAC_SECRET: test-only-ci-cursor-hmac-secret-at-least-32
+      CLASSROOM_ENVIRONMENT: development
+      CLASSROOM_LOCAL_USER_ID: ci-operator
+      CLASSROOM_LOCAL_USER_NAME: CI Operator
+      CLASSROOM_LOCAL_USER_EMAIL: ci-operator@example.invalid
+      CLASSROOM_ADMIN_EMAILS: ci-operator@example.invalid
 
     steps:
       - name: Check out source
@@ -45,30 +42,13 @@ jobs:
       - name: Audit production dependencies
         run: npm run audit:production
 
-      - name: Scan project sources and generate the dependency SBOM
-        run: npm run gate:supply-chain
-
-      - name: Type-check and lint
-        run: npm run gate:static
-
-      - name: Run unit, Gherkin, migration, evidence-tool, fault-injection, and quality checks
-        run: npm run gate:test
-
-      - name: Build and inspect the production bundle
-        run: npm run gate:build
+      - name: Verify source, tests, and production bundle
+        run: npm run gate:ci
 
       - name: Preserve the verified build for review
         uses: actions/upload-artifact@v7
         with:
-          name: continuity-ops-${{ github.sha }}
-          path: |
-            dist
-            evidence/continuity-ops-fault-injection.json
-            evidence/continuity-ops-gherkin-acceptance.json
-            evidence/continuity-ops-gherkin-fault-injection.json
-            evidence/continuity-ops-local-runtime-bootstrap.json
-            evidence/continuity-ops-quality-metrics.json
-            evidence/continuity-ops-evidence-manifest.json
-            evidence/continuity-ops-sbom.cdx.json
+          name: classroom-response-ranking-${{ github.sha }}
+          path: dist
           if-no-files-found: error
           retention-days: 7

@@ -1,19 +1,15 @@
-/** Cloudflare Worker entry point for Continuity Ops. */
+/** Cloudflare Worker entry point for the classroom response and ranking system. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
-  CONTINUITY_OPS_ENVIRONMENT?: string;
-  CONTINUITY_OPS_DEPLOYMENT_VERSION?: string;
-  CONTINUITY_OPS_CURSOR_HMAC_SECRET?: string;
-  CONTINUITY_OPS_ORGANIZATION_NAME?: string;
-  CONTINUITY_OPS_BOOTSTRAP_ADMIN_EMAIL?: string;
-  CONTINUITY_OPS_LOCAL_OPERATOR_ID?: string;
-  CONTINUITY_OPS_LOCAL_OPERATOR_NAME?: string;
-  CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL?: string;
-  CONTINUITY_OPS_LOCAL_OPERATOR_ROLE?: string;
+  CLASSROOM_ENVIRONMENT?: string;
+  CLASSROOM_LOCAL_USER_ID?: string;
+  CLASSROOM_LOCAL_USER_NAME?: string;
+  CLASSROOM_LOCAL_USER_EMAIL?: string;
+  CLASSROOM_ADMIN_EMAILS?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {

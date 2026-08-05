@@ -32,8 +32,8 @@ export async function classroomPageIdentity(returnTo: string): Promise<Classroom
   const host = (requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "").split(",")[0].trim();
   if (!localHost(host)) return null;
   const environment = classroomEnvironment();
-  const email = environment.CONTINUITY_OPS_LOCAL_OPERATOR_EMAIL?.trim();
-  const displayName = environment.CONTINUITY_OPS_LOCAL_OPERATOR_NAME?.trim();
+  const email = environment.CLASSROOM_LOCAL_USER_EMAIL?.trim();
+  const displayName = environment.CLASSROOM_LOCAL_USER_NAME?.trim();
   if (!email || !displayName) return null;
   return { displayName, email, mode: "local", signOutPath: returnTo };
 }
