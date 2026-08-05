@@ -104,6 +104,7 @@ test("Sites build binds D1 and keeps deployment migration packaging separate", a
   assert.deepEqual(Object.keys(hosting).sort(), ["d1", "project_id", "r2"]);
 
   await access(new URL("../drizzle/0005_request_observability.sql", import.meta.url));
+  await access(new URL("../drizzle/0006_adopt_observability_state.sql", import.meta.url));
   await assert.rejects(
     access(new URL("../dist/server/.dev.vars", import.meta.url)),
     (error) => error && typeof error === "object" && error.code === "ENOENT",

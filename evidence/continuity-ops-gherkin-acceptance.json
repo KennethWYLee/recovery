@@ -3,7 +3,7 @@
   "evidenceId": "CO-VRF-GHERKIN-001",
   "product": "Continuity Ops",
   "productVersion": "2.2.0",
-  "generatedAt": "2026-08-04T23:49:56.676Z",
+  "generatedAt": "2026-08-05T00:06:35.837Z",
   "evidenceStatus": "verified_local",
   "verificationType": "executable_gherkin_domain_acceptance",
   "result": "passed_with_documented_limits",

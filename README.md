@@ -81,7 +81,7 @@ Runtime bootstrap 固定分成三個可重試階段。三階段分別建立 29�
 
 若要在本機檢查圖表與錯誤情境，先完成 migration，再執行 `npm run seed:demo:observability`。此命令只會取代本機資料庫中 `source = 'simulated'` 的請求紀錄，不會刪除正式執行紀錄，也不會連線到遠端 D1。畫面會持續標示模擬資料的筆數與用途。
 
-兩次先前的 Sites 發布嘗試都在平台處理含 trigger 的完整 SQL migration 集合時失敗，錯誤為 `incomplete input`。本機整檔、逐 statement 與 Wrangler 驗證均通過；因此部署端 SQL 切割相容性是目前最符合證據的原因推論，但沒有平台 trace 可把它寫成已確認的 Sites 缺陷。目前部署包只交付不含 trigger、且與 `db/migrations/0005_request_observability.sql` 逐字相同的 `0005` 向前升級；既有 `0001`–`0004` 仍由已驗證的遠端資料庫狀態或 fresh-D1 runtime bootstrap 負責。
+兩次先前的 Sites 發布嘗試都在平台處理含 trigger 的完整 SQL migration 集合時失敗，錯誤為 `incomplete input`。本機整檔、逐 statement 與 Wrangler 驗證均通過；因此部署端 SQL 切割相容性是目前最符合證據的原因推論，但沒有平台 trace 可把它寫成已確認的 Sites 缺陷。部署包以不含 trigger、且與 `db/migrations/0005_request_observability.sql` 逐字相同的 `0005` 完成資料結構升級；`0006_adopt_observability_state.sql` 只在舊版 ready marker、舊版 digest 與三個 observability schema objects 同時相符時，將 runtime state 更新為 `0005`。既有 `0001`–`0004` 仍由已驗證的遠端資料庫狀態或 fresh-D1 runtime bootstrap 負責。
 
 Vite 開發伺服器、migration 指令與建置後 Worker preview 均明確使用 `.wrangler/state` 作為本機持久化路徑，並共用 `continuity-ops-local-d1` binding。不要混用 Wrangler 的其他預設狀態目錄。
 

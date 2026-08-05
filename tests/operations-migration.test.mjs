@@ -97,6 +97,40 @@ test("Sites packages the exact reviewed 0005 forward migration", async () => {
   assert.equal(packaged.replace(/\r\n?/gu, "\n"), canonical.replace(/\r\n?/gu, "\n"));
 });
 
+test("Sites 0006 advances only the verified 0004 ready-state marker after observability exists", async () => {
+  const db = await migratedDatabase();
+  const migration = await readFile(new URL("../drizzle/0006_adopt_observability_state.sql", import.meta.url), "utf8");
+  db.exec(`CREATE TABLE ops_runtime_schema_state (
+    singleton INTEGER PRIMARY KEY NOT NULL,
+    schema_version TEXT NOT NULL,
+    schema_digest TEXT NOT NULL,
+    phase INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT
+  )`);
+  const insertState = db.prepare(`INSERT INTO ops_runtime_schema_state
+    (singleton, schema_version, schema_digest, phase, status, updated_at, completed_at)
+    VALUES (1, ?, ?, 3, 'ready', '2026-08-01T00:00:00.000Z', '2026-08-01T00:00:00.000Z')`);
+  try {
+    insertState.run("0004", "f1bd7d9267db8475f85b17336b125c77f08d9337e51832af4728daa0f08125a3");
+    assert.equal(db.prepare(migration).run().changes, 1);
+    const adopted = db.prepare(
+      "SELECT schema_version, schema_digest, phase, status FROM ops_runtime_schema_state WHERE singleton = 1",
+    ).get();
+    assert.equal(adopted.schema_version, "0005");
+    assert.equal(adopted.schema_digest, "d375830a0de59dec1d0a29a4ec5b0356e636b72e458ffb0bb888de57225059a3");
+    assert.equal(adopted.phase, 3);
+    assert.equal(adopted.status, "ready");
+
+    db.exec("DELETE FROM ops_runtime_schema_state");
+    insertState.run("0004", "unexpected-digest");
+    assert.equal(db.prepare(migration).run().changes, 0);
+  } finally {
+    db.close();
+  }
+});
+
 async function migratedDatabase() {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
