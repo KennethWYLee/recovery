@@ -65,18 +65,31 @@ test("balanced grouping keeps the requested capacity and differs by at most one 
   assert.deepEqual(balancedGroupSizes(31, 6), [6, 5, 5, 5, 5, 5]);
 });
 
-test("ranking uses average rank, rank-count tie breakers, and true ties", () => {
+test("ranking converts positions to scores, ranks higher scores first, and preserves true ties", () => {
   const results = rankResults(
-    [{ id: "a", label: "第1組" }, { id: "b", label: "第2組" }, { id: "c", label: "第3組" }],
+    [{ id: "a", label: "第1組" }, { id: "b", label: "第2組" }, { id: "c", label: "第3組" }, { id: "d", label: "第4組" }],
     [
       { groupId: "a", rank: 1 }, { groupId: "a", rank: 2 },
       { groupId: "b", rank: 2 }, { groupId: "b", rank: 1 },
       { groupId: "c", rank: 3 }, { groupId: "c", rank: 3 },
     ],
   );
-  assert.deepEqual(results.map((result) => result.finalRank), [1, 1, 3]);
-  assert.deepEqual(results.map((result) => result.tied), [true, true, false]);
-  assert.equal(results[2].averageRank, 3);
+  assert.deepEqual(results.map((result) => result.finalRank), [1, 1, 3, 4]);
+  assert.deepEqual(results.map((result) => result.tied), [true, true, false, false]);
+  assert.deepEqual(results.map((result) => result.averageScore), [2.5, 2.5, 1, 0]);
+  assert.equal(results[0].maximumScore, 3);
+});
+
+test("ranking breaks equal average scores by first-place count", () => {
+  const results = rankResults(
+    [{ id: "a", label: "第1組" }, { id: "b", label: "第2組" }],
+    [
+      { groupId: "a", rank: 1 }, { groupId: "a", rank: 3 },
+      { groupId: "b", rank: 2 }, { groupId: "b", rank: 2 },
+    ],
+  );
+  assert.deepEqual(results.map((result) => result.groupId), ["a", "b"]);
+  assert.deepEqual(results.map((result) => result.finalRank), [1, 2]);
 });
 
 test("course names are normalized and bounded", () => {

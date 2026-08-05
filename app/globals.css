@@ -447,11 +447,13 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .ranking-criteria { margin: 18px 22px 0; padding: 12px 14px; color: var(--muted); background: var(--surface-subtle); border-radius: 8px; }
 .ranking-list { display: grid; gap: 10px; margin: 18px 22px; padding: 0; list-style: none; }
 .ranking-list li { display: grid; grid-template-columns: 38px 20px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 15px; background: #fff; border: 1px solid var(--border); border-radius: 10px; }
-.rank-number { display: grid; place-items: center; width: 36px; height: 36px; color: #fff; background: var(--primary); border-radius: 9px; font-size: 17px; font-weight: 850; }
+.rank-number { display: grid; place-items: center; width: 38px; min-height: 42px; padding: 4px 0; color: #fff; background: var(--primary); border-radius: 9px; font-size: 17px; font-weight: 850; line-height: 1; }
+.rank-number small { color: inherit; font-size: 10px; }
 .ranking-list li > svg { width: 17px; margin-top: 9px; color: var(--muted); }
 .ranking-list li > div { min-width: 0; }
-.ranking-list strong { color: var(--text-strong); }
-.ranking-list p { max-height: 72px; margin: 5px 0 0; overflow: hidden; color: var(--muted); white-space: pre-wrap; }
+.ranking-answer { display: grid; gap: 9px; }
+.ranking-answer p { margin: 0; color: var(--text-strong); font-size: 16px; line-height: 1.65; white-space: pre-wrap; }
+.ranking-answer small { color: var(--muted); font-weight: 750; }
 .rank-controls { display: grid; gap: 3px; }
 .rank-controls button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--muted); background: var(--surface-subtle); border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
 .rank-controls svg { width: 15px; }
@@ -465,15 +467,19 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .results-table { overflow: hidden; }
 .results-table > header > span { color: var(--muted); font-weight: 700; }
 .results-table ol { margin: 0; padding: 0; list-style: none; }
-.results-table li { display: grid; grid-template-columns: 78px minmax(140px, .7fr) 70px minmax(100px, 1fr); align-items: center; gap: 12px; padding: 15px 22px; }
+.results-table li { display: grid; grid-template-columns: 74px minmax(0, 1fr) 110px; align-items: start; gap: 14px; padding: 20px 22px; }
 .results-table li + li { border-top: 1px solid var(--border-soft); }
 .final-rank { color: var(--primary); font-size: 18px; }
-.results-table li > span { display: grid; }
-.results-table b { color: var(--text-strong); }
-.results-table small { color: var(--muted); }
-.results-table em { color: var(--text-strong); font-size: 20px; font-style: normal; font-weight: 850; }
+.result-content { display: grid; gap: 9px; min-width: 0; }
+.result-content header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.result-content b { color: var(--primary); }
+.result-content small { color: var(--muted); }
+.result-content p { margin: 0; color: var(--text-strong); line-height: 1.65; white-space: pre-wrap; }
+.results-table li > em { display: grid; justify-items: end; color: var(--text-strong); font-size: 24px; font-style: normal; font-weight: 850; }
+.results-table li > em small { color: var(--muted); font-size: 11px; font-weight: 650; text-align: right; }
 .result-bar { height: 9px; overflow: hidden; background: var(--border-soft); border-radius: 999px; }
 .result-bar i { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
+.results-table .result-bar { grid-column: 2 / 4; }
 .rank-distribution { padding: 22px; }
 .chart-wrap { width: 100%; height: 340px; margin-top: 18px; }
 .raw-ranking-panel { grid-column: 1 / -1; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
@@ -617,8 +623,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .attendance-panel > footer, .session-action-bar, .session-create-card > footer, .response-workspace > footer { align-items: stretch; flex-direction: column; }
   .response-workspace > footer > div { display: grid; }
   .presentation-grid { grid-template-columns: 1fr; }
-  .results-table li { grid-template-columns: 62px 1fr 58px; }
-  .result-bar { grid-column: 2 / 4; }
+  .results-table li { grid-template-columns: 62px 1fr; }
+  .results-table li > em { grid-column: 2; justify-items: start; }
+  .results-table .result-bar { grid-column: 2; }
   .course-summary-strip { align-items: flex-start; flex-direction: column; }
   .workspace-heading-actions { width: 100%; }
   .workspace-heading-actions .button { flex: 1; }

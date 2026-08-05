@@ -94,14 +94,15 @@ export type ClassroomQuestionSummary = ClassroomQuestion & {
   submittedGroups: number;
   rankedStudents: number;
   leaderLabel: string | null;
-  leaderAverageRank: number | null;
+  leaderAverageScore: number | null;
 };
 
 export type ClassroomRankingResult = {
   groupId: string;
   label: string;
   finalRank: number;
-  averageRank: number;
+  averageScore: number;
+  maximumScore: number;
   ratingCount: number;
   rankCounts: number[];
   tied: boolean;
@@ -267,16 +268,18 @@ export function rankResults(
   const maximumRank = Math.max(1, ...rankings.map((item) => item.rank));
   const compared = [...byGroup.values()].map(({ group, ranks }) => {
     const rankCounts = Array.from({ length: maximumRank }, (_, index) => ranks.filter((rank) => rank === index + 1).length);
+    const scores = ranks.map((rank) => maximumRank - rank + 1);
     return {
       groupId: group.id,
       label: group.label,
-      averageRank: ranks.length ? ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length : Number.POSITIVE_INFINITY,
+      averageScore: scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0,
+      maximumScore: maximumRank,
       ratingCount: ranks.length,
       rankCounts,
     };
   });
   compared.sort((left, right) => {
-    if (left.averageRank !== right.averageRank) return left.averageRank - right.averageRank;
+    if (left.averageScore !== right.averageScore) return right.averageScore - left.averageScore;
     for (let index = 0; index < maximumRank; index += 1) {
       if (left.rankCounts[index] !== right.rankCounts[index]) return right.rankCounts[index] - left.rankCounts[index];
     }
@@ -285,13 +288,13 @@ export function rankResults(
   const results: ClassroomRankingResult[] = [];
   compared.forEach((entry, index, all) => {
     const previous = all[index - 1];
-    const sameDistribution = previous && entry.averageRank === previous.averageRank
+    const sameDistribution = previous && entry.averageScore === previous.averageScore
       && entry.rankCounts.every((count, rankIndex) => count === previous.rankCounts[rankIndex]);
     const finalRank = sameDistribution ? results[index - 1].finalRank : index + 1;
     const tied = Boolean(sameDistribution || all[index + 1]
-      && entry.averageRank === all[index + 1].averageRank
+      && entry.averageScore === all[index + 1].averageScore
       && entry.rankCounts.every((count, rankIndex) => count === all[index + 1].rankCounts[rankIndex]));
-    results.push({ ...entry, averageRank: Number.isFinite(entry.averageRank) ? entry.averageRank : 0, finalRank, tied });
+    results.push({ ...entry, finalRank, tied });
   });
   return results;
 }
