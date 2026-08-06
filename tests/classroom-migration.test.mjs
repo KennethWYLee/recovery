@@ -9,6 +9,7 @@ const migrationUrls = [
   new URL("../drizzle/0003_classroom_live_sessions.sql", import.meta.url),
   new URL("../drizzle/0004_multi_question_classrooms.sql", import.meta.url),
   new URL("../drizzle/0005_course_roster.sql", import.meta.url),
+  new URL("../drizzle/0006_course_question_bank.sql", import.meta.url),
 ];
 
 async function classroomDatabase() {
@@ -31,6 +32,7 @@ test("classroom migration creates the reviewed course boundary", async () => {
     "classroom_access_requests",
     "classroom_audit_events",
     "classroom_course_members",
+    "classroom_course_question_bank",
     "classroom_course_roster",
     "classroom_courses",
     "classroom_group_responses",
@@ -140,5 +142,24 @@ test("a course roster keeps one active identity per student number", async () =>
   insert.run("roster-1", "11256001@ntub.edu.tw", now, now);
   assert.throws(() => insert.run("roster-2", "alternate@ntub.edu.tw", now, now), /UNIQUE/iu);
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM classroom_course_roster WHERE status = 'active'").get().count, 1);
+  db.close();
+});
+
+test("a reusable question belongs to one course and enforces usage counters", async () => {
+  const db = await classroomDatabase();
+  const now = "2026-08-06T00:00:00.000Z";
+  db.prepare("INSERT INTO classroom_users VALUES (?, ?, ?, 'teacher', 'active', ?, ?)")
+    .run("teacher-1", "teacher@ntub.edu.tw", "教師", now, now);
+  db.prepare(`INSERT INTO classroom_courses
+    (id, owner_user_id, name, name_key, academic_year, term, status, version, created_at, updated_at, deleted_at)
+    VALUES ('course-1', 'teacher-1', '資料庫', '資料庫', 115, '1', 'active', 1, ?, ?, NULL)`).run(now, now);
+  const insert = db.prepare(`INSERT INTO classroom_course_question_bank
+    (id, course_id, title, question_text, ranking_criteria, status, usage_count, last_used_at,
+     version, created_by_user_id, created_at, updated_at)
+    VALUES (?, ?, '正規化判斷', '請判斷是否符合第三正規化。', '請依正確性與理由排序。', 'ready', ?, NULL, 1, 'teacher-1', ?, ?)`);
+  insert.run("question-bank-1", "course-1", 0, now, now);
+  assert.throws(() => insert.run("question-bank-2", "course-1", -1, now, now), /CHECK constraint/iu);
+  assert.throws(() => insert.run("question-bank-3", "missing-course", 0, now, now), /FOREIGN KEY/iu);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM classroom_course_question_bank WHERE status = 'ready'").get().count, 1);
   db.close();
 });

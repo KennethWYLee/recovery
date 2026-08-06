@@ -26,9 +26,26 @@ export type ClassroomCourse = {
   isDemo: boolean;
   studentCount: number;
   rosterCount: number;
+  questionBankCount: number;
   sessionCount: number;
   activeSessionId: string | null;
   activeSessionPhase: ClassroomSessionPhase | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ClassroomQuestionBankItem = {
+  id: string;
+  courseId: string;
+  title: string;
+  category: string;
+  questionText: string;
+  rankingCriteria: string;
+  status: "draft" | "ready";
+  usageCount: number;
+  lastUsedAt: string | null;
+  usedInCurrentSession: boolean;
   version: number;
   createdAt: string;
   updatedAt: string;

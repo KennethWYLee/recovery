@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Archive,
   ArrowRight,
   BookOpen,
   CheckCircle2,
@@ -10,6 +11,7 @@ import {
   KeyRound,
   FileSpreadsheet,
   ListChecks,
+  LibraryBig,
   Pencil,
   Plus,
   ShieldCheck,
@@ -18,13 +20,14 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   courseTermLabel,
   currentAcademicTerm,
   SESSION_PHASE_LABELS,
   type AcademicTerm,
   type ClassroomCourse,
+  type ClassroomQuestionBankItem,
   type ClassroomRole,
 } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "./classroom-page-identity";
@@ -86,7 +89,7 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadCode, setLoadCode] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<"create" | "rename" | "delete" | "roster" | null>(null);
+  const [dialog, setDialog] = useState<"create" | "rename" | "delete" | "roster" | "questionBank" | null>(null);
   const [target, setTarget] = useState<ClassroomCourse | null>(null);
   const [name, setName] = useState("");
   const [academicYear, setAcademicYear] = useState(defaults.academicYear);
@@ -99,6 +102,36 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
   const [rosterEntries, setRosterEntries] = useState<ClassroomRosterDraft[]>([]);
   const [rosterCurrent, setRosterCurrent] = useState<RosterEntry[]>([]);
   const [rosterPreview, setRosterPreview] = useState<{ total: number; added: number; updated: number; unchanged: number; removed: number } | null>(null);
+  const [questionBankItems, setQuestionBankItems] = useState<ClassroomQuestionBankItem[]>([]);
+  const [questionBankTitle, setQuestionBankTitle] = useState("");
+  const [questionBankCategory, setQuestionBankCategory] = useState("未分類");
+  const [questionBankPrompt, setQuestionBankPrompt] = useState("");
+  const [questionBankCriteria, setQuestionBankCriteria] = useState("請依回答的正確性、解釋力及理由充分程度，將所有回答從最佳到相對較弱排列。");
+  const [questionBankStatus, setQuestionBankStatus] = useState<"draft" | "ready">("ready");
+  const [editingQuestionBankId, setEditingQuestionBankId] = useState<string | null>(null);
+  const [questionBankSearch, setQuestionBankSearch] = useState("");
+  const [questionBankCategoryFilter, setQuestionBankCategoryFilter] = useState("all");
+  const [questionBankStatusFilter, setQuestionBankStatusFilter] = useState("all");
+  const [questionBankUsageFilter, setQuestionBankUsageFilter] = useState("all");
+  const [questionBankSort, setQuestionBankSort] = useState("updated");
+
+  const questionBankCategories = useMemo(() => [...new Set(questionBankItems.map((item) => item.category))].sort((left, right) => left.localeCompare(right, "zh-Hant")), [questionBankItems]);
+  const visibleQuestionBankItems = useMemo(() => {
+    const search = questionBankSearch.normalize("NFKC").trim().toLocaleLowerCase("zh-Hant");
+    const items = questionBankItems.filter((item) => {
+      if (questionBankCategoryFilter !== "all" && item.category !== questionBankCategoryFilter) return false;
+      if (questionBankStatusFilter !== "all" && item.status !== questionBankStatusFilter) return false;
+      if (questionBankUsageFilter === "used" && item.usageCount === 0) return false;
+      if (questionBankUsageFilter === "never" && item.usageCount > 0) return false;
+      return !search || `${item.title}\n${item.questionText}\n${item.category}`.toLocaleLowerCase("zh-Hant").includes(search);
+    });
+    return items.sort((left, right) => {
+      if (questionBankSort === "title") return left.title.localeCompare(right.title, "zh-Hant");
+      if (questionBankSort === "usage") return right.usageCount - left.usageCount || left.title.localeCompare(right.title, "zh-Hant");
+      if (questionBankSort === "lastUsed") return (right.lastUsedAt ?? "").localeCompare(left.lastUsedAt ?? "") || left.title.localeCompare(right.title, "zh-Hant");
+      return right.updatedAt.localeCompare(left.updatedAt) || left.title.localeCompare(right.title, "zh-Hant");
+    });
+  }, [questionBankItems, questionBankSearch, questionBankCategoryFilter, questionBankStatusFilter, questionBankUsageFilter, questionBankSort]);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -124,6 +157,96 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
   function closeDialog() {
     if (pending) return;
     setDialog(null); setTarget(null); setName(""); setFormError(null); setRosterFileName(""); setRosterEntries([]); setRosterCurrent([]); setRosterPreview(null);
+    setQuestionBankItems([]); resetQuestionBankForm();
+  }
+
+  function resetQuestionBankForm() {
+    setQuestionBankTitle("");
+    setQuestionBankCategory("未分類");
+    setQuestionBankPrompt("");
+    setQuestionBankCriteria("請依回答的正確性、解釋力及理由充分程度，將所有回答從最佳到相對較弱排列。");
+    setQuestionBankStatus("ready");
+    setEditingQuestionBankId(null);
+  }
+
+  async function openQuestionBank(course: ClassroomCourse) {
+    setTarget(course); setDialog("questionBank"); setPending(true); setFormError(null); resetQuestionBankForm();
+    setQuestionBankSearch(""); setQuestionBankCategoryFilter("all"); setQuestionBankStatusFilter("all"); setQuestionBankUsageFilter("all"); setQuestionBankSort("updated");
+    try {
+      const result = await apiData<{ items: ClassroomQuestionBankItem[] }>(await fetch(`/api/classroom/courses/${encodeURIComponent(course.id)}/question-bank`, { cache: "no-store", headers: { accept: "application/json" } }));
+      setQuestionBankItems(result.items);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "目前無法取得問題庫。");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function editQuestionBankItem(item: ClassroomQuestionBankItem) {
+    setQuestionBankTitle(item.title);
+    setQuestionBankCategory(item.category);
+    setQuestionBankPrompt(item.questionText);
+    setQuestionBankCriteria(item.rankingCriteria);
+    setQuestionBankStatus(item.status);
+    setEditingQuestionBankId(item.id);
+    setFormError(null);
+  }
+
+  async function saveQuestionBankItem() {
+    if (!target) return;
+    const current = questionBankItems.find((item) => item.id === editingQuestionBankId);
+    setPending(true); setFormError(null);
+    try {
+      const url = current
+        ? `/api/classroom/courses/${encodeURIComponent(target.id)}/question-bank/${encodeURIComponent(current.id)}`
+        : `/api/classroom/courses/${encodeURIComponent(target.id)}/question-bank`;
+      const result = await apiData<{ item: ClassroomQuestionBankItem }>(await fetch(url, {
+        method: current ? "PATCH" : "POST",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({
+          title: questionBankTitle,
+          category: questionBankCategory,
+          questionText: questionBankPrompt,
+          rankingCriteria: questionBankCriteria,
+          status: questionBankStatus,
+          expectedVersion: current?.version,
+        }),
+      }));
+      setQuestionBankItems((items) => current
+        ? items.map((item) => item.id === result.item.id ? result.item : item)
+        : [result.item, ...items]);
+      if (!current) {
+        setCourses((courses) => courses.map((course) => course.id === target.id
+          ? { ...course, questionBankCount: course.questionBankCount + 1 }
+          : course));
+      }
+      resetQuestionBankForm();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "目前無法儲存問題。");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function archiveQuestionBankItem(item: ClassroomQuestionBankItem) {
+    if (!target || !window.confirm(`確定要從問題庫移除「${item.title}」嗎？已使用過的課堂問題不會受影響。`)) return;
+    setPending(true); setFormError(null);
+    try {
+      await apiData(await fetch(`/api/classroom/courses/${encodeURIComponent(target.id)}/question-bank/${encodeURIComponent(item.id)}`, {
+        method: "DELETE",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({ expectedVersion: item.version }),
+      }));
+      setQuestionBankItems((items) => items.filter((current) => current.id !== item.id));
+      setCourses((courses) => courses.map((course) => course.id === target.id
+        ? { ...course, questionBankCount: Math.max(0, course.questionBankCount - 1) }
+        : course));
+      if (editingQuestionBankId === item.id) resetQuestionBankForm();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "目前無法移除問題。");
+    } finally {
+      setPending(false);
+    }
   }
 
   async function openRoster(course: ClassroomCourse) {
@@ -237,9 +360,9 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
       {loading ? <div className="courses-loading" role="status"><span className="spinner" />正在取得課程…</div> : loadError ? <div className="courses-error" role="alert"><strong>無法取得課程</strong><span>{loadError}</span><button className="button secondary" type="button" onClick={() => void loadCourses()}>重新載入</button></div> : courses.length === 0 ? <div className="courses-empty"><BookOpen /><h2>尚未建立課程</h2><p>{actor?.isAdmin ? "建立第一門課程，即可開始今日活動。" : "請掃描教師提供的今日課堂 QR Code。"}</p></div> : <div className="course-list" role="list">
         {courses.map((course) => <article className="course-list-row" role="listitem" key={course.id}>
           <span className="course-list-icon"><BookOpen /></span>
-          <div className="course-list-copy"><small>{courseTermLabel(course)}{course.isDemo ? " · 虛擬資料" : ""}</small><h2>{course.name}</h2><p><UsersRound />{course.studentCount} 位已登入 <span aria-hidden="true">·</span> 名單 {course.rosterCount} 人 <span aria-hidden="true">·</span> 預設 {course.defaultGroupCount} 組 <span aria-hidden="true">·</span> {course.sessionCount} 次課堂</p></div>
+          <div className="course-list-copy"><small>{courseTermLabel(course)}{course.isDemo ? " · 虛擬資料" : ""}</small><h2>{course.name}</h2><p><UsersRound />{course.studentCount} 位已登入 <span aria-hidden="true">·</span> 名單 {course.rosterCount} 人 <span aria-hidden="true">·</span> 問題庫 {course.questionBankCount} 題 <span aria-hidden="true">·</span> 預設 {course.defaultGroupCount} 組 <span aria-hidden="true">·</span> {course.sessionCount} 次課堂</p></div>
           <div className="course-list-status">{course.activeSessionPhase ? <span className="status-live"><i />{SESSION_PHASE_LABELS[course.activeSessionPhase]}</span> : <span><CheckCircle2 />沒有進行中活動</span>}</div>
-          {actor?.isAdmin && <div className="course-list-actions"><button type="button" aria-label={`管理 ${course.name} 學生名單`} title="學生名單" onClick={() => void openRoster(course)}><ListChecks /></button><button type="button" aria-label={`修改 ${course.name} 名稱`} title="修改名稱" onClick={() => { setTarget(course); setName(course.name); setFormError(null); setDialog("rename"); }}><Pencil /></button><button className="delete" type="button" aria-label={`刪除 ${course.name}`} title="刪除課程" onClick={() => { setTarget(course); setFormError(null); setDialog("delete"); }}><Trash2 /></button></div>}
+          {actor?.isAdmin && <div className="course-list-actions"><button type="button" aria-label={`管理 ${course.name} 問題庫`} title="問題庫" onClick={() => void openQuestionBank(course)}><LibraryBig /></button><button type="button" aria-label={`管理 ${course.name} 學生名單`} title="學生名單" onClick={() => void openRoster(course)}><ListChecks /></button><button type="button" aria-label={`修改 ${course.name} 名稱`} title="修改名稱" onClick={() => { setTarget(course); setName(course.name); setFormError(null); setDialog("rename"); }}><Pencil /></button><button className="delete" type="button" aria-label={`刪除 ${course.name}`} title="刪除課程" onClick={() => { setTarget(course); setFormError(null); setDialog("delete"); }}><Trash2 /></button></div>}
           <Link href={`/courses/${encodeURIComponent(course.id)}`}>開啟課程<ArrowRight /></Link>
         </article>)}
       </div>}
@@ -251,6 +374,18 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
     </CourseDialog>
     <CourseDialog open={dialog === "rename"} title="修改課程名稱" description="只會修改名稱，不影響已有學生與課堂紀錄。" confirmLabel="儲存名稱" pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void saveCourse()}><label className="course-field"><span>課程名稱</span><input value={name} maxLength={80} onChange={(event) => setName(event.target.value)} /></label></CourseDialog>
     <CourseDialog open={dialog === "delete"} title={`刪除「${target?.name ?? ""}」？`} description="課程會從清單移除，系統仍保留操作紀錄。" confirmLabel="刪除課程" destructive pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void removeCourse()} />
+    <CourseDialog open={dialog === "questionBank"} title={`「${target?.name ?? ""}」問題庫`} description="依主題分類與使用情況整理問題；上課時可從這份清單直接選用。" confirmLabel={editingQuestionBankId ? "儲存修改" : "新增到問題庫"} confirmDisabled={questionBankTitle.trim().length < 2 || questionBankCategory.trim().length < 1 || questionBankPrompt.trim().length < 5 || questionBankCriteria.trim().length < 5} pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void saveQuestionBankItem()}>
+      <section className="question-bank-manager">
+        <div className="question-bank-editor">
+          <label className="course-field"><span>問題名稱</span><input value={questionBankTitle} maxLength={100} onChange={(event) => setQuestionBankTitle(event.target.value)} placeholder="例如：正規化設計判斷" /></label>
+          <div className="course-field-row"><label className="course-field"><span>主題分類</span><input list="question-bank-categories" value={questionBankCategory} maxLength={50} onChange={(event) => setQuestionBankCategory(event.target.value)} placeholder="例如：正規化" /><datalist id="question-bank-categories">{questionBankCategories.map((category) => <option value={category} key={category} />)}</datalist></label><label className="course-field"><span>狀態</span><select value={questionBankStatus} onChange={(event) => setQuestionBankStatus(event.target.value as "draft" | "ready")}><option value="ready">可使用</option><option value="draft">草稿</option></select></label></div>
+          <label className="course-field"><span>問題內容</span><textarea rows={4} maxLength={2000} value={questionBankPrompt} onChange={(event) => setQuestionBankPrompt(event.target.value)} /></label>
+          <label className="course-field"><span>排序判準</span><textarea rows={3} maxLength={500} value={questionBankCriteria} onChange={(event) => setQuestionBankCriteria(event.target.value)} /></label>
+          {editingQuestionBankId && <button className="text-button" type="button" onClick={resetQuestionBankForm}>取消修改，改為新增問題</button>}
+        </div>
+        <div className="question-bank-list"><header><strong>既有問題</strong><span>{visibleQuestionBankItems.length}／{questionBankItems.length} 題</span></header><div className="question-bank-filters"><input aria-label="搜尋問題庫" value={questionBankSearch} onChange={(event) => setQuestionBankSearch(event.target.value)} placeholder="搜尋名稱、內容或分類" /><div><select aria-label="分類" value={questionBankCategoryFilter} onChange={(event) => setQuestionBankCategoryFilter(event.target.value)}><option value="all">全部分類</option>{questionBankCategories.map((category) => <option value={category} key={category}>{category}</option>)}</select><select aria-label="狀態" value={questionBankStatusFilter} onChange={(event) => setQuestionBankStatusFilter(event.target.value)}><option value="all">全部狀態</option><option value="ready">可使用</option><option value="draft">草稿</option></select><select aria-label="使用情況" value={questionBankUsageFilter} onChange={(event) => setQuestionBankUsageFilter(event.target.value)}><option value="all">全部使用情況</option><option value="never">從未使用</option><option value="used">曾經使用</option></select><select aria-label="排序方式" value={questionBankSort} onChange={(event) => setQuestionBankSort(event.target.value)}><option value="updated">最近更新</option><option value="lastUsed">最近使用</option><option value="usage">使用次數</option><option value="title">問題名稱</option></select></div></div>{questionBankItems.length === 0 ? <p>尚未建立問題。完成左側內容後，即可新增第一題。</p> : visibleQuestionBankItems.length === 0 ? <p>目前沒有符合條件的問題。</p> : <ol>{visibleQuestionBankItems.map((item) => <li key={item.id}><div><span className="question-bank-item-meta"><em>{item.category}</em><i className={item.status}>{item.status === "ready" ? "可使用" : "草稿"}</i></span><strong>{item.title}</strong><p>{item.questionText}</p><small>{item.usageCount > 0 ? `已使用 ${item.usageCount} 次${item.lastUsedAt ? ` · 最近 ${new Date(item.lastUsedAt).toLocaleDateString("zh-TW")}` : ""}` : "從未使用"}</small></div><span><button type="button" aria-label={`修改 ${item.title}`} title="修改" disabled={pending} onClick={() => editQuestionBankItem(item)}><Pencil /></button><button type="button" aria-label={`移除 ${item.title}`} title="移除" disabled={pending} onClick={() => void archiveQuestionBankItem(item)}><Archive /></button></span></li>)}</ol>}</div>
+      </section>
+    </CourseDialog>
     <CourseDialog open={dialog === "roster"} title={`「${target?.name ?? ""}」學生白名單`} description="上傳後先預覽差異；確認套用才會取代目前名單。名單內的 NTUB 帳號登入時會自動核准，名單外才送交管理員審核。" confirmLabel="確認取代名單" confirmDisabled={!rosterPreview || rosterEntries.length === 0} pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void applyRoster()}>
       <section className="roster-import">
         <label className="roster-dropzone">

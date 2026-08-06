@@ -66,6 +66,27 @@ export const classroomCourseRoster = sqliteTable("classroom_course_roster", {
   index("classroom_course_roster_email_status_idx").on(table.email, table.status, table.courseId),
 ]);
 
+export const classroomCourseQuestionBank = sqliteTable("classroom_course_question_bank", {
+  id: text("id").primaryKey(),
+  courseId: text("course_id").notNull().references(() => classroomCourses.id, { onDelete: "restrict" }),
+  title: text("title").notNull(),
+  category: text("category").notNull().default("未分類"),
+  questionText: text("question_text").notNull(),
+  rankingCriteria: text("ranking_criteria").notNull(),
+  status: text("status", { enum: ["draft", "ready", "archived"] }).notNull().default("ready"),
+  usageCount: integer("usage_count").notNull().default(0),
+  lastUsedAt: text("last_used_at"),
+  version: integer("version").notNull().default(1),
+  createdByUserId: text("created_by_user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("classroom_course_question_bank_course_status_idx").on(table.courseId, table.status, table.updatedAt),
+  index("classroom_course_question_bank_course_category_idx").on(table.courseId, table.category, table.status),
+  check("classroom_course_question_bank_usage_check", sql`${table.usageCount} >= 0`),
+  check("classroom_course_question_bank_version_check", sql`${table.version} >= 1`),
+]);
+
 export const classroomSeedState = sqliteTable("classroom_seed_state", {
   userId: text("user_id").primaryKey().references(() => classroomUsers.id, { onDelete: "restrict" }),
   seededAt: text("seeded_at").notNull(),
@@ -144,6 +165,7 @@ export const classroomQuestions = sqliteTable("classroom_questions", {
   sessionId: text("session_id").notNull().references(() => classroomSessions.id, { onDelete: "restrict" }),
   questionText: text("question_text").notNull(),
   rankingCriteria: text("ranking_criteria").notNull(),
+  sourceQuestionBankId: text("source_question_bank_id"),
   phase: text("phase", { enum: ["draft", "answering", "presenting", "ranking", "locked", "published", "archived"] }).notNull().default("draft"),
   position: integer("position").notNull(),
   version: integer("version").notNull().default(1),
@@ -158,6 +180,7 @@ export const classroomQuestions = sqliteTable("classroom_questions", {
   uniqueIndex("classroom_questions_session_position_unique").on(table.sessionId, table.position),
   uniqueIndex("classroom_questions_one_active_unique").on(table.sessionId).where(sql`${table.phase} IN ('answering','presenting','ranking','locked')`),
   index("classroom_questions_session_phase_idx").on(table.sessionId, table.phase, table.position),
+  index("classroom_questions_session_source_idx").on(table.sessionId, table.sourceQuestionBankId),
 ]);
 
 export const classroomQuestionMemberships = sqliteTable("classroom_question_memberships", {
