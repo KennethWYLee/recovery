@@ -4,13 +4,13 @@ import Link from "next/link";
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, CheckCircle2, ClipboardCheck,
   Clock3, Copy, Download, Eye, GripVertical, Hash, History, LockKeyhole, LogOut,
-  Plus, RefreshCw, RotateCcw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X,
+  LibraryBig, Plus, RefreshCw, RotateCcw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   courseTermLabel, QUESTION_PHASE_LABELS,
-  type ClassroomCourse, type ClassroomGroup, type ClassroomSessionSnapshot,
+  type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot,
 } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
 
@@ -83,6 +83,12 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const [rankingOrder, setRankingOrder] = useState<string[]>([]);
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [questionCriteria, setQuestionCriteria] = useState("請依回答的正確性、解釋力及理由充分程度，將所有回答從最佳到相對較弱排列。");
+  const [questionBankItems, setQuestionBankItems] = useState<ClassroomQuestionBankItem[]>([]);
+  const [selectedQuestionBankId, setSelectedQuestionBankId] = useState("");
+  const [questionBankSearch, setQuestionBankSearch] = useState("");
+  const [questionBankCategory, setQuestionBankCategory] = useState("all");
+  const [questionBankUsage, setQuestionBankUsage] = useState("unused");
+  const [questionBankSort, setQuestionBankSort] = useState("updated");
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStudentTestPicker, setShowStudentTestPicker] = useState(false);
@@ -90,6 +96,22 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const responseKeyRef = useRef("");
   const rankingKeyRef = useRef("");
   const selectedQuestionRef = useRef<string | null>(null);
+
+  const questionBankCategories = useMemo(() => [...new Set(questionBankItems.map((item) => item.category))].sort((left, right) => left.localeCompare(right, "zh-Hant")), [questionBankItems]);
+  const visibleQuestionBankItems = useMemo(() => {
+    const search = questionBankSearch.normalize("NFKC").trim().toLocaleLowerCase("zh-Hant");
+    return questionBankItems.filter((item) => {
+      if (questionBankCategory !== "all" && item.category !== questionBankCategory) return false;
+      if (questionBankUsage === "used" && !item.usedInCurrentSession) return false;
+      if (questionBankUsage === "unused" && item.usedInCurrentSession) return false;
+      return !search || `${item.title}\n${item.questionText}\n${item.category}`.toLocaleLowerCase("zh-Hant").includes(search);
+    }).sort((left, right) => {
+      if (questionBankSort === "title") return left.title.localeCompare(right.title, "zh-Hant");
+      if (questionBankSort === "usage") return right.usageCount - left.usageCount || left.title.localeCompare(right.title, "zh-Hant");
+      if (questionBankSort === "lastUsed") return (right.lastUsedAt ?? "").localeCompare(left.lastUsedAt ?? "") || left.title.localeCompare(right.title, "zh-Hant");
+      return right.updatedAt.localeCompare(left.updatedAt) || left.title.localeCompare(right.title, "zh-Hant");
+    });
+  }, [questionBankItems, questionBankSearch, questionBankCategory, questionBankUsage, questionBankSort]);
 
   const load = useCallback(async (quiet = false, questionId?: string | null, testStudentOverride?: string | null) => {
     if (!quiet) setError(null);
@@ -143,9 +165,48 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     if (!snapshot) return;
     await applySnapshot(fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/questions`, {
       method: "POST", headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ questionText: questionPrompt, rankingCriteria: questionCriteria }),
+      body: JSON.stringify({
+        questionText: questionPrompt,
+        rankingCriteria: questionCriteria,
+        questionBankId: selectedQuestionBankId || undefined,
+      }),
     }), "問題草稿已建立，確認後即可開放作答。");
-    setQuestionPrompt(""); setShowQuestionForm(false);
+    setQuestionPrompt(""); setSelectedQuestionBankId(""); setShowQuestionForm(false);
+  }
+
+  async function toggleQuestionCreator() {
+    const opening = !showQuestionForm;
+    setShowQuestionForm(opening);
+    if (!opening || !snapshot) return;
+    setQuestionBankSearch(""); setQuestionBankCategory("all"); setQuestionBankUsage("unused"); setQuestionBankSort("updated");
+    setPending(true); setError(null);
+    try {
+      const search = new URLSearchParams({ sessionId: snapshot.session.id, readyOnly: "true" });
+      const data = await apiData<{ items: ClassroomQuestionBankItem[] }>(await fetch(`/api/classroom/courses/${encodeURIComponent(courseId)}/question-bank?${search.toString()}`, { cache: "no-store", headers: { accept: "application/json" } }));
+      setQuestionBankItems(data.items);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "目前無法取得問題庫。");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function selectQuestionBankItem(itemId: string) {
+    setSelectedQuestionBankId(itemId);
+    const item = questionBankItems.find((candidate) => candidate.id === itemId);
+    if (!item) return;
+    setQuestionPrompt(item.questionText);
+    setQuestionCriteria(item.rankingCriteria);
+  }
+
+  function updateQuestionPrompt(value: string) {
+    setQuestionPrompt(value);
+    setSelectedQuestionBankId("");
+  }
+
+  function updateQuestionCriteria(value: string) {
+    setQuestionCriteria(value);
+    setSelectedQuestionBankId("");
   }
 
   async function saveResponse(submit: boolean) {
@@ -230,7 +291,9 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
         {snapshot.session.phase === "grouping" && <section><div className="section-intro"><div><p>確認分組</p><h2>檢查組員與隨機代表</h2><span>教師仍可拖曳調整組員或更換代表；遲到學生會自動加入當下人數最少的組。</span></div><strong>{snapshot.groups.length} 組 · {snapshot.completion.grouped} 位學生</strong></div><GroupBoard snapshot={snapshot} actor={actor} dragParticipant={dragParticipant} setDragParticipant={setDragParticipant} mutate={mutate} />{actor.isAdmin && <div className="session-action-bar"><span>組數在這一步確認後固定；之後移動組員只影響進行中的作答或未來問題。</span><button className="button primary" disabled={pending} onClick={() => void mutate({ action: "advance", expectedVersion: snapshot.session.version })}>開始本次課堂<ArrowRight /></button></div>}</section>}
 
-        {snapshot.session.phase === "answering" && <section className="live-classroom-layout"><aside className="question-rail"><header><div><p>本次課堂</p><h2>問題與排名</h2></div>{actor.isAdmin && <button aria-label="新增問題" onClick={() => setShowQuestionForm((value) => !value)}><Plus /></button>}</header>{showQuestionForm && actor.isAdmin && <div className="question-create-inline"><label><span>新問題</span><textarea rows={4} maxLength={2000} value={questionPrompt} onChange={(event) => setQuestionPrompt(event.target.value)} /></label><label><span>排序判準</span><textarea rows={3} maxLength={500} value={questionCriteria} onChange={(event) => setQuestionCriteria(event.target.value)} /></label><button className="button primary wide" disabled={pending || questionPrompt.trim().length < 5 || questionCriteria.trim().length < 5} onClick={() => void createQuestion()}>建立問題草稿</button></div>}<ol>{snapshot.questions.map((item) => <li key={item.id}><button className={item.id === question?.id ? "selected" : ""} onClick={() => { selectedQuestionRef.current = item.id; void load(false, item.id); }}><span>{item.position}</span><div><strong>{item.text}</strong><small>{QUESTION_PHASE_LABELS[item.phase]}</small>{item.phase === "published" && item.leaderLabel && <em>第1名 {item.leaderLabel} · 平均 {item.leaderAverageScore?.toFixed(2)} 分</em>}{["ranking", "locked"].includes(item.phase) && <em>{item.rankedStudents} 人已排序</em>}</div></button></li>)}</ol>{snapshot.questions.length === 0 && <div className="question-rail-empty"><ClipboardCheck /><strong>尚未建立問題</strong><span>{actor.isAdmin ? "新增第一題後再開放作答。" : "等待教師新增問題。"}</span></div>}<footer><span>{snapshot.questions.filter((item) => item.phase === "published").length} 題已公布</span>{actor.isAdmin && <button className="text-button" disabled={snapshot.questions.some((item) => ["answering", "presenting", "ranking", "locked"].includes(item.phase))} onClick={() => void mutate({ action: "advance", expectedVersion: snapshot.session.version })}><History />封存課堂</button>}</footer></aside>
+        {snapshot.session.phase === "answering" && <section className="live-classroom-layout"><aside className="question-rail"><header><div><p>本次課堂</p><h2>問題與排名</h2></div>{actor.isAdmin && <button aria-label="新增問題" onClick={() => void toggleQuestionCreator()}><Plus /></button>}</header>{showQuestionForm && actor.isAdmin && <div className="question-create-inline">
+          <section className="question-bank-classroom-picker"><header><span><LibraryBig />從問題庫選擇</span><small>{visibleQuestionBankItems.length}／{questionBankItems.length} 題</small></header><input aria-label="搜尋課堂問題庫" value={questionBankSearch} onChange={(event) => setQuestionBankSearch(event.target.value)} placeholder="搜尋問題" /><div className="question-bank-classroom-filters"><select aria-label="問題分類" value={questionBankCategory} onChange={(event) => setQuestionBankCategory(event.target.value)}><option value="all">全部分類</option>{questionBankCategories.map((category) => <option value={category} key={category}>{category}</option>)}</select><select aria-label="本次使用狀態" value={questionBankUsage} onChange={(event) => setQuestionBankUsage(event.target.value)}><option value="unused">本次尚未使用</option><option value="used">本次已使用</option><option value="all">全部</option></select><select aria-label="問題排序" value={questionBankSort} onChange={(event) => setQuestionBankSort(event.target.value)}><option value="updated">最近更新</option><option value="lastUsed">最近使用</option><option value="usage">使用次數</option><option value="title">問題名稱</option></select></div><div className="question-bank-classroom-list">{visibleQuestionBankItems.map((item) => <button type="button" className={selectedQuestionBankId === item.id ? "selected" : ""} key={item.id} onClick={() => selectQuestionBankItem(item.id)}><span><em>{item.category}</em>{item.usedInCurrentSession && <i>本次已使用</i>}</span><strong>{item.title}</strong><small>{item.questionText}</small></button>)}{visibleQuestionBankItems.length === 0 && <p>{questionBankItems.length === 0 ? "問題庫尚無可用問題。" : "沒有符合條件的問題。"}</p>}</div><button type="button" className="question-bank-custom" onClick={() => setSelectedQuestionBankId("")}>臨時輸入新問題</button></section>
+          <label><span>新問題</span><textarea rows={4} maxLength={2000} value={questionPrompt} onChange={(event) => updateQuestionPrompt(event.target.value)} /></label><label><span>排序判準</span><textarea rows={3} maxLength={500} value={questionCriteria} onChange={(event) => updateQuestionCriteria(event.target.value)} /></label><button className="button primary wide" disabled={pending || questionPrompt.trim().length < 5 || questionCriteria.trim().length < 5} onClick={() => void createQuestion()}>建立問題草稿</button></div>}<ol>{snapshot.questions.map((item) => <li key={item.id}><button className={item.id === question?.id ? "selected" : ""} onClick={() => { selectedQuestionRef.current = item.id; void load(false, item.id); }}><span>{item.position}</span><div><strong>{item.text}</strong><small>{QUESTION_PHASE_LABELS[item.phase]}</small>{item.phase === "published" && item.leaderLabel && <em>第1名 {item.leaderLabel} · 平均 {item.leaderAverageScore?.toFixed(2)} 分</em>}{["ranking", "locked"].includes(item.phase) && <em>{item.rankedStudents} 人已排序</em>}</div></button></li>)}</ol>{snapshot.questions.length === 0 && <div className="question-rail-empty"><ClipboardCheck /><strong>尚未建立問題</strong><span>{actor.isAdmin ? "可從問題庫選取，或直接輸入本次問題。" : "等待教師新增問題。"}</span></div>}<footer><span>{snapshot.questions.filter((item) => item.phase === "published").length} 題已公布</span>{actor.isAdmin && <button className="text-button" disabled={snapshot.questions.some((item) => ["answering", "presenting", "ranking", "locked"].includes(item.phase))} onClick={() => void mutate({ action: "advance", expectedVersion: snapshot.session.version })}><History />封存課堂</button>}</footer></aside>
           <div className="question-stage">{!question ? <div className="stage-empty"><ClipboardCheck /><h2>選擇或新增一個問題</h2><p>每個問題都有獨立的回答、原始排序及公布結果。</p></div> : <>
             <header className="question-stage-header"><div><span>問題 {question.position}</span><h2>{question.text}</h2><p>{question.rankingCriteria}</p></div><strong className={`question-phase ${question.phase}`}>{QUESTION_PHASE_LABELS[question.phase]}</strong></header>
             {question.phase === "draft" && <div className="stage-empty"><Eye /><h2>問題草稿尚未對學生開放</h2><p>確認問題與排序判準後，開放作答時會保存當下分組，作為本題排除自己組的依據。</p></div>}

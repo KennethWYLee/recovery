@@ -103,9 +103,9 @@ export async function ensureClassroomSchema(db = classroomDb()): Promise<void> {
   if (!schemaReady) {
     schemaReady = (async () => {
       const tables = await db.prepare(
-        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_course_roster', 'classroom_seed_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist', 'classroom_sessions', 'classroom_groups', 'classroom_session_participants', 'classroom_group_responses', 'classroom_ranking_submissions', 'classroom_ranking_items', 'classroom_rate_limits', 'classroom_questions', 'classroom_question_memberships', 'classroom_question_responses', 'classroom_question_ranking_submissions', 'classroom_question_ranking_items') ORDER BY name",
+        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_course_roster', 'classroom_course_question_bank', 'classroom_seed_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist', 'classroom_sessions', 'classroom_groups', 'classroom_session_participants', 'classroom_group_responses', 'classroom_ranking_submissions', 'classroom_ranking_items', 'classroom_rate_limits', 'classroom_questions', 'classroom_question_memberships', 'classroom_question_responses', 'classroom_question_ranking_submissions', 'classroom_question_ranking_items') ORDER BY name",
       ).all<{ name: string }>();
-      if (tables.results.length !== 20) throw new Error("The classroom database schema is incomplete.");
+      if (tables.results.length !== 21) throw new Error("The classroom database schema is incomplete.");
       await db.prepare("PRAGMA optimize").run();
     })().catch((error) => {
       schemaReady = null;
@@ -465,6 +465,7 @@ function mapCourse(row: {
   is_demo: number;
   student_count: number;
   roster_count: number;
+  question_bank_count: number;
   session_count: number;
   active_session_id: string | null;
   active_session_phase: string | null;
@@ -485,6 +486,7 @@ function mapCourse(row: {
     isDemo: row.is_demo === 1,
     studentCount: row.student_count,
     rosterCount: row.roster_count,
+    questionBankCount: row.question_bank_count,
     sessionCount: row.session_count,
     activeSessionId: row.active_session_id,
     activeSessionPhase: row.active_session_phase as ClassroomCourse["activeSessionPhase"],
@@ -497,6 +499,7 @@ function mapCourse(row: {
 const COURSE_SELECT_COLUMNS = `c.id, c.name, c.academic_year, c.term, c.default_group_capacity, c.default_group_count, c.is_demo, c.version, c.created_at, c.updated_at,
   (SELECT COUNT(*) FROM classroom_course_members cm WHERE cm.course_id = c.id AND cm.role = 'student' AND cm.status = 'active') AS student_count,
   (SELECT COUNT(*) FROM classroom_course_roster cr WHERE cr.course_id = c.id AND cr.status = 'active') AS roster_count,
+  (SELECT COUNT(*) FROM classroom_course_question_bank qb WHERE qb.course_id = c.id AND qb.status != 'archived') AS question_bank_count,
   (SELECT COUNT(*) FROM classroom_sessions cs WHERE cs.course_id = c.id) AS session_count,
   (SELECT cs.id FROM classroom_sessions cs WHERE cs.course_id = c.id AND cs.phase != 'archived' ORDER BY cs.created_at DESC LIMIT 1) AS active_session_id,
   (SELECT cs.phase FROM classroom_sessions cs WHERE cs.course_id = c.id AND cs.phase != 'archived' ORDER BY cs.created_at DESC LIMIT 1) AS active_session_phase`;

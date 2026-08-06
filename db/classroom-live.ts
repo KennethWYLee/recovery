@@ -564,30 +564,56 @@ export async function setClassroomRepresentative(
 
 export async function createClassroomQuestion(
   db: D1Database, actor: ClassroomActor, sessionId: string,
-  values: { questionText: unknown; rankingCriteria: unknown },
+  values: { questionText: unknown; rankingCriteria: unknown; questionBankId?: unknown },
 ): Promise<ClassroomSessionSnapshot> {
   if (!actor.isAdmin) throw new ClassroomWorkflowError(403, "SESSION_MANAGEMENT_REQUIRED", "只有系統管理員可以新增問題。");
   const session = await requireSession(db, actor, sessionId);
   if (session.phase !== "answering") throw new ClassroomWorkflowError(409, "SESSION_NOT_LIVE", "請完成分組並開始課堂後再新增問題。");
-  const questionText = normalizeSessionText(values.questionText, 2_000);
-  const criteria = normalizeSessionText(values.rankingCriteria, 500);
+  const requestedBankId = typeof values.questionBankId === "string" ? values.questionBankId.trim() : "";
+  const bankItem = requestedBankId ? await db.prepare(
+    `SELECT id, question_text, ranking_criteria
+     FROM classroom_course_question_bank
+     WHERE id = ? AND course_id = ? AND status = 'ready'`,
+  ).bind(requestedBankId, session.course_id).first<{
+    id: string;
+    question_text: string;
+    ranking_criteria: string;
+  }>() : null;
+  if (requestedBankId && (!/^question-bank-[a-z0-9-]{8,100}$/u.test(requestedBankId) || !bankItem)) {
+    throw new ClassroomWorkflowError(404, "QUESTION_BANK_ITEM_NOT_FOUND", "問題庫中找不到這個問題，請重新選擇。");
+  }
+  const questionText = normalizeSessionText(bankItem?.question_text ?? values.questionText, 2_000);
+  const criteria = normalizeSessionText(bankItem?.ranking_criteria ?? values.rankingCriteria, 500);
   if (questionText.length < 5 || criteria.length < 5) throw new ClassroomWorkflowError(400, "INVALID_QUESTION", "請完整填寫問題與排序判準。");
   const position = await db.prepare("SELECT COALESCE(MAX(position), 0) + 1 AS position FROM classroom_questions WHERE session_id = ?")
     .bind(sessionId).first<{ position: number }>();
   const id = classroomId("question");
   const now = classroomNow();
-  await db.batch([
+  const statements: D1PreparedStatement[] = [
     db.prepare(
       `INSERT INTO classroom_questions
-        (id, session_id, question_text, ranking_criteria, phase, position, version, created_by_user_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?)`,
-    ).bind(id, sessionId, questionText, criteria, position?.position ?? 1, actor.id, now, now),
+        (id, session_id, question_text, ranking_criteria, source_question_bank_id,
+         phase, position, version, created_by_user_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?, ?)`,
+    ).bind(id, sessionId, questionText, criteria, bankItem?.id ?? null, position?.position ?? 1, actor.id, now, now),
     db.prepare(
       `INSERT INTO classroom_audit_events
         (id, actor_user_id, action, resource_type, resource_id, details_json, occurred_at)
        VALUES (?, ?, 'question.create', 'classroom_question', ?, ?, ?)`,
-    ).bind(classroomId("class-audit"), actor.id, id, JSON.stringify({ sessionId, position: position?.position ?? 1 }), now),
-  ]);
+    ).bind(classroomId("class-audit"), actor.id, id, JSON.stringify({
+      sessionId,
+      position: position?.position ?? 1,
+      questionBankId: bankItem?.id ?? null,
+    }), now),
+  ];
+  if (bankItem) {
+    statements.push(db.prepare(
+      `UPDATE classroom_course_question_bank
+       SET usage_count = usage_count + 1, last_used_at = ?, updated_at = ?
+       WHERE id = ? AND course_id = ? AND status = 'ready'`,
+    ).bind(now, now, bankItem.id, session.course_id));
+  }
+  await db.batch(statements);
   return classroomSessionSnapshot(db, actor, sessionId, id);
 }
 

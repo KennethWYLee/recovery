@@ -20,6 +20,7 @@ export async function POST(request: Request, context: Context): Promise<Response
     const snapshot = await createClassroomQuestion(api.db, api.actor, sessionId, {
       questionText: body.questionText,
       rankingCriteria: body.rankingCriteria,
+      questionBankId: body.questionBankId,
     });
     return classroomData({ snapshot }, { status: 201 });
   });
