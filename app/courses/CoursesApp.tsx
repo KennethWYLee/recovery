@@ -8,10 +8,13 @@ import {
   Clock3,
   LogOut,
   KeyRound,
+  FileSpreadsheet,
+  ListChecks,
   Pencil,
   Plus,
   ShieldCheck,
   Trash2,
+  Upload,
   UsersRound,
   X,
 } from "lucide-react";
@@ -25,9 +28,15 @@ import {
   type ClassroomRole,
 } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "./classroom-page-identity";
+import {
+  rosterEntriesFromRows,
+  rosterEntriesFromText,
+  type ClassroomRosterDraft,
+} from "@/lib/classroom-roster";
 
 type Actor = { id: string; email: string; displayName: string; role: ClassroomRole; isAdmin: boolean };
 type CoursePayload = { actor: Actor; courses: ClassroomCourse[] };
+type RosterEntry = ClassroomRosterDraft & { sourceFileName: string; importedAt: string };
 type ApiEnvelope<T> = { data?: T; error?: { code?: string; message?: string } };
 
 class ClassroomClientError extends Error {
@@ -42,7 +51,7 @@ async function apiData<T>(response: Response): Promise<T> {
   return body.data;
 }
 
-function CourseDialog({ open, title, description, pending, error, confirmLabel, destructive = false, children, onClose, onConfirm }: {
+function CourseDialog({ open, title, description, pending, error, confirmLabel, destructive = false, confirmDisabled = false, children, onClose, onConfirm }: {
   open: boolean;
   title: string;
   description: string;
@@ -50,6 +59,7 @@ function CourseDialog({ open, title, description, pending, error, confirmLabel, 
   error: string | null;
   confirmLabel: string;
   destructive?: boolean;
+  confirmDisabled?: boolean;
   children?: React.ReactNode;
   onClose: () => void;
   onConfirm: () => void;
@@ -64,7 +74,7 @@ function CourseDialog({ open, title, description, pending, error, confirmLabel, 
       <header><div><h2>{title}</h2><p>{description}</p></div><button type="button" className="course-icon-button" aria-label="關閉" disabled={pending} onClick={onClose}><X /></button></header>
       {children}
       {error && <div className="course-form-error" role="alert">{error}</div>}
-      <footer><button type="button" className="button secondary" disabled={pending} onClick={onClose}>取消</button><button type="button" className={`button ${destructive ? "danger" : "primary"}`} disabled={pending} onClick={onConfirm}>{pending ? "正在處理…" : confirmLabel}</button></footer>
+      <footer><button type="button" className="button secondary" disabled={pending} onClick={onClose}>取消</button><button type="button" className={`button ${destructive ? "danger" : "primary"}`} disabled={pending || confirmDisabled} onClick={onConfirm}>{pending ? "正在處理…" : confirmLabel}</button></footer>
     </form>
   </dialog>;
 }
@@ -76,7 +86,7 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadCode, setLoadCode] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<"create" | "rename" | "delete" | null>(null);
+  const [dialog, setDialog] = useState<"create" | "rename" | "delete" | "roster" | null>(null);
   const [target, setTarget] = useState<ClassroomCourse | null>(null);
   const [name, setName] = useState("");
   const [academicYear, setAcademicYear] = useState(defaults.academicYear);
@@ -85,6 +95,10 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
   const [joinCode, setJoinCode] = useState("");
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [rosterFileName, setRosterFileName] = useState("");
+  const [rosterEntries, setRosterEntries] = useState<ClassroomRosterDraft[]>([]);
+  const [rosterCurrent, setRosterCurrent] = useState<RosterEntry[]>([]);
+  const [rosterPreview, setRosterPreview] = useState<{ total: number; added: number; updated: number; unchanged: number; removed: number } | null>(null);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -109,7 +123,60 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
 
   function closeDialog() {
     if (pending) return;
-    setDialog(null); setTarget(null); setName(""); setFormError(null);
+    setDialog(null); setTarget(null); setName(""); setFormError(null); setRosterFileName(""); setRosterEntries([]); setRosterCurrent([]); setRosterPreview(null);
+  }
+
+  async function openRoster(course: ClassroomCourse) {
+    setTarget(course); setDialog("roster"); setPending(true); setFormError(null); setRosterFileName(""); setRosterEntries([]); setRosterPreview(null);
+    try {
+      const result = await apiData<{ roster: RosterEntry[] }>(await fetch(`/api/classroom/courses/${encodeURIComponent(course.id)}/roster`, { cache: "no-store", headers: { accept: "application/json" } }));
+      setRosterCurrent(result.roster);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "目前無法取得課程名單。");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function previewRosterFile(file: File) {
+    if (!target) return;
+    setPending(true); setFormError(null); setRosterPreview(null); setRosterEntries([]); setRosterFileName(file.name);
+    try {
+      if (file.size > 2_000_000) throw new Error("檔案不得超過 2 MB。");
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      let parsed;
+      if (extension === "txt") parsed = rosterEntriesFromText(await file.text());
+      else if (extension === "xlsx") {
+        const { readSheet } = await import("read-excel-file/browser");
+        parsed = rosterEntriesFromRows(await readSheet(file));
+      } else throw new Error("請上傳 .xlsx 或 .txt 檔案；舊式 .xls 請先另存為 .xlsx。");
+      if (parsed.errors.length > 0) throw new Error(parsed.errors.slice(0, 5).join("\n"));
+      if (parsed.entries.length === 0) throw new Error("檔案沒有可匯入的學生資料。");
+      const result = await apiData<{ preview: { total: number; added: number; updated: number; unchanged: number; removed: number } }>(await fetch(`/api/classroom/courses/${encodeURIComponent(target.id)}/roster`, {
+        method: "POST", headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({ action: "preview", sourceFileName: file.name, entries: parsed.entries }),
+      }));
+      setRosterEntries(parsed.entries); setRosterPreview(result.preview);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "無法讀取這份名單。");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function applyRoster() {
+    if (!target || !rosterPreview || rosterEntries.length === 0) return;
+    setPending(true); setFormError(null);
+    try {
+      const result = await apiData<{ roster: RosterEntry[] }>(await fetch(`/api/classroom/courses/${encodeURIComponent(target.id)}/roster`, {
+        method: "POST", headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({ action: "replace", sourceFileName: rosterFileName, entries: rosterEntries }),
+      }));
+      setCourses((current) => current.map((course) => course.id === target.id ? { ...course, rosterCount: result.roster.length } : course));
+      setPending(false); setDialog(null); setTarget(null); setRosterEntries([]); setRosterCurrent([]); setRosterPreview(null); setRosterFileName("");
+    } catch (error) {
+      setPending(false); setFormError(error instanceof Error ? error.message : "目前無法套用課程名單。");
+    }
   }
 
   function openCreate() {
@@ -170,9 +237,9 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
       {loading ? <div className="courses-loading" role="status"><span className="spinner" />正在取得課程…</div> : loadError ? <div className="courses-error" role="alert"><strong>無法取得課程</strong><span>{loadError}</span><button className="button secondary" type="button" onClick={() => void loadCourses()}>重新載入</button></div> : courses.length === 0 ? <div className="courses-empty"><BookOpen /><h2>尚未建立課程</h2><p>{actor?.isAdmin ? "建立第一門課程，即可開始今日活動。" : "請掃描教師提供的今日課堂 QR Code。"}</p></div> : <div className="course-list" role="list">
         {courses.map((course) => <article className="course-list-row" role="listitem" key={course.id}>
           <span className="course-list-icon"><BookOpen /></span>
-          <div className="course-list-copy"><small>{courseTermLabel(course)}{course.isDemo ? " · 虛擬資料" : ""}</small><h2>{course.name}</h2><p><UsersRound />{course.studentCount} 位學生 <span aria-hidden="true">·</span> 預設 {course.defaultGroupCount} 組 <span aria-hidden="true">·</span> {course.sessionCount} 次課堂</p></div>
+          <div className="course-list-copy"><small>{courseTermLabel(course)}{course.isDemo ? " · 虛擬資料" : ""}</small><h2>{course.name}</h2><p><UsersRound />{course.studentCount} 位已登入 <span aria-hidden="true">·</span> 名單 {course.rosterCount} 人 <span aria-hidden="true">·</span> 預設 {course.defaultGroupCount} 組 <span aria-hidden="true">·</span> {course.sessionCount} 次課堂</p></div>
           <div className="course-list-status">{course.activeSessionPhase ? <span className="status-live"><i />{SESSION_PHASE_LABELS[course.activeSessionPhase]}</span> : <span><CheckCircle2 />沒有進行中活動</span>}</div>
-          {actor?.isAdmin && <div className="course-list-actions"><button type="button" aria-label={`修改 ${course.name} 名稱`} onClick={() => { setTarget(course); setName(course.name); setFormError(null); setDialog("rename"); }}><Pencil /></button><button className="delete" type="button" aria-label={`刪除 ${course.name}`} onClick={() => { setTarget(course); setFormError(null); setDialog("delete"); }}><Trash2 /></button></div>}
+          {actor?.isAdmin && <div className="course-list-actions"><button type="button" aria-label={`管理 ${course.name} 學生名單`} title="學生名單" onClick={() => void openRoster(course)}><ListChecks /></button><button type="button" aria-label={`修改 ${course.name} 名稱`} title="修改名稱" onClick={() => { setTarget(course); setName(course.name); setFormError(null); setDialog("rename"); }}><Pencil /></button><button className="delete" type="button" aria-label={`刪除 ${course.name}`} title="刪除課程" onClick={() => { setTarget(course); setFormError(null); setDialog("delete"); }}><Trash2 /></button></div>}
           <Link href={`/courses/${encodeURIComponent(course.id)}`}>開啟課程<ArrowRight /></Link>
         </article>)}
       </div>}
@@ -184,5 +251,17 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
     </CourseDialog>
     <CourseDialog open={dialog === "rename"} title="修改課程名稱" description="只會修改名稱，不影響已有學生與課堂紀錄。" confirmLabel="儲存名稱" pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void saveCourse()}><label className="course-field"><span>課程名稱</span><input value={name} maxLength={80} onChange={(event) => setName(event.target.value)} /></label></CourseDialog>
     <CourseDialog open={dialog === "delete"} title={`刪除「${target?.name ?? ""}」？`} description="課程會從清單移除，系統仍保留操作紀錄。" confirmLabel="刪除課程" destructive pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void removeCourse()} />
+    <CourseDialog open={dialog === "roster"} title={`「${target?.name ?? ""}」學生白名單`} description="上傳後先預覽差異；確認套用才會取代目前名單。名單內的 NTUB 帳號登入時會自動核准，名單外才送交管理員審核。" confirmLabel="確認取代名單" confirmDisabled={!rosterPreview || rosterEntries.length === 0} pending={pending} error={formError} onClose={closeDialog} onConfirm={() => void applyRoster()}>
+      <section className="roster-import">
+        <label className="roster-dropzone">
+          <FileSpreadsheet />
+          <span><strong>選擇 Excel 或學號 TXT</strong><small>Excel 第一列需有「學號」或「Email」；姓名選填。TXT 每行一個學號，也可用 Tab 或逗號補姓名。</small></span>
+          <input type="file" accept=".xlsx,.txt,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={pending} onChange={(event) => { const file = event.target.files?.[0]; if (file) void previewRosterFile(file); event.currentTarget.value = ""; }} />
+          <em><Upload />選擇檔案</em>
+        </label>
+        <div className="roster-current"><span>目前名單</span><strong>{rosterCurrent.length} 人</strong>{rosterCurrent[0] && <small>最近來源：{rosterCurrent[0].sourceFileName}</small>}</div>
+        {rosterPreview && <><div className="roster-preview" aria-label="名單匯入預覽"><span><small>匯入後</small><strong>{rosterPreview.total}</strong></span><span><small>新增</small><strong>{rosterPreview.added}</strong></span><span><small>更新</small><strong>{rosterPreview.updated}</strong></span><span><small>保留</small><strong>{rosterPreview.unchanged}</strong></span><span className={rosterPreview.removed > 0 ? "will-remove" : ""}><small>移除</small><strong>{rosterPreview.removed}</strong></span></div><div className="roster-sample"><header><strong>{rosterFileName}</strong><small>顯示前 {Math.min(8, rosterEntries.length)} 筆，共 {rosterEntries.length} 筆</small></header><ol>{rosterEntries.slice(0, 8).map((entry) => <li key={entry.studentId}><span>{entry.studentId}</span><strong>{entry.displayName || "未提供姓名"}</strong><small>{entry.email}</small></li>)}</ol></div></>}
+      </section>
+    </CourseDialog>
   </div>;
 }

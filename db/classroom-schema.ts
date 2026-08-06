@@ -49,6 +49,23 @@ export const classroomCourseMembers = sqliteTable("classroom_course_members", {
   index("classroom_course_members_user_status_idx").on(table.userId, table.status),
 ]);
 
+export const classroomCourseRoster = sqliteTable("classroom_course_roster", {
+  id: text("id").primaryKey(),
+  courseId: text("course_id").notNull().references(() => classroomCourses.id, { onDelete: "restrict" }),
+  studentId: text("student_id").notNull(),
+  email: text("email").notNull(),
+  displayName: text("display_name").notNull().default(""),
+  status: text("status", { enum: ["active", "removed"] }).notNull().default("active"),
+  sourceFileName: text("source_file_name").notNull(),
+  importedByUserId: text("imported_by_user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  importedAt: text("imported_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("classroom_course_roster_course_student_unique").on(table.courseId, table.studentId),
+  index("classroom_course_roster_course_email_idx").on(table.courseId, table.email),
+  index("classroom_course_roster_email_status_idx").on(table.email, table.status, table.courseId),
+]);
+
 export const classroomSeedState = sqliteTable("classroom_seed_state", {
   userId: text("user_id").primaryKey().references(() => classroomUsers.id, { onDelete: "restrict" }),
   seededAt: text("seeded_at").notNull(),
