@@ -8,6 +8,7 @@ const migrationUrls = [
   new URL("../drizzle/0002_classroom_access_approval.sql", import.meta.url),
   new URL("../drizzle/0003_classroom_live_sessions.sql", import.meta.url),
   new URL("../drizzle/0004_multi_question_classrooms.sql", import.meta.url),
+  new URL("../drizzle/0005_course_roster.sql", import.meta.url),
 ];
 
 async function classroomDatabase() {
@@ -30,6 +31,7 @@ test("classroom migration creates the reviewed course boundary", async () => {
     "classroom_access_requests",
     "classroom_audit_events",
     "classroom_course_members",
+    "classroom_course_roster",
     "classroom_courses",
     "classroom_group_responses",
     "classroom_groups",
@@ -121,5 +123,22 @@ test("course memberships cannot reference missing users or courses", async () =>
     (id, course_id, user_id, role, status, joined_at, updated_at)
     VALUES ('member-1', 'missing-course', 'missing-user', 'student', 'active', ?, ?)`)
     .run("2026-08-05T00:00:00.000Z", "2026-08-05T00:00:00.000Z"), /FOREIGN KEY/iu);
+  db.close();
+});
+
+test("a course roster keeps one active identity per student number", async () => {
+  const db = await classroomDatabase();
+  const now = "2026-08-06T00:00:00.000Z";
+  db.prepare("INSERT INTO classroom_users VALUES (?, ?, ?, 'teacher', 'active', ?, ?)")
+    .run("teacher-1", "teacher@ntub.edu.tw", "教師", now, now);
+  db.prepare(`INSERT INTO classroom_courses
+    (id, owner_user_id, name, name_key, academic_year, term, status, version, created_at, updated_at, deleted_at)
+    VALUES ('course-1', 'teacher-1', '資料庫', '資料庫', 115, '1', 'active', 1, ?, ?, NULL)`).run(now, now);
+  const insert = db.prepare(`INSERT INTO classroom_course_roster
+    (id, course_id, student_id, email, display_name, status, source_file_name, imported_by_user_id, imported_at, updated_at)
+    VALUES (?, 'course-1', '11256001', ?, '王小明', 'active', 'roster.xlsx', 'teacher-1', ?, ?)`);
+  insert.run("roster-1", "11256001@ntub.edu.tw", now, now);
+  assert.throws(() => insert.run("roster-2", "alternate@ntub.edu.tw", now, now), /UNIQUE/iu);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM classroom_course_roster WHERE status = 'active'").get().count, 1);
   db.close();
 });

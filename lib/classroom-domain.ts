@@ -25,6 +25,7 @@ export type ClassroomCourse = {
   defaultGroupCount: number;
   isDemo: boolean;
   studentCount: number;
+  rosterCount: number;
   sessionCount: number;
   activeSessionId: string | null;
   activeSessionPhase: ClassroomSessionPhase | null;

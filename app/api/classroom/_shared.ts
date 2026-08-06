@@ -107,14 +107,14 @@ export function classroomDemoActorForSession(
   return classroomDemoActor(context, value, demoStudentActorForSession, sessionId);
 }
 
-export async function classroomJsonBody(request: Request): Promise<Record<string, unknown>> {
+export async function classroomJsonBody(request: Request, maximumBytes = 8_192): Promise<Record<string, unknown>> {
   const type = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
   if (type !== "application/json") {
     await drainClassroomRequestBody(request);
     throw new ClassroomApiError(415, "JSON_REQUIRED", "請使用JSON格式送出資料。");
   }
   try {
-    return await readBoundedClassroomJsonObject(request, 8_192);
+    return await readBoundedClassroomJsonObject(request, maximumBytes);
   } catch (error) {
     if (!(error instanceof ClassroomRequestBodyError)) throw error;
     if (error.kind === "too_large") throw new ClassroomApiError(413, "REQUEST_TOO_LARGE", "送出的資料超過系統限制。");

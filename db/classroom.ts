@@ -103,9 +103,9 @@ export async function ensureClassroomSchema(db = classroomDb()): Promise<void> {
   if (!schemaReady) {
     schemaReady = (async () => {
       const tables = await db.prepare(
-        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_seed_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist', 'classroom_sessions', 'classroom_groups', 'classroom_session_participants', 'classroom_group_responses', 'classroom_ranking_submissions', 'classroom_ranking_items', 'classroom_rate_limits', 'classroom_questions', 'classroom_question_memberships', 'classroom_question_responses', 'classroom_question_ranking_submissions', 'classroom_question_ranking_items') ORDER BY name",
+        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_course_roster', 'classroom_seed_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist', 'classroom_sessions', 'classroom_groups', 'classroom_session_participants', 'classroom_group_responses', 'classroom_ranking_submissions', 'classroom_ranking_items', 'classroom_rate_limits', 'classroom_questions', 'classroom_question_memberships', 'classroom_question_responses', 'classroom_question_ranking_submissions', 'classroom_question_ranking_items') ORDER BY name",
       ).all<{ name: string }>();
-      if (tables.results.length !== 19) throw new Error("The classroom database schema is incomplete.");
+      if (tables.results.length !== 20) throw new Error("The classroom database schema is incomplete.");
       await db.prepare("PRAGMA optimize").run();
     })().catch((error) => {
       schemaReady = null;
@@ -167,7 +167,29 @@ export async function loadOrProvisionClassroomActor(request: Request): Promise<C
     const allowlisted = await db.prepare(
       "SELECT email FROM classroom_access_allowlist WHERE email = ? AND user_id = ? AND status = 'active'",
     ).bind(email, result.id).first<{ email: string }>();
-    if (!allowlisted) {
+    const studentId = email.slice(0, email.lastIndexOf("@"));
+    const rosterMatches = await db.prepare(
+      `SELECT r.course_id, r.imported_by_user_id
+       FROM classroom_course_roster r
+       JOIN classroom_courses c ON c.id = r.course_id
+       WHERE r.status = 'active' AND c.status = 'active' AND (r.email = ? OR r.student_id = ?)
+       ORDER BY r.course_id`,
+    ).bind(email, studentId).all<{ course_id: string; imported_by_user_id: string }>();
+    if (rosterMatches.results.length > 0) {
+      const statements = rosterMatches.results.map((match) => db.prepare(
+        `INSERT INTO classroom_course_members
+          (id, course_id, user_id, role, status, joined_at, updated_at)
+         VALUES (?, ?, ?, 'student', 'active', ?, ?)
+         ON CONFLICT(course_id, user_id) DO UPDATE SET status = 'active', role = 'student', updated_at = excluded.updated_at`,
+      ).bind(classroomId("course-member"), match.course_id, result.id, now, now));
+      statements.push(db.prepare(
+        `UPDATE classroom_access_requests
+         SET status = 'approved', version = version + 1, reviewed_by_user_id = ?, reviewed_at = ?
+         WHERE email = ? AND status != 'approved'`,
+      ).bind(rosterMatches.results[0].imported_by_user_id, now, email));
+      await db.batch(statements);
+    }
+    if (!allowlisted && rosterMatches.results.length === 0) {
       const request = await recordClassroomAccessRequest(db, result);
       if (request.status === "rejected") {
         throw new ClassroomAccessError("approval_rejected", "此帳號的使用申請尚未獲准，請洽系統管理員。");
@@ -190,7 +212,11 @@ async function recordClassroomAccessRequest(db: D1Database, actor: ClassroomActo
      VALUES (?, ?, ?, ?, 'pending', 1, ?, ?, NULL, NULL)
      ON CONFLICT(email) DO UPDATE SET
        display_name = excluded.display_name,
-       last_requested_at = excluded.last_requested_at`,
+       status = CASE WHEN classroom_access_requests.status = 'approved' THEN 'pending' ELSE classroom_access_requests.status END,
+       version = CASE WHEN classroom_access_requests.status = 'approved' THEN classroom_access_requests.version + 1 ELSE classroom_access_requests.version END,
+       last_requested_at = excluded.last_requested_at,
+       reviewed_by_user_id = CASE WHEN classroom_access_requests.status = 'approved' THEN NULL ELSE classroom_access_requests.reviewed_by_user_id END,
+       reviewed_at = CASE WHEN classroom_access_requests.status = 'approved' THEN NULL ELSE classroom_access_requests.reviewed_at END`,
   ).bind(classroomId("access-request"), actor.id, actor.email, actor.displayName, now, now).run();
   const request = await db.prepare(
     "SELECT status FROM classroom_access_requests WHERE email = ?",
@@ -438,6 +464,7 @@ function mapCourse(row: {
   default_group_count: number;
   is_demo: number;
   student_count: number;
+  roster_count: number;
   session_count: number;
   active_session_id: string | null;
   active_session_phase: string | null;
@@ -457,6 +484,7 @@ function mapCourse(row: {
     defaultGroupCount: row.default_group_count,
     isDemo: row.is_demo === 1,
     studentCount: row.student_count,
+    rosterCount: row.roster_count,
     sessionCount: row.session_count,
     activeSessionId: row.active_session_id,
     activeSessionPhase: row.active_session_phase as ClassroomCourse["activeSessionPhase"],
@@ -468,6 +496,7 @@ function mapCourse(row: {
 
 const COURSE_SELECT_COLUMNS = `c.id, c.name, c.academic_year, c.term, c.default_group_capacity, c.default_group_count, c.is_demo, c.version, c.created_at, c.updated_at,
   (SELECT COUNT(*) FROM classroom_course_members cm WHERE cm.course_id = c.id AND cm.role = 'student' AND cm.status = 'active') AS student_count,
+  (SELECT COUNT(*) FROM classroom_course_roster cr WHERE cr.course_id = c.id AND cr.status = 'active') AS roster_count,
   (SELECT COUNT(*) FROM classroom_sessions cs WHERE cs.course_id = c.id) AS session_count,
   (SELECT cs.id FROM classroom_sessions cs WHERE cs.course_id = c.id AND cs.phase != 'archived' ORDER BY cs.created_at DESC LIMIT 1) AS active_session_id,
   (SELECT cs.phase FROM classroom_sessions cs WHERE cs.course_id = c.id AND cs.phase != 'archived' ORDER BY cs.created_at DESC LIMIT 1) AS active_session_phase`;
