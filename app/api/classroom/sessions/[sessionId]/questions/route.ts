@@ -21,6 +21,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       questionText: body.questionText,
       rankingCriteria: body.rankingCriteria,
       questionBankId: body.questionBankId,
+      answerDurationSeconds: body.answerDurationSeconds,
     });
     return classroomData({ snapshot }, { status: 201 });
   });

@@ -13,6 +13,7 @@ import {
   normalizeSessionText,
   previousSessionPhase,
   rankResults,
+  rankingsExcludingOwnGroup,
   validAcademicTerm,
   validAcademicYear,
   validCourseName,
@@ -91,6 +92,21 @@ test("ranking breaks equal average scores by first-place count", () => {
   );
   assert.deepEqual(results.map((result) => result.groupId), ["a", "b"]);
   assert.deepEqual(results.map((result) => result.finalRank), [1, 2]);
+});
+
+test("consensus scoring removes each student's own group and reindexes the remaining answers", () => {
+  const first = rankingsExcludingOwnGroup([
+    { userId: "u1", ownGroupId: "a", groupId: "a", rank: 1 },
+    { userId: "u1", ownGroupId: "a", groupId: "b", rank: 2 },
+    { userId: "u1", ownGroupId: "a", groupId: "c", rank: 3 },
+  ]);
+  const second = rankingsExcludingOwnGroup([
+    { userId: "u1", ownGroupId: "a", groupId: "b", rank: 1 },
+    { userId: "u1", ownGroupId: "a", groupId: "c", rank: 2 },
+    { userId: "u1", ownGroupId: "a", groupId: "a", rank: 3 },
+  ]);
+  assert.deepEqual(first, [{ groupId: "b", rank: 1 }, { groupId: "c", rank: 2 }]);
+  assert.deepEqual(second, first, "moving the student's own answer must not change other groups' effective ranks");
 });
 
 test("course names are normalized and bounded", () => {

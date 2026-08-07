@@ -128,12 +128,14 @@ test("Sites build binds D1 and packages only classroom migrations", async () => 
   await access(new URL("../drizzle/0004_multi_question_classrooms.sql", import.meta.url));
   await access(new URL("../drizzle/0005_course_roster.sql", import.meta.url));
   await access(new URL("../drizzle/0006_course_question_bank.sql", import.meta.url));
+  await access(new URL("../drizzle/0007_student_live_flow.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0001_classroom_courses.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0002_classroom_access_approval.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0003_classroom_live_sessions.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0004_multi_question_classrooms.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0005_course_roster.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0006_course_question_bank.sql", import.meta.url));
+  await access(new URL("../dist/.openai/drizzle/0007_student_live_flow.sql", import.meta.url));
   const migrations = (await readdir(new URL("../drizzle/", import.meta.url)))
     .filter((name) => name.endsWith(".sql"));
   assert.deepEqual(migrations.sort(), [
@@ -143,6 +145,7 @@ test("Sites build binds D1 and packages only classroom migrations", async () => 
     "0004_multi_question_classrooms.sql",
     "0005_course_roster.sql",
     "0006_course_question_bank.sql",
+    "0007_student_live_flow.sql",
   ]);
 
   await assert.rejects(

@@ -10,6 +10,7 @@ const migrationUrls = [
   new URL("../drizzle/0004_multi_question_classrooms.sql", import.meta.url),
   new URL("../drizzle/0005_course_roster.sql", import.meta.url),
   new URL("../drizzle/0006_course_question_bank.sql", import.meta.url),
+  new URL("../drizzle/0007_student_live_flow.sql", import.meta.url),
 ];
 
 async function classroomDatabase() {
@@ -50,6 +51,14 @@ test("classroom migration creates the reviewed course boundary", async () => {
     "classroom_sessions",
     "classroom_users",
   ]);
+  db.close();
+});
+
+test("questions persist the answer window used by the student live flow", async () => {
+  const db = await classroomDatabase();
+  const columns = db.prepare("PRAGMA table_info(classroom_questions)").all().map((row) => row.name);
+  assert.ok(columns.includes("answer_duration_seconds"));
+  assert.ok(columns.includes("answer_deadline_at"));
   db.close();
 });
 

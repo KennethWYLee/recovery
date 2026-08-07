@@ -102,10 +102,19 @@ export type ClassroomQuestion = {
   text: string;
   rankingCriteria: string;
   phase: ClassroomQuestionPhase;
+  answerDurationSeconds: number;
+  answerDeadlineAt: string | null;
   position: number;
   version: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ClassroomRawRankingItem = {
+  userId: string;
+  ownGroupId: string;
+  groupId: string;
+  rank: number;
 };
 
 export type ClassroomQuestionSummary = ClassroomQuestion & {
@@ -320,4 +329,17 @@ export function rankResults(
     results.push({ ...entry, finalRank, tied });
   });
   return results;
+}
+
+export function rankingsExcludingOwnGroup(items: ClassroomRawRankingItem[]): Array<{ groupId: string; rank: number }> {
+  const byUser = new Map<string, ClassroomRawRankingItem[]>();
+  for (const item of items) {
+    const current = byUser.get(item.userId) ?? [];
+    current.push(item);
+    byUser.set(item.userId, current);
+  }
+  return [...byUser.values()].flatMap((ranking) => ranking
+    .filter((item) => item.groupId !== item.ownGroupId)
+    .sort((left, right) => left.rank - right.rank)
+    .map((item, index) => ({ groupId: item.groupId, rank: index + 1 })));
 }

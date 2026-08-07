@@ -167,6 +167,8 @@ export const classroomQuestions = sqliteTable("classroom_questions", {
   rankingCriteria: text("ranking_criteria").notNull(),
   sourceQuestionBankId: text("source_question_bank_id"),
   phase: text("phase", { enum: ["draft", "answering", "presenting", "ranking", "locked", "published", "archived"] }).notNull().default("draft"),
+  answerDurationSeconds: integer("answer_duration_seconds").notNull().default(300),
+  answerDeadlineAt: text("answer_deadline_at"),
   position: integer("position").notNull(),
   version: integer("version").notNull().default(1),
   openedAt: text("opened_at"),
@@ -181,6 +183,7 @@ export const classroomQuestions = sqliteTable("classroom_questions", {
   uniqueIndex("classroom_questions_one_active_unique").on(table.sessionId).where(sql`${table.phase} IN ('answering','presenting','ranking','locked')`),
   index("classroom_questions_session_phase_idx").on(table.sessionId, table.phase, table.position),
   index("classroom_questions_session_source_idx").on(table.sessionId, table.sourceQuestionBankId),
+  check("classroom_questions_answer_duration_check", sql`${table.answerDurationSeconds} BETWEEN 60 AND 7200`),
 ]);
 
 export const classroomQuestionMemberships = sqliteTable("classroom_question_memberships", {
