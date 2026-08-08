@@ -241,12 +241,16 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
         const currentQuestion = data.snapshot?.question;
         if (data.snapshot && currentQuestion && ["presenting", "ranking"].includes(currentQuestion.phase) && !data.actor.isAdmin) {
           const eligible = data.snapshot.groups.filter((group) => ["submitted", "locked"].includes(group.response.status) && group.response.content.trim().length > 0).map((group) => group.id);
-          const rankingKey = `${currentQuestion.id}:${eligible.join(",")}`;
+          const savedOrder = data.snapshot.currentUser.orderedGroupIds;
+          const savedOrderIsComplete = savedOrder.length === eligible.length
+            && new Set(savedOrder).size === savedOrder.length
+            && eligible.every((groupId) => savedOrder.includes(groupId));
+          const rankingKey = `${currentQuestion.id}:${eligible.join(",")}:${savedOrderIsComplete ? savedOrder.join(",") : "new"}`;
           if (rankingKey !== rankingKeyRef.current) {
             rankingKeyRef.current = rankingKey;
-            const randomized = shuffle(eligible);
-            setRankingOrder(randomized);
-            setAnswerLabels(Object.fromEntries(randomized.map((groupId, index) => [groupId, `回答 ${String.fromCharCode(65 + index)}`])));
+            const initialOrder = savedOrderIsComplete ? savedOrder : shuffle(eligible);
+            setRankingOrder(initialOrder);
+            setAnswerLabels(Object.fromEntries(initialOrder.map((groupId, index) => [groupId, `回答 ${String.fromCharCode(65 + index)}`])));
           }
         }
         setPayload(data);
@@ -277,7 +281,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     const timer = window.setTimeout(async () => {
       setResponseSaveState("saving");
       try {
-        const data = await apiData<{ snapshot: ClassroomSessionSnapshot }>(
+        const data = await apiData<{ live: { response: ClassroomGroup["response"] } }>(
           await fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/response`, {
             method: "PUT",
             headers: {
@@ -293,12 +297,18 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
             }),
           }),
         );
-        const savedGroup = data.snapshot.groups.find((group) => group.id === myGroup.id);
-        if (savedGroup) responseKeyRef.current = `${question.id}:${savedGroup.response.version}`;
-        setPayload((current) => (current ? { ...current, snapshot: data.snapshot } : current));
+        responseKeyRef.current = `${question.id}:${data.live.response.version}`;
+        setPayload((current) => current?.snapshot ? {
+          ...current,
+          snapshot: {
+            ...current.snapshot,
+            groups: current.snapshot.groups.map((group) => group.id === myGroup.id ? { ...group, response: data.live.response } : group),
+          },
+        } : current);
         setResponseSaveState("saved");
-      } catch {
+      } catch (cause) {
         setResponseSaveState("error");
+        setError(cause instanceof Error ? cause.message : "自動儲存失敗，請重新整理後再試。");
       }
     }, 1_000);
     return () => window.clearTimeout(timer);
@@ -334,12 +344,14 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
   useEffect(() => {
     if (!snapshot || !question || question.phase !== "answering" || !question.answerDeadlineAt) return;
-    const delay = new Date(question.answerDeadlineAt).getTime() - Date.now();
+    const serverOffset = new Date(snapshot.serverNow).getTime() - Date.now();
+    const delay = new Date(question.answerDeadlineAt).getTime() - (Date.now() + serverOffset);
     const expiryKey = `${question.id}:${question.answerDeadlineAt}`;
-    const expire = () => {
+    let retryTimer: number | undefined;
+    const expire = async () => {
       if (expiryKeyRef.current === expiryKey) return;
       expiryKeyRef.current = expiryKey;
-      void applySnapshot(
+      const updated = await applySnapshot(
         fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/questions/${encodeURIComponent(question.id)}/expire`, {
           method: "POST",
           headers: {
@@ -349,16 +361,25 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
           body: JSON.stringify({ testStudentId }),
         }),
       );
+      if (!updated || (updated.question?.id === question.id && updated.question.phase === "answering")) {
+        expiryKeyRef.current = "";
+        retryTimer = window.setTimeout(() => void expire(), 2_000);
+      }
     };
     if (delay <= 0) {
-      expire();
-      return;
+      void expire();
+      return () => {
+        if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+      };
     }
-    const timer = window.setTimeout(expire, delay + 250);
-    return () => window.clearTimeout(timer);
+    const timer = window.setTimeout(() => void expire(), delay + 250);
+    return () => {
+      window.clearTimeout(timer);
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+    };
   }, [snapshot, question, testStudentId]);
 
-  async function applySnapshot(request: Promise<Response>, message?: string) {
+  async function applySnapshot(request: Promise<Response>, message?: string): Promise<ClassroomSessionSnapshot | null> {
     setPending(true);
     setError(null);
     setNotice(null);
@@ -367,8 +388,10 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
       selectedQuestionRef.current = data.snapshot.question?.id ?? null;
       setPayload((current) => (current ? { ...current, snapshot: data.snapshot } : current));
       if (message) setNotice(message);
+      return data.snapshot;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "操作失敗。");
+      return null;
     } finally {
       setPending(false);
     }
@@ -456,7 +479,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   async function saveResponse(submit: boolean) {
     if (!snapshot || !question || !myGroup) return;
     setResponseSaveState("saving");
-    await applySnapshot(
+    const updated = await applySnapshot(
       fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/response`, {
         method: "PUT",
         headers: {
@@ -473,7 +496,20 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
       }),
       submit ? "小組回答已送出。" : "草稿已儲存。",
     );
-    setResponseSaveState("saved");
+    setResponseSaveState(updated ? "saved" : "error");
+  }
+
+  async function advanceQuestion() {
+    if (!snapshot || !question) return;
+    const forceCloseResponses = question.phase === "answering"
+      && snapshot.completion.submittedGroups !== snapshot.groups.length;
+    if (forceCloseResponses && !window.confirm("仍有小組尚未送出。要結束作答並只保留目前已有內容的回答嗎？")) return;
+    await mutate({
+      action: "question_advance",
+      questionId: question.id,
+      expectedQuestionVersion: question.version,
+      forceCloseResponses,
+    });
   }
 
   async function submitRanking() {
@@ -595,7 +631,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     published: "封存這個問題",
   };
 
-  if (!actor.isAdmin && snapshot) return <StudentClassroomView actor={actor} course={course} snapshot={snapshot} identity={identity} testMode={testMode} responseText={responseText} setResponseText={setResponseText} responseSaveState={responseSaveState} rankingOrder={rankingOrder} answerLabels={answerLabels} dragRank={dragRank} setDragRank={setDragRank} moveRank={moveRank} dropRank={dropRank} pending={pending} saveResponse={saveResponse} submitRanking={submitRanking} refresh={() => load(false)} exitStudentTestMode={exitStudentTestMode} />;
+  if (!actor.isAdmin && snapshot) return <StudentClassroomView actor={actor} course={course} snapshot={snapshot} identity={identity} testMode={testMode} error={error} notice={notice} responseText={responseText} setResponseText={setResponseText} responseSaveState={responseSaveState} rankingOrder={rankingOrder} answerLabels={answerLabels} dragRank={dragRank} setDragRank={setDragRank} moveRank={moveRank} dropRank={dropRank} pending={pending} saveResponse={saveResponse} submitRanking={submitRanking} refresh={() => load(false)} exitStudentTestMode={exitStudentTestMode} />;
 
   return (
     <div className="course-shell">
@@ -976,14 +1012,8 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
                           <span>{question.phase === "locked" ? "學生目前仍看不到排名；確認後再正式公布。" : question.phase === "published" ? "結果已固定並對學生公開。" : "同一時間只會開放一個問題。"}</span>
                           <button
                             className="button primary"
-                            disabled={pending || (question.phase === "answering" && snapshot.completion.submittedGroups !== snapshot.groups.length) || (question.phase === "ranking" && snapshot.completion.rankedStudents === 0)}
-                            onClick={() =>
-                              void mutate({
-                                action: "question_advance",
-                                questionId: question.id,
-                                expectedQuestionVersion: question.version,
-                              })
-                            }
+                            disabled={pending || (question.phase === "ranking" && snapshot.completion.rankedStudents === 0)}
+                            onClick={() => void advanceQuestion()}
                           >
                             {questionAdvanceLabels[question.phase]}
                             <ArrowRight />
@@ -1022,16 +1052,21 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   );
 }
 
-function StudentClassroomView({ actor, course, snapshot, identity, testMode, responseText, setResponseText, responseSaveState, rankingOrder, answerLabels, dragRank, setDragRank, moveRank, dropRank, pending, saveResponse, submitRanking, refresh, exitStudentTestMode }: { actor: Actor; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot; identity: ClassroomPageIdentity; testMode: boolean; responseText: string; setResponseText: (value: string) => void; responseSaveState: "idle" | "saving" | "saved" | "error"; rankingOrder: string[]; answerLabels: Record<string, string>; dragRank: string | null; setDragRank: (value: string | null) => void; moveRank: (index: number, offset: number) => void; dropRank: (index: number) => void; pending: boolean; saveResponse: (submit: boolean) => Promise<void>; submitRanking: () => Promise<void>; refresh: () => void; exitStudentTestMode: () => void }) {
+function StudentClassroomView({ actor, course, snapshot, identity, testMode, error, notice, responseText, setResponseText, responseSaveState, rankingOrder, answerLabels, dragRank, setDragRank, moveRank, dropRank, pending, saveResponse, submitRanking, refresh, exitStudentTestMode }: { actor: Actor; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot; identity: ClassroomPageIdentity; testMode: boolean; error: string | null; notice: string | null; responseText: string; setResponseText: (value: string) => void; responseSaveState: "idle" | "saving" | "saved" | "error"; rankingOrder: string[]; answerLabels: Record<string, string>; dragRank: string | null; setDragRank: (value: string | null) => void; moveRank: (index: number, offset: number) => void; dropRank: (index: number) => void; pending: boolean; saveResponse: (submit: boolean) => Promise<void>; submitRanking: () => Promise<void>; refresh: () => void; exitStudentTestMode: () => void }) {
   const [now, setNow] = useState(() => Date.now());
+  const [serverOffset, setServerOffset] = useState(0);
   const question = snapshot.question;
   const myGroup = snapshot.groups.find((group) => group.id === snapshot.currentUser.groupId) ?? null;
+  useEffect(() => {
+    const timer = window.setTimeout(() => setServerOffset(new Date(snapshot.serverNow).getTime() - Date.now()), 0);
+    return () => window.clearTimeout(timer);
+  }, [snapshot.serverNow]);
   useEffect(() => {
     if (question?.phase !== "answering") return;
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, [question?.phase]);
-  const remainingSeconds = question?.answerDeadlineAt ? Math.max(0, Math.ceil((new Date(question.answerDeadlineAt).getTime() - now) / 1_000)) : null;
+  const remainingSeconds = question?.answerDeadlineAt ? Math.max(0, Math.ceil((new Date(question.answerDeadlineAt).getTime() - (now + serverOffset)) / 1_000)) : null;
   const timerLabel = remainingSeconds === null ? "等待教師開始計時" : `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")}`;
   const eligibleGroups = snapshot.groups.filter((group) => ["submitted", "locked"].includes(group.response.status) && group.response.content.trim().length > 0);
 
@@ -1079,6 +1114,8 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, res
             </button>
           </section>
         )}
+        {error && <div className="workspace-alert error" role="alert">{error}</div>}
+        {notice && <div className="workspace-alert success" role="status">{notice}</div>}
         {!question && (
           <section className="student-focus-card student-waiting">
             <Clock3 />
@@ -1102,7 +1139,13 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, res
                   </div>
                   <time className={remainingSeconds !== null && remainingSeconds <= 60 ? "urgent" : ""}>{timerLabel}</time>
                 </header>
-                {!myGroup ? (
+                {!snapshot.currentUser.participatesInQuestion ? (
+                  <div className="student-waiting">
+                    <Clock3 />
+                    <h3>你將從下一題開始參與</h3>
+                    <p>本題開始後才加入，因此可以旁聽，但不會更動本題原有分組與統計。</p>
+                  </div>
+                ) : !myGroup ? (
                   <div className="student-waiting">
                     <Clock3 />
                     <h3>你將從下一題開始參與</h3>
@@ -1157,7 +1200,21 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, res
                 </div>
               </section>
             )}
-            {question.phase === "ranking" && (
+            {question.phase === "ranking" && !snapshot.currentUser.canRank && (
+              <section className="student-focus-card student-waiting">
+                <Clock3 />
+                <h2>本題可旁聽，但不列入排序</h2>
+                <p>你在本題開始後才加入；下一題開始時會依當時分組取得完整參與資格。</p>
+              </section>
+            )}
+            {question.phase === "ranking" && snapshot.currentUser.canRank && snapshot.currentUser.hasSubmittedRanking && !snapshot.session.allowRankingEdits && (
+              <section className="student-focus-card student-submitted">
+                <CheckCircle2 />
+                <h2>完整排序已送出</h2>
+                <p>教師未開放修改；排序結束後會公布全班結果。</p>
+              </section>
+            )}
+            {question.phase === "ranking" && snapshot.currentUser.canRank && (!snapshot.currentUser.hasSubmittedRanking || snapshot.session.allowRankingEdits) && (
               <section className="student-focus-card student-ranking-card">
                 <header>
                   <div>
@@ -1479,7 +1536,7 @@ function AnsweringStage({ snapshot, actor, myGroup, responseText, setResponseTex
               }}
             />
           </div>
-          <p>所有小組送出後才能鎖定回答並開始展示。</p>
+          <p>可等待所有小組送出；必要時可提前結束，系統只保留目前已有內容的回答。</p>
         </aside>
       </div>
     );

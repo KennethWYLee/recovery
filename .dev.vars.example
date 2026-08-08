@@ -4,3 +4,4 @@ CLASSROOM_LOCAL_USER_ID=local-operator
 CLASSROOM_LOCAL_USER_NAME=Local Operator
 CLASSROOM_LOCAL_USER_EMAIL=local-operator@example.invalid
 CLASSROOM_ADMIN_EMAILS=local-operator@example.invalid
+CLASSROOM_RELEASE=local-development

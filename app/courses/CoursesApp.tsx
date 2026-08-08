@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Activity,
   Archive,
   ArrowRight,
   BookOpen,
@@ -351,7 +352,7 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
   }
 
   return <div className="course-shell">
-    <header className="course-topbar"><Link href="/courses" className="course-brand"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link><div className="course-topbar-actions">{actor?.isAdmin && <Link href="/access-review" className="course-admin-link"><ShieldCheck />帳號審核</Link>}<div className="course-account"><span><strong>{actor?.displayName ?? identity.displayName}</strong><small>{actor?.isAdmin ? "系統管理員" : "學生"}</small></span><a href={identity.signOutPath}><LogOut />登出</a></div></div></header>
+    <header className="course-topbar"><Link href="/courses" className="course-brand"><span aria-hidden="true">課</span><strong>課堂小組回應與排序</strong></Link><div className="course-topbar-actions">{actor?.isAdmin && <><Link href="/observability" className="course-admin-link"><Activity />營運紀錄</Link><Link href="/access-review" className="course-admin-link"><ShieldCheck />帳號審核</Link></>}<div className="course-account"><span><strong>{actor?.displayName ?? identity.displayName}</strong><small>{actor?.isAdmin ? "系統管理員" : "學生"}</small></span><a href={identity.signOutPath}><LogOut />登出</a></div></div></header>
     <main className="courses-main">
       <section className="courses-heading"><div><p>課程中心</p><h1>選擇今天的課程</h1><span>教師管理課堂與問題；學生輸入本次課堂代碼後加入分組。</span></div>{actor?.isAdmin && <button className="button primary" type="button" onClick={openCreate}><Plus />建立課程</button>}</section>
       <form className="join-code-panel" onSubmit={(event) => { event.preventDefault(); const code = joinCode.trim().toUpperCase(); if (/^[23456789A-HJ-NP-Z]{6}$/u.test(code)) window.location.assign(`/join/${code}`); }}>

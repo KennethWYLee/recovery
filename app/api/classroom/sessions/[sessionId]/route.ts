@@ -30,7 +30,7 @@ async function parsedSessionId(context: Context): Promise<string> {
 }
 
 export async function GET(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request);
     const snapshot = await classroomSessionSnapshot(api.db, api.actor, await parsedSessionId(context));
     return classroomData({ actor: api.actor, snapshot });
@@ -38,7 +38,7 @@ export async function GET(request: Request, context: Context): Promise<Response>
 }
 
 export async function PATCH(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request, true);
     const sessionId = await parsedSessionId(context);
     const body = await classroomJsonBody(request);
@@ -63,7 +63,7 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
       const questionId = classroomQuestionId(body.questionId);
       const version = expectedVersion(body.expectedQuestionVersion);
       if (!questionId || !version) throw new ClassroomApiError(400, "QUESTION_VERSION_REQUIRED", "缺少問題或目前版本。");
-      snapshot = await advanceClassroomQuestion(api.db, api.actor, sessionId, questionId, version);
+      snapshot = await advanceClassroomQuestion(api.db, api.actor, sessionId, questionId, version, body.forceCloseResponses === true);
     } else if (body.action === "update_settings") {
       const version = expectedVersion(body.expectedVersion);
       if (!version) throw new ClassroomApiError(400, "EXPECTED_VERSION_REQUIRED", "缺少目前的課堂版本。");

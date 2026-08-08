@@ -92,6 +92,16 @@ export const classroomSeedState = sqliteTable("classroom_seed_state", {
   seededAt: text("seeded_at").notNull(),
 });
 
+export const classroomSchemaState = sqliteTable("classroom_schema_state", {
+  singletonId: integer("singleton_id").primaryKey(),
+  schemaVersion: integer("schema_version").notNull(),
+  schemaFingerprint: text("schema_fingerprint").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  check("classroom_schema_state_singleton_check", sql`${table.singletonId} = 1`),
+  check("classroom_schema_state_version_check", sql`${table.schemaVersion} >= 1`),
+]);
+
 export const classroomAuditEvents = sqliteTable("classroom_audit_events", {
   id: text("id").primaryKey(),
   actorUserId: text("actor_user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
@@ -312,3 +322,79 @@ export const classroomRateLimits = sqliteTable("classroom_rate_limits", {
   requestCount: integer("request_count").notNull(),
   updatedAt: text("updated_at").notNull(),
 }, (table) => [check("classroom_rate_limits_count_check", sql`${table.requestCount} >= 1`)]);
+
+export const classroomOperationLogs = sqliteTable("classroom_operation_logs", {
+  id: text("id").primaryKey(),
+  requestId: text("request_id").notNull(),
+  actorUserId: text("actor_user_id").references(() => classroomUsers.id, { onDelete: "set null" }),
+  actorKind: text("actor_kind", { enum: ["administrator", "student", "anonymous"] }).notNull(),
+  method: text("method").notNull(),
+  route: text("route").notNull(),
+  scopeType: text("scope_type", { enum: ["course", "session", "question", "system"] }).notNull(),
+  scopeId: text("scope_id"),
+  outcome: text("outcome", { enum: ["success", "client_error", "server_error"] }).notNull(),
+  statusCode: integer("status_code").notNull(),
+  errorCode: text("error_code"),
+  durationMs: integer("duration_ms").notNull(),
+  captureKind: text("capture_kind", { enum: ["error", "mutation", "slow", "sample"] }).notNull(),
+  testMode: integer("test_mode", { mode: "boolean" }).notNull().default(false),
+  environment: text("environment").notNull(),
+  securityRelevant: integer("security_relevant", { mode: "boolean" }).notNull().default(false),
+  release: text("release").notNull(),
+  occurredAt: text("occurred_at").notNull(),
+}, (table) => [
+  uniqueIndex("classroom_operation_logs_request_unique").on(table.requestId),
+  index("classroom_operation_logs_time_idx").on(table.occurredAt),
+  index("classroom_operation_logs_outcome_time_idx").on(table.outcome, table.occurredAt),
+  index("classroom_operation_logs_route_time_idx").on(table.route, table.occurredAt),
+  index("classroom_operation_logs_scope_time_idx").on(table.scopeType, table.scopeId, table.occurredAt),
+  index("classroom_operation_logs_security_time_idx").on(table.securityRelevant, table.occurredAt),
+  check("classroom_operation_logs_status_check", sql`${table.statusCode} BETWEEN 100 AND 599`),
+  check("classroom_operation_logs_duration_check", sql`${table.durationMs} BETWEEN 0 AND 120000`),
+]);
+
+export const classroomIncidents = sqliteTable("classroom_incidents", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  severity: text("severity", { enum: ["low", "medium", "high", "critical"] }).notNull(),
+  status: text("status", { enum: ["open", "investigating", "resolved"] }).notNull(),
+  sourceRequestId: text("source_request_id").references(() => classroomOperationLogs.requestId, { onDelete: "set null" }),
+  verificationRequestId: text("verification_request_id").references(() => classroomOperationLogs.requestId, { onDelete: "set null" }),
+  symptom: text("symptom").notNull(),
+  rootCause: text("root_cause").notNull().default(""),
+  resolution: text("resolution").notNull().default(""),
+  fixRelease: text("fix_release").notNull().default(""),
+  regressionCheck: text("regression_check").notNull().default(""),
+  regressionCommand: text("regression_command").notNull().default(""),
+  regressionEvidence: text("regression_evidence").notNull().default(""),
+  verificationResult: text("verification_result", { enum: ["not_run", "passed", "failed"] }).notNull().default("not_run"),
+  createdByUserId: text("created_by_user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  updatedByUserId: text("updated_by_user_id").notNull().references(() => classroomUsers.id, { onDelete: "restrict" }),
+  version: integer("version").notNull().default(1),
+  detectedAt: text("detected_at").notNull(),
+  resolvedAt: text("resolved_at"),
+  verifiedAt: text("verified_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("classroom_incidents_status_time_idx").on(table.status, table.updatedAt),
+  index("classroom_incidents_severity_time_idx").on(table.severity, table.updatedAt),
+  index("classroom_incidents_source_request_idx").on(table.sourceRequestId),
+  index("classroom_incidents_verification_request_idx").on(table.verificationRequestId),
+  check("classroom_incidents_resolved_evidence_check", sql`${table.status} != 'resolved' OR (
+    ${table.sourceRequestId} IS NOT NULL AND
+    ${table.verificationRequestId} IS NOT NULL AND
+    ${table.sourceRequestId} != ${table.verificationRequestId} AND
+    ${table.verificationResult} = 'passed' AND
+    length(trim(${table.rootCause})) > 0 AND
+    length(trim(${table.resolution})) > 0 AND
+    length(trim(${table.fixRelease})) > 0 AND
+    ${table.fixRelease} NOT LIKE '%-unverified' AND
+    length(trim(${table.regressionCheck})) > 0 AND
+    length(trim(${table.regressionCommand})) > 0 AND
+    length(trim(${table.regressionEvidence})) > 0 AND
+    ${table.resolvedAt} IS NOT NULL AND
+    ${table.verifiedAt} IS NOT NULL
+  )`),
+  check("classroom_incidents_version_check", sql`${table.version} >= 1`),
+]);

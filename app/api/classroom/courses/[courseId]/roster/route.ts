@@ -33,14 +33,14 @@ function sourceFileName(value: unknown): string {
 }
 
 export async function GET(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await managedCourse(request, context);
     return classroomData({ roster: await listClassroomCourseRoster(api.db, api.actor, api.courseId) });
   });
 }
 
 export async function POST(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await managedCourse(request, context);
     const body = await classroomJsonBody(request, 200_000);
     const entries = normalizeRosterDrafts(body.entries);

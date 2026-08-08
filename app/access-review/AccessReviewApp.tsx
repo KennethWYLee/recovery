@@ -114,7 +114,10 @@ export function AccessReviewApp({ identity }: { identity: ClassroomPageIdentity 
         </section>
 
         <section className="access-review-grid">
-          <section className="access-review-section compact"><header><div><h2>目前白名單</h2><p>下列帳號已可進入系統。</p></div></header><div className="access-simple-list">{payload.allowlist.length === 0 ? <p>尚未核准任何帳號。</p> : payload.allowlist.map((entry) => <div key={entry.email}><span><strong>{entry.displayName}</strong><small>{entry.email}</small></span><time dateTime={entry.approvedAt}>{timeLabel(entry.approvedAt)}</time></div>)}</div></section>
+          <section className="access-review-section compact"><header><div><h2>目前白名單</h2><p>可撤銷全域白名單；課程正式名單內的學生仍可進入該課程。</p></div></header><div className="access-simple-list">{payload.allowlist.length === 0 ? <p>尚未核准任何帳號。</p> : payload.allowlist.map((entry) => {
+            const request = payload.requests.find((candidate) => candidate.email === entry.email && candidate.status === "approved");
+            return <div key={entry.email}><span><strong>{entry.displayName}</strong><small>{entry.email}</small></span><time dateTime={entry.approvedAt}>{timeLabel(entry.approvedAt)}</time>{request && <button className="button danger" type="button" disabled={reviewingId === request.id} onClick={() => void review(request, "reject")}><X aria-hidden="true" />撤銷</button>}</div>;
+          })}</div></section>
           <section className="access-review-section compact"><header><div><h2>最近審核紀錄</h2><p>顯示最近 12 筆處理結果。</p></div></header><div className="access-simple-list">{decided.length === 0 ? <p>尚無審核紀錄。</p> : decided.map((request) => <div key={request.id}><span><strong>{request.displayName}</strong><small>{request.status === "approved" ? "已允許" : "已拒絕"} · {request.email}</small></span>{request.reviewedAt && <time dateTime={request.reviewedAt}>{timeLabel(request.reviewedAt)}</time>}</div>)}</div></section>
         </section>
       </>}

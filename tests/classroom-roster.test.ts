@@ -35,6 +35,7 @@ test("Excel rosters require a recognized identity column and preserve optional n
 
 test("server roster validation rejects duplicates, outside domains, and oversized lists", () => {
   assert.equal(normalizeRosterDrafts([{ studentId: "11256001", email: "11256001@gmail.com" }]), null);
+  assert.equal(normalizeRosterDrafts([{ studentId: "11256001", email: "11256002@ntub.edu.tw" }]), null);
   assert.equal(normalizeRosterDrafts([
     { studentId: "11256001", email: "11256001@ntub.edu.tw" },
     { studentId: "11256001", email: "other@ntub.edu.tw" },

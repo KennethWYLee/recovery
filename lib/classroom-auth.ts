@@ -6,6 +6,7 @@ export type ClassroomEnvironment = {
   CLASSROOM_LOCAL_USER_NAME?: string;
   CLASSROOM_LOCAL_USER_EMAIL?: string;
   CLASSROOM_ADMIN_EMAILS?: string;
+  CLASSROOM_RELEASE?: string;
 };
 
 export type ClassroomIdentity = {

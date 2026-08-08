@@ -19,7 +19,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const context = await classroomApiContext(request);
     const courses = await listClassroomCourses(context.db, context.actor);
     return classroomData({ actor: context.actor, courses });
@@ -27,7 +27,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const context = await classroomApiContext(request, true);
     const body = await classroomJsonBody(request);
     if (!validCourseName(body.name)) {

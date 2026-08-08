@@ -9,8 +9,12 @@ export function normalizeClassroomEmail(value: unknown): string {
   if (typeof value !== "string") return "";
   const normalized = value.normalize("NFKC").trim().toLowerCase();
   if (normalized.length < 6 || normalized.length > 254 || /\s/u.test(normalized)) return "";
-  const at = normalized.lastIndexOf("@");
-  if (at <= 0 || at === normalized.length - 1) return "";
+  const parts = normalized.split("@");
+  if (parts.length !== 2) return "";
+  const [local, domain] = parts;
+  if (!local || !domain || local.length > 64 || local.startsWith(".") || local.endsWith(".") || local.includes("..")) return "";
+  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/u.test(local)) return "";
+  if (!/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u.test(domain)) return "";
   return normalized;
 }
 
@@ -34,4 +38,12 @@ export function isClassroomSystemAdministrator(email: unknown, configuredEmails?
 export function classroomIdentityKind(email: unknown, configuredEmails?: string): ClassroomIdentityKind {
   if (isClassroomSystemAdministrator(email, configuredEmails)) return "administrator";
   return isNtubClassroomEmail(email) ? "ntub_member" : "ineligible";
+}
+
+export async function classroomAccessRequestRateLimitScope(emailValue: unknown): Promise<string> {
+  const email = normalizeClassroomEmail(emailValue);
+  if (!email) return "";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(email));
+  const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `access-request:${hash}`;
 }

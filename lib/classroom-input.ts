@@ -20,25 +20,25 @@ export async function readBoundedClassroomJsonObject(
   const declaredLength = declaredLengthHeader === null ? null : Number(declaredLengthHeader);
   const chunks: Uint8Array[] = [];
   let byteLength = 0;
-  let tooLarge = declaredLength !== null && Number.isSafeInteger(declaredLength) && declaredLength >= 0 && declaredLength > maxBytes;
+  if (declaredLength !== null && Number.isSafeInteger(declaredLength) && declaredLength >= 0 && declaredLength > maxBytes) {
+    await reader.cancel().catch(() => undefined);
+    throw new ClassroomRequestBodyError("too_large");
+  }
   try {
     while (true) {
       const result = await reader.read();
       if (result.done) break;
-      if (tooLarge) continue;
       if (byteLength + result.value.byteLength > maxBytes) {
-        tooLarge = true;
-        chunks.length = 0;
-        byteLength = 0;
-        continue;
+        await reader.cancel().catch(() => undefined);
+        throw new ClassroomRequestBodyError("too_large");
       }
       chunks.push(result.value);
       byteLength += result.value.byteLength;
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof ClassroomRequestBodyError) throw error;
     throw new ClassroomRequestBodyError("read_failed");
   }
-  if (tooLarge) throw new ClassroomRequestBodyError("too_large");
 
   const bytes = new Uint8Array(byteLength);
   let offset = 0;
@@ -64,12 +64,19 @@ export async function readBoundedClassroomJsonObject(
   return parsed as Record<string, unknown>;
 }
 
-export async function drainClassroomRequestBody(request: Request): Promise<void> {
+export async function drainClassroomRequestBody(request: Request, maximumDiscardBytes = 65_536): Promise<void> {
   const reader = request.body?.getReader();
   if (!reader) return;
+  let discardedBytes = 0;
   try {
-    while (!(await reader.read()).done) {
-      // Deliberately discard the request body without retaining it.
+    while (true) {
+      const result = await reader.read();
+      if (result.done) return;
+      discardedBytes += result.value.byteLength;
+      if (discardedBytes > maximumDiscardBytes) {
+        await reader.cancel().catch(() => undefined);
+        return;
+      }
     }
   } catch {
     throw new ClassroomRequestBodyError("read_failed");

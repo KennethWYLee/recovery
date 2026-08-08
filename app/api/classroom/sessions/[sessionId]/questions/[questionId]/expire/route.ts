@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ sessionId: string; questionId: string }> };
 
 export async function POST(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request);
     const params = await context.params;
     const sessionId = classroomSessionId(params.sessionId);

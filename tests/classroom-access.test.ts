@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CLASSROOM_SYSTEM_ADMIN_EMAILS,
+  classroomAccessRequestRateLimitScope,
   classroomIdentityKind,
   isClassroomSystemAdministrator,
   normalizeClassroomEmail,
@@ -19,6 +20,10 @@ test("the two confirmed accounts are system administrators", () => {
 test("classroom email normalization is strict and deterministic", () => {
   assert.equal(normalizeClassroomEmail(" Student@NTUB.EDU.TW "), "student@ntub.edu.tw");
   assert.equal(normalizeClassroomEmail("student @ntub.edu.tw"), "");
+  assert.equal(normalizeClassroomEmail("student@other@ntub.edu.tw"), "");
+  assert.equal(normalizeClassroomEmail(".student@ntub.edu.tw"), "");
+  assert.equal(normalizeClassroomEmail("student..name@ntub.edu.tw"), "");
+  assert.equal(normalizeClassroomEmail("student@-ntub.edu.tw"), "");
   assert.equal(normalizeClassroomEmail("not-an-email"), "");
 });
 
@@ -32,4 +37,13 @@ test("only the exact NTUB domain may request access", () => {
 test("configured administrators are additive and normalized", () => {
   assert.equal(classroomIdentityKind("chair@example.org", " chair@example.org "), "administrator");
   assert.equal(isClassroomSystemAdministrator("wy.lee@ntub.edu.tw", "chair@example.org"), true);
+});
+
+test("access-request rate-limit scopes are deterministic and do not expose email addresses", async () => {
+  const first = await classroomAccessRequestRateLimitScope(" Student@NTUB.EDU.TW ");
+  const second = await classroomAccessRequestRateLimitScope("student@ntub.edu.tw");
+  assert.equal(first, second);
+  assert.match(first, /^access-request:[a-f0-9]{64}$/u);
+  assert.equal(first.includes("student"), false);
+  assert.equal(await classroomAccessRequestRateLimitScope("not-an-email"), "");
 });

@@ -136,6 +136,7 @@ export type ClassroomRankingResult = {
 };
 
 export type ClassroomSessionSnapshot = {
+  serverNow: string;
   session: ClassroomSession;
   questions: ClassroomQuestionSummary[];
   question: ClassroomQuestion | null;
@@ -152,7 +153,10 @@ export type ClassroomSessionSnapshot = {
     participantId: string | null;
     groupId: string | null;
     isRepresentative: boolean;
+    participatesInQuestion: boolean;
+    canRank: boolean;
     hasSubmittedRanking: boolean;
+    orderedGroupIds: string[];
   };
   results: ClassroomRankingResult[];
   rawRankings: Array<{
@@ -293,11 +297,15 @@ export function rankResults(
   rankings: Array<{ groupId: string; rank: number }>,
 ): ClassroomRankingResult[] {
   const byGroup = new Map(groups.map((group) => [group.id, { group, ranks: [] as number[] }]));
+  const acceptedRanks: number[] = [];
   for (const item of rankings) {
     const target = byGroup.get(item.groupId);
-    if (target && Number.isSafeInteger(item.rank) && item.rank >= 1) target.ranks.push(item.rank);
+    if (target && Number.isSafeInteger(item.rank) && item.rank >= 1) {
+      target.ranks.push(item.rank);
+      acceptedRanks.push(item.rank);
+    }
   }
-  const maximumRank = Math.max(1, ...rankings.map((item) => item.rank));
+  const maximumRank = Math.max(1, ...acceptedRanks);
   const compared = [...byGroup.values()].map(({ group, ranks }) => {
     const rankCounts = Array.from({ length: maximumRank }, (_, index) => ranks.filter((rank) => rank === index + 1).length);
     const scores = ranks.map((rank) => maximumRank - rank + 1);
@@ -342,4 +350,21 @@ export function rankingsExcludingOwnGroup(items: ClassroomRawRankingItem[]): Arr
     .filter((item) => item.groupId !== item.ownGroupId)
     .sort((left, right) => left.rank - right.rank)
     .map((item, index) => ({ groupId: item.groupId, rank: index + 1 })));
+}
+
+export function classroomAnswerWindowError(
+  phase: ClassroomQuestionPhase,
+  deadlineAt: string | null,
+  now: string,
+): "ANSWERING_CLOSED" | "ANSWER_DEADLINE_PASSED" | null {
+  if (phase !== "answering") return "ANSWERING_CLOSED";
+  if (deadlineAt && now >= deadlineAt) return "ANSWER_DEADLINE_PASSED";
+  return null;
+}
+
+export function completeClassroomRankingOrder(value: unknown, expectedGroupIds: readonly string[]): string[] | null {
+  if (!Array.isArray(value) || value.some((id) => typeof id !== "string")) return null;
+  const submitted = value as string[];
+  if (submitted.length !== expectedGroupIds.length || new Set(submitted).size !== submitted.length) return null;
+  return expectedGroupIds.every((id) => submitted.includes(id)) ? submitted : null;
 }

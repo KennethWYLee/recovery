@@ -34,7 +34,7 @@ function itemError(result: "not_found" | "conflict") {
 }
 
 export async function PATCH(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await managedItem(request, context);
     const body = await classroomJsonBody(request);
     const version = expectedVersion(body.expectedVersion);
@@ -55,7 +55,7 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
 }
 
 export async function DELETE(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await managedItem(request, context);
     const body = await classroomJsonBody(request);
     const version = expectedVersion(body.expectedVersion);

@@ -24,7 +24,7 @@ async function managedCourse(request: Request, context: Context) {
 }
 
 export async function GET(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await managedCourse(request, context);
     const search = new URL(request.url).searchParams;
     const rawSessionId = search.get("sessionId");
@@ -38,7 +38,7 @@ export async function GET(request: Request, context: Context): Promise<Response>
 }
 
 export async function POST(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await managedCourse(request, context);
     const body = await classroomJsonBody(request);
     const draft = normalizeQuestionBankDraft({

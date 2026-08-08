@@ -55,6 +55,8 @@ test("production bundle exposes only the classroom product and preserves securit
 
   assert.match(worker, /\/api\/classroom\/courses/);
   assert.match(worker, /\/api\/classroom\/access-requests/);
+  assert.match(worker, /\/api\/classroom\/observability/);
+  assert.match(worker, /\/api\/classroom\/observability\/verification/);
   assert.match(worker, /\/api\/classroom\/sessions/);
   assert.match(worker, /\/questions/);
   assert.match(worker, /question-bank/);
@@ -73,19 +75,15 @@ test("production bundle exposes only the classroom product and preserves securit
 
 test("client bundles contain course management and access review without removed product assets", async () => {
   const assets = await readdir(new URL("../dist/client/assets/", import.meta.url));
-  const coursesAsset = assets.find((name) => name.startsWith("CoursesApp-") && name.endsWith(".js"));
-  const workspaceAsset = assets.find((name) => name.startsWith("CourseWorkspace-") && name.endsWith(".js"));
-  const reviewAsset = assets.find((name) => name.startsWith("AccessReviewApp-") && name.endsWith(".js"));
+  const scriptAssets = assets.filter((name) => name.endsWith(".js"));
   const cssAssets = assets.filter((name) => name.endsWith(".css"));
 
-  assert.ok(coursesAsset, "CoursesApp client asset is missing");
-  assert.ok(workspaceAsset, "CourseWorkspace client asset is missing");
-  assert.ok(reviewAsset, "AccessReviewApp client asset is missing");
+  assert.ok(scriptAssets.length > 0, "compiled client scripts are missing");
   assert.ok(cssAssets.length > 0, "compiled stylesheet is missing");
-  assert.equal(assets.some((name) => /OperationsApp|ObservabilityView|RoleSelectionClient/i.test(name)), false);
+  assert.equal(assets.some((name) => /OperationsApp|RoleSelectionClient/i.test(name)), false);
 
   const scripts = await Promise.all(
-    [coursesAsset, workspaceAsset, reviewAsset].map((name) =>
+    scriptAssets.map((name) =>
       readFile(new URL(`../dist/client/assets/${name}`, import.meta.url), "utf8")),
   );
   const css = (await Promise.all(
@@ -95,6 +93,15 @@ test("client bundles contain course management and access review without removed
 
   assert.match(client, /\/api\/classroom\/courses/);
   assert.match(client, /\/api\/classroom\/access-requests/);
+  assert.match(client, /\/api\/classroom\/observability/);
+  assert.match(client, /\/api\/classroom\/observability\/verification/);
+  assert.match(client, /產生驗證 Request ID/);
+  assert.match(client, /目前部署版次/);
+  assert.match(client, /被問題追蹤引用的來源／驗證紀錄保留到解除引用/);
+  assert.match(client, /不可作為結案證據/);
+  assert.match(client, /虛擬學生模式排除，示範課管理操作仍記錄/);
+  assert.match(client, /正在確認權限/);
+  assert.match(client, /驗證須晚於問題/);
   assert.match(client, /學生測試模式/);
   assert.match(css, /focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
@@ -129,6 +136,8 @@ test("Sites build binds D1 and packages only classroom migrations", async () => 
   await access(new URL("../drizzle/0005_course_roster.sql", import.meta.url));
   await access(new URL("../drizzle/0006_course_question_bank.sql", import.meta.url));
   await access(new URL("../drizzle/0007_student_live_flow.sql", import.meta.url));
+  await access(new URL("../drizzle/0008_classroom_schema_state.sql", import.meta.url));
+  await access(new URL("../drizzle/0009_classroom_observability.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0001_classroom_courses.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0002_classroom_access_approval.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0003_classroom_live_sessions.sql", import.meta.url));
@@ -136,6 +145,8 @@ test("Sites build binds D1 and packages only classroom migrations", async () => 
   await access(new URL("../dist/.openai/drizzle/0005_course_roster.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0006_course_question_bank.sql", import.meta.url));
   await access(new URL("../dist/.openai/drizzle/0007_student_live_flow.sql", import.meta.url));
+  await access(new URL("../dist/.openai/drizzle/0008_classroom_schema_state.sql", import.meta.url));
+  await access(new URL("../dist/.openai/drizzle/0009_classroom_observability.sql", import.meta.url));
   const migrations = (await readdir(new URL("../drizzle/", import.meta.url)))
     .filter((name) => name.endsWith(".sql"));
   assert.deepEqual(migrations.sort(), [
@@ -146,6 +157,8 @@ test("Sites build binds D1 and packages only classroom migrations", async () => 
     "0005_course_roster.sql",
     "0006_course_question_bank.sql",
     "0007_student_live_flow.sql",
+    "0008_classroom_schema_state.sql",
+    "0009_classroom_observability.sql",
   ]);
 
   await assert.rejects(

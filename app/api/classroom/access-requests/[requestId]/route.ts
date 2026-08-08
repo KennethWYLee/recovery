@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ requestId: string }> };
 
 export async function PATCH(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request, true);
     const requestId = classroomAccessRequestId((await context.params).requestId);
     if (!requestId) throw new ClassroomApiError(404, "ACCESS_REQUEST_NOT_FOUND", "找不到這筆登入申請。");

@@ -1,5 +1,9 @@
 import { env } from "cloudflare:workers";
-import { classroomIdentityKind, normalizeClassroomEmail } from "@/lib/classroom-access";
+import {
+  classroomAccessRequestRateLimitScope,
+  classroomIdentityKind,
+  normalizeClassroomEmail,
+} from "@/lib/classroom-access";
 import { resolveClassroomIdentity, type ClassroomEnvironment } from "@/lib/classroom-auth";
 import {
   CLASSROOM_DEFAULT_COURSES,
@@ -10,6 +14,8 @@ import {
   type ClassroomCourse,
   type ClassroomRole,
 } from "@/lib/classroom-domain";
+import { enforceClassroomRateLimitScope } from "./classroom-rate-limit";
+export { enforceClassroomMutationRateLimit } from "./classroom-rate-limit";
 
 export type ClassroomActor = {
   id: string;
@@ -40,7 +46,7 @@ export type ClassroomAllowlistEntry = {
   approvedByEmail: string;
 };
 
-export type ClassroomAccessFailureReason = "domain_not_allowed" | "approval_pending" | "approval_rejected";
+export type ClassroomAccessFailureReason = "domain_not_allowed" | "approval_pending" | "approval_rejected" | "rate_limited";
 
 export class ClassroomAccessError extends Error {
   readonly reason: ClassroomAccessFailureReason;
@@ -53,6 +59,12 @@ export class ClassroomAccessError extends Error {
 }
 
 let schemaReady: Promise<void> | null = null;
+const CLASSROOM_SCHEMA_VERSION = 9;
+const CLASSROOM_SCHEMA_FINGERPRINT = "classroom-schema-v9-20260808";
+
+function classroomSchemaMismatch(detail: string): Error {
+  return new Error(`CLASSROOM_SCHEMA_MISMATCH: ${detail}`);
+}
 
 export function classroomEnvironment(): CloudflareEnv & ClassroomEnvironment {
   return env as unknown as CloudflareEnv & ClassroomEnvironment;
@@ -72,28 +84,6 @@ export function classroomNow(): string {
   return new Date().toISOString();
 }
 
-export async function enforceClassroomMutationRateLimit(
-  db: D1Database,
-  actor: ClassroomActor,
-  pathname: string,
-  limit = 120,
-  windowSeconds = 60,
-): Promise<boolean> {
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const threshold = nowSeconds - windowSeconds;
-  const scopeKey = `${actor.id}:${pathname.slice(0, 120)}`;
-  const row = await db.prepare(
-    `INSERT INTO classroom_rate_limits (scope_key, window_started_at, request_count, updated_at)
-     VALUES (?, ?, 1, ?)
-     ON CONFLICT(scope_key) DO UPDATE SET
-       window_started_at = CASE WHEN classroom_rate_limits.window_started_at <= ? THEN excluded.window_started_at ELSE classroom_rate_limits.window_started_at END,
-       request_count = CASE WHEN classroom_rate_limits.window_started_at <= ? THEN 1 ELSE classroom_rate_limits.request_count + 1 END,
-       updated_at = excluded.updated_at
-     RETURNING request_count`,
-  ).bind(scopeKey, nowSeconds, classroomNow(), threshold, threshold).first<{ request_count: number }>();
-  return Boolean(row && row.request_count <= limit);
-}
-
 async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -103,9 +93,25 @@ export async function ensureClassroomSchema(db = classroomDb()): Promise<void> {
   if (!schemaReady) {
     schemaReady = (async () => {
       const tables = await db.prepare(
-        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_course_roster', 'classroom_course_question_bank', 'classroom_seed_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist', 'classroom_sessions', 'classroom_groups', 'classroom_session_participants', 'classroom_group_responses', 'classroom_ranking_submissions', 'classroom_ranking_items', 'classroom_rate_limits', 'classroom_questions', 'classroom_question_memberships', 'classroom_question_responses', 'classroom_question_ranking_submissions', 'classroom_question_ranking_items') ORDER BY name",
+        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_course_roster', 'classroom_course_question_bank', 'classroom_seed_state', 'classroom_schema_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist', 'classroom_sessions', 'classroom_groups', 'classroom_session_participants', 'classroom_group_responses', 'classroom_ranking_submissions', 'classroom_ranking_items', 'classroom_rate_limits', 'classroom_questions', 'classroom_question_memberships', 'classroom_question_responses', 'classroom_question_ranking_submissions', 'classroom_question_ranking_items', 'classroom_operation_logs', 'classroom_incidents') ORDER BY name",
       ).all<{ name: string }>();
-      if (tables.results.length !== 21) throw new Error("The classroom database schema is incomplete.");
+      if (tables.results.length !== 24) throw classroomSchemaMismatch("required tables are missing");
+      const state = await db.prepare(
+        "SELECT schema_version, schema_fingerprint FROM classroom_schema_state WHERE singleton_id = 1",
+      ).first<{ schema_version: number; schema_fingerprint: string }>();
+      if (state?.schema_version !== CLASSROOM_SCHEMA_VERSION || state.schema_fingerprint !== CLASSROOM_SCHEMA_FINGERPRINT) {
+        throw classroomSchemaMismatch(`expected version ${CLASSROOM_SCHEMA_VERSION} (${CLASSROOM_SCHEMA_FINGERPRINT})`);
+      }
+      const questionColumns = await db.prepare("PRAGMA table_info(classroom_questions)")
+        .all<{ name: string }>();
+      const columnNames = new Set(questionColumns.results.map((column) => column.name));
+      for (const requiredColumn of ["source_question_bank_id", "answer_duration_seconds", "answer_deadline_at"]) {
+        if (!columnNames.has(requiredColumn)) throw classroomSchemaMismatch(`classroom_questions.${requiredColumn} is missing`);
+      }
+      const currentRankingIndex = await db.prepare(
+        "SELECT name FROM sqlite_schema WHERE type = 'index' AND name = 'classroom_question_rankings_current_unique'",
+      ).first<{ name: string }>();
+      if (!currentRankingIndex) throw classroomSchemaMismatch("current ranking uniqueness index is missing");
       await db.prepare("PRAGMA optimize").run();
     })().catch((error) => {
       schemaReady = null;
@@ -190,6 +196,7 @@ export async function loadOrProvisionClassroomActor(request: Request): Promise<C
       await db.batch(statements);
     }
     if (!allowlisted && rosterMatches.results.length === 0) {
+      await requireClassroomAccessRequestCapacity(db, email);
       const request = await recordClassroomAccessRequest(db, result);
       if (request.status === "rejected") {
         throw new ClassroomAccessError("approval_rejected", "此帳號的使用申請尚未獲准，請洽系統管理員。");
@@ -202,6 +209,13 @@ export async function loadOrProvisionClassroomActor(request: Request): Promise<C
     await ensureDemoClassroom(db, result);
   }
   return result;
+}
+
+async function requireClassroomAccessRequestCapacity(db: D1Database, email: string): Promise<void> {
+  const scope = await classroomAccessRequestRateLimitScope(email);
+  if (!scope || !await enforceClassroomRateLimitScope(db, scope, 6, 60)) {
+    throw new ClassroomAccessError("rate_limited", "登入申請次數過於頻繁，請稍候再試。");
+  }
 }
 
 async function recordClassroomAccessRequest(db: D1Database, actor: ClassroomActor): Promise<{ status: ClassroomAccessStatus }> {
@@ -264,6 +278,7 @@ function demoRankOrder(base: number[], ownGroup: number, studentIndex: number): 
   const order = base.filter((group) => group !== ownGroup);
   if (studentIndex % 4 === 1) [order[1], order[2]] = [order[2], order[1]];
   if (studentIndex % 4 === 2) [order[3], order[4]] = [order[4], order[3]];
+  order.splice(studentIndex % (order.length + 1), 0, ownGroup);
   return order;
 }
 
@@ -680,39 +695,45 @@ export async function reviewClassroomAccessRequest(
   const status: ClassroomAccessStatus = action === "approve" ? "approved" : "rejected";
   const now = classroomNow();
   const nextVersion = expectedVersion + 1;
-  const updated = await db.prepare(
-    `UPDATE classroom_access_requests
-     SET status = ?, version = version + 1, reviewed_by_user_id = ?, reviewed_at = ?
-     WHERE id = ? AND version = ?`,
-  ).bind(status, actor.id, now, requestId, expectedVersion).run();
-  if ((updated.meta.changes ?? 0) !== 1) return null;
-
   const auditId = `class-audit-access-${requestId}-${nextVersion}`;
-  const followUp: D1PreparedStatement[] = action === "approve"
+  const statements: D1PreparedStatement[] = action === "approve"
     ? [
         db.prepare(
           `INSERT INTO classroom_access_allowlist
             (email, user_id, status, approved_by_user_id, approved_at, updated_at)
-           VALUES (?, ?, 'active', ?, ?, ?)
+           SELECT email, user_id, 'active', ?, ?, ?
+           FROM classroom_access_requests WHERE id = ? AND version = ?
            ON CONFLICT(email) DO UPDATE SET
-             user_id = excluded.user_id,
-             status = 'active',
-             approved_by_user_id = excluded.approved_by_user_id,
-             approved_at = excluded.approved_at,
-             updated_at = excluded.updated_at`,
-        ).bind(current.email, current.user_id, actor.id, now, now),
+              user_id = excluded.user_id,
+              status = 'active',
+              approved_by_user_id = excluded.approved_by_user_id,
+              approved_at = excluded.approved_at,
+              updated_at = excluded.updated_at`,
+        ).bind(actor.id, now, now, requestId, expectedVersion),
       ]
     : [
-        db.prepare("DELETE FROM classroom_access_allowlist WHERE email = ?").bind(current.email),
+        db.prepare(
+          `UPDATE classroom_access_allowlist SET status = 'revoked', updated_at = ?
+           WHERE email = ? AND EXISTS (
+             SELECT 1 FROM classroom_access_requests WHERE id = ? AND version = ?
+           )`,
+        ).bind(now, current.email, requestId, expectedVersion),
       ];
-  followUp.push(
+  statements.push(
     db.prepare(
-      `INSERT OR IGNORE INTO classroom_audit_events
+      `INSERT INTO classroom_audit_events
         (id, actor_user_id, action, resource_type, resource_id, details_json, occurred_at)
-       VALUES (?, ?, ?, 'access_request', ?, ?, ?)`,
-    ).bind(auditId, actor.id, `access.${action}`, requestId, JSON.stringify({ email: current.email }), now),
+       SELECT ?, ?, ?, 'access_request', ?, ?, ?
+       FROM classroom_access_requests WHERE id = ? AND version = ?`,
+    ).bind(auditId, actor.id, `access.${action}`, requestId, JSON.stringify({ requestId }), now, requestId, expectedVersion),
+    db.prepare(
+      `UPDATE classroom_access_requests
+       SET status = ?, version = version + 1, reviewed_by_user_id = ?, reviewed_at = ?
+       WHERE id = ? AND version = ?`,
+    ).bind(status, actor.id, now, requestId, expectedVersion),
   );
-  await db.batch(followUp);
+  const batch = await db.batch(statements);
+  if ((batch.at(-1)?.meta.changes ?? 0) !== 1) return null;
 
   const result = await db.prepare(
     `SELECT r.id, r.email, r.display_name, r.status, r.version, r.requested_at,

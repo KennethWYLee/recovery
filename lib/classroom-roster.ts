@@ -42,7 +42,10 @@ export function normalizeRosterDraft(value: unknown): ClassroomRosterDraft | nul
   const row = value as Record<string, unknown>;
   const email = normalizeClassroomEmail(row.email);
   const emailStudentId = email ? email.slice(0, email.lastIndexOf("@")) : "";
-  const studentId = normalizeRosterStudentId(row.studentId) || normalizeRosterStudentId(emailStudentId);
+  const explicitStudentId = normalizeRosterStudentId(row.studentId);
+  const normalizedEmailStudentId = normalizeRosterStudentId(emailStudentId);
+  if (explicitStudentId && normalizedEmailStudentId && explicitStudentId !== normalizedEmailStudentId) return null;
+  const studentId = explicitStudentId || normalizedEmailStudentId;
   const resolvedEmail = email || rosterEmailForStudentId(studentId);
   if (!studentId || !isNtubClassroomEmail(resolvedEmail)) return null;
   return { studentId, email: resolvedEmail, displayName: normalizeDisplayName(row.displayName) };

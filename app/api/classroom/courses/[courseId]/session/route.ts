@@ -20,7 +20,7 @@ async function parsedCourseId(context: Context): Promise<string> {
 }
 
 export async function GET(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request);
     const courseId = await parsedCourseId(context);
     const course = await getClassroomCourse(api.db, api.actor, courseId);
@@ -33,7 +33,7 @@ export async function GET(request: Request, context: Context): Promise<Response>
 }
 
 export async function POST(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request, true);
     const courseId = await parsedCourseId(context);
     const body = await classroomJsonBody(request);

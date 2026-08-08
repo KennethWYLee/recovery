@@ -24,7 +24,7 @@ async function parsedCourseId(context: Context): Promise<string> {
 }
 
 export async function GET(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request);
     const course = await getClassroomCourse(api.db, api.actor, await parsedCourseId(context));
     if (!course) throw new ClassroomApiError(404, "COURSE_NOT_FOUND", "找不到這門課程，或您沒有存取權限。");
@@ -33,7 +33,7 @@ export async function GET(request: Request, context: Context): Promise<Response>
 }
 
 export async function PATCH(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request, true);
     const courseId = await parsedCourseId(context);
     const body = await classroomJsonBody(request);
@@ -49,7 +49,7 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
 }
 
 export async function DELETE(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request, true);
     const courseId = await parsedCourseId(context);
     const body = await classroomJsonBody(request);

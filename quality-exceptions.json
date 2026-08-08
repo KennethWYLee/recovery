@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "limits": {
+    "maxFileLines": 500,
+    "maxFunctionLines": 150,
+    "maxCyclomaticComplexity": 15
+  },
+  "fileExceptions": {
+    "app/courses/[courseId]/CourseWorkspace.tsx": {
+      "baselineLines": 1772,
+      "reason": "既有課堂工作區同時承載教師與學生流程；須先以行為測試保護，再按畫面責任拆分。",
+      "ownerRole": "前端維護者",
+      "expiresOn": "2026-11-30"
+    },
+    "db/classroom-live.ts": {
+      "baselineLines": 909,
+      "reason": "既有即時課堂交易集中於單一資料模組；須依交易邊界逐步拆分並維持一致性。",
+      "ownerRole": "後端資料層維護者",
+      "expiresOn": "2026-11-30"
+    },
+    "db/classroom.ts": {
+      "baselineLines": 759,
+      "reason": "既有身分、課程與示範資料存取集中；須在介面契約固定後分離各資料責任。",
+      "ownerRole": "後端資料層維護者",
+      "expiresOn": "2026-11-30"
+    }
+  },
+  "functionExceptions": {
+    "app/api/classroom/sessions/[sessionId]/route.ts::callback:withClassroomApi#2": {
+      "baselineComplexity": 18,
+      "reason": "既有課堂設定更新包含多項欄位驗證；預計抽出純驗證函式後移除此例外。",
+      "ownerRole": "API 維護者",
+      "expiresOn": "2026-10-31"
+    },
+    "app/courses/[courseId]/CourseWorkspace.tsx::CourseWorkspace": {
+      "baselineLines": 878,
+      "baselineComplexity": 64,
+      "reason": "既有教師工作區整合資料載入、狀態控制及多個階段畫面；將依課堂階段拆成可測元件。",
+      "ownerRole": "前端維護者",
+      "expiresOn": "2026-11-30"
+    },
+    "app/courses/[courseId]/CourseWorkspace.tsx::callback:useCallback": {
+      "baselineComplexity": 25,
+      "reason": "既有工作區載入流程同時處理多種回應狀態；將拆分回應解析與錯誤呈現。",
+      "ownerRole": "前端維護者",
+      "expiresOn": "2026-10-31"
+    },
+    "app/courses/[courseId]/CourseWorkspace.tsx::StudentClassroomView": {
+      "baselineLines": 248,
+      "baselineComplexity": 42,
+      "reason": "既有學生畫面依課堂階段切換多種狀態；將各階段拆成獨立且可測的顯示元件。",
+      "ownerRole": "前端維護者",
+      "expiresOn": "2026-11-30"
+    },
+    "app/courses/CoursesApp.tsx::CoursesApp": {
+      "baselineLines": 318,
+      "baselineComplexity": 29,
+      "reason": "既有課程清單同時負責建立、編輯與測試身分；將表單和清單責任分離。",
+      "ownerRole": "前端維護者",
+      "expiresOn": "2026-11-30"
+    },
+    "db/classroom-live.ts::createClassroomSession": {
+      "baselineComplexity": 18,
+      "reason": "建立課堂需驗證分組、容量及既有場次；將規則抽成獨立純函式並補交易測試。",
+      "ownerRole": "後端資料層維護者",
+      "expiresOn": "2026-10-31"
+    },
+    "db/classroom-live.ts::classroomSessionSnapshot": {
+      "baselineLines": 155,
+      "baselineComplexity": 32,
+      "reason": "快照查詢目前組裝角色相關資料；待隱私契約測試穩定後拆分查詢與輸出轉換。",
+      "ownerRole": "後端資料層維護者",
+      "expiresOn": "2026-10-31"
+    },
+    "db/classroom-live.ts::createClassroomQuestion": {
+      "baselineComplexity": 21,
+      "reason": "建立問題同時處理題庫與場次狀態驗證；將來源選擇和狀態規則分離。",
+      "ownerRole": "後端資料層維護者",
+      "expiresOn": "2026-10-31"
+    },
+    "db/classroom-live.ts::advanceClassroomQuestion": {
+      "baselineComplexity": 22,
+      "reason": "問題階段轉換含多條合法路徑與前置條件；將狀態機規則抽出並以驗收情境保護。",
+      "ownerRole": "後端資料層維護者",
+      "expiresOn": "2026-10-31"
+    },
+    "db/classroom.ts::loadOrProvisionClassroomActor": {
+      "baselineComplexity": 22,
+      "reason": "登入建立流程需區分管理員、白名單與待審核狀態；將身分決策抽成純函式。",
+      "ownerRole": "身分與存取維護者",
+      "expiresOn": "2026-10-31"
+    },
+    "db/classroom.ts::ensureDemoClassroom": {
+      "baselineLines": 187,
+      "baselineComplexity": 22,
+      "reason": "示範資料建立目前包含完整關聯資料；將固定樣本與寫入程序分離以降低維護風險。",
+      "ownerRole": "示範資料維護者",
+      "expiresOn": "2026-11-30"
+    },
+    "lib/classroom-input.ts::readBoundedClassroomJsonObject": {
+      "baselineComplexity": 18,
+      "reason": "輸入讀取需涵蓋串流中止、大小限制及 JSON 錯誤；將解析結果分類抽成小型函式。",
+      "ownerRole": "應用安全維護者",
+      "expiresOn": "2026-10-31"
+    },
+    "lib/classroom-observability.ts::normalizeClassroomIncidentDraft": {
+      "baselineComplexity": 23,
+      "reason": "事件表單正規化需驗證多個必填證據欄位；將欄位規則改為資料驅動驗證。",
+      "ownerRole": "可觀測性功能維護者",
+      "expiresOn": "2026-10-31"
+    }
+  }
+}

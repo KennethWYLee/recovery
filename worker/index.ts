@@ -10,6 +10,7 @@ interface Env {
   CLASSROOM_LOCAL_USER_NAME?: string;
   CLASSROOM_LOCAL_USER_EMAIL?: string;
   CLASSROOM_ADMIN_EMAILS?: string;
+  CLASSROOM_RELEASE?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {

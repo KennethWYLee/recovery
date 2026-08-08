@@ -25,6 +25,7 @@ jobs:
       CLASSROOM_LOCAL_USER_NAME: CI Operator
       CLASSROOM_LOCAL_USER_EMAIL: ci-operator@example.invalid
       CLASSROOM_ADMIN_EMAILS: ci-operator@example.invalid
+      CLASSROOM_RELEASE: ${{ github.sha }}
 
     steps:
       - name: Check out source

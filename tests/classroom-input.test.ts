@@ -48,3 +48,89 @@ test("unsupported classroom request bodies are fully drained", async () => {
   await drainClassroomRequestBody(request);
   assert.equal(request.bodyUsed, true);
 });
+
+test("oversized request streams are cancelled instead of being read without a bound", async () => {
+  let cancelled = false;
+  const request = new Request("https://classroom.example.test/api/classroom/courses", {
+    method: "POST",
+    body: new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(10));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    }),
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+  await rejectsWithKind(readBoundedClassroomJsonObject(request, 8), "too_large");
+  assert.equal(cancelled, true);
+});
+
+test("declared oversized bodies are rejected before the first stream read", async () => {
+  let cancelled = false;
+  let pulled = false;
+  const request = new Request("https://classroom.example.test/api/classroom/courses", {
+    method: "POST",
+    headers: { "content-length": "100" },
+    body: new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled = true;
+        controller.enqueue(bytes("{}"));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    }),
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+
+  await rejectsWithKind(readBoundedClassroomJsonObject(request, 8), "too_large");
+  assert.equal(cancelled, true);
+  assert.equal(pulled, false);
+});
+
+test("missing and failed request streams use explicit machine-readable errors", async () => {
+  const emptyRequest = new Request("https://classroom.example.test/api/classroom/courses", { method: "POST" });
+  await rejectsWithKind(readBoundedClassroomJsonObject(emptyRequest), "invalid_json");
+
+  const failedRequest = new Request("https://classroom.example.test/api/classroom/courses", {
+    method: "POST",
+    body: new ReadableStream<Uint8Array>({
+      pull() {
+        throw new Error("synthetic stream failure");
+      },
+    }),
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+  await rejectsWithKind(readBoundedClassroomJsonObject(failedRequest), "read_failed");
+});
+
+test("discarding unsupported bodies is bounded and reports stream failures", async () => {
+  let cancelled = false;
+  const oversizedRequest = new Request("https://classroom.example.test/api/classroom/courses", {
+    method: "POST",
+    body: new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(10));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    }),
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+  await drainClassroomRequestBody(oversizedRequest, 8);
+  assert.equal(cancelled, true);
+
+  const failedRequest = new Request("https://classroom.example.test/api/classroom/courses", {
+    method: "POST",
+    body: new ReadableStream<Uint8Array>({
+      pull() {
+        throw new Error("synthetic stream failure");
+      },
+    }),
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+  await rejectsWithKind(drainClassroomRequestBody(failedRequest), "read_failed");
+});

@@ -7,6 +7,8 @@ import {
   currentAcademicTerm,
   balancedGroupSizes,
   balancedGroupSizesByCount,
+  classroomAnswerWindowError,
+  completeClassroomRankingOrder,
   nextQuestionPhase,
   nextSessionPhase,
   normalizeCourseName,
@@ -84,7 +86,7 @@ test("ranking converts positions to scores, ranks higher scores first, and prese
 
 test("ranking breaks equal average scores by first-place count", () => {
   const results = rankResults(
-    [{ id: "a", label: "第1組" }, { id: "b", label: "第2組" }],
+    [{ id: "b", label: "第2組" }, { id: "a", label: "第1組" }],
     [
       { groupId: "a", rank: 1 }, { groupId: "a", rank: 3 },
       { groupId: "b", rank: 2 }, { groupId: "b", rank: 2 },
@@ -92,6 +94,77 @@ test("ranking breaks equal average scores by first-place count", () => {
   );
   assert.deepEqual(results.map((result) => result.groupId), ["a", "b"]);
   assert.deepEqual(results.map((result) => result.finalRank), [1, 2]);
+});
+
+test("ranking order comes from scores and rank distribution, not input order or labels", () => {
+  const scoreOrdered = rankResults(
+    [
+      { id: "weak", label: "A" },
+      { id: "strong", label: "Z" },
+      { id: "middle", label: "M" },
+    ],
+    [
+      { groupId: "weak", rank: 3 }, { groupId: "weak", rank: 3 },
+      { groupId: "strong", rank: 1 }, { groupId: "strong", rank: 1 },
+      { groupId: "middle", rank: 2 }, { groupId: "middle", rank: 2 },
+    ],
+  );
+  assert.deepEqual(scoreOrdered.map((result) => result.groupId), ["strong", "middle", "weak"]);
+  assert.deepEqual(scoreOrdered.map((result) => result.finalRank), [1, 2, 3]);
+
+  const distributionOrdered = rankResults(
+    [{ id: "first-place", label: "Z" }, { id: "steady", label: "A" }],
+    [
+      { groupId: "first-place", rank: 1 }, { groupId: "first-place", rank: 3 },
+      { groupId: "steady", rank: 2 }, { groupId: "steady", rank: 2 },
+    ],
+  );
+  assert.deepEqual(distributionOrdered.map((result) => result.groupId), ["first-place", "steady"]);
+  assert.deepEqual(distributionOrdered.map((result) => result.tied), [false, false]);
+});
+
+test("average score remains the first comparison when groups receive different vote counts", () => {
+  const results = rankResults(
+    [{ id: "more-votes", label: "A" }, { id: "sparse-best", label: "Z" }],
+    [
+      { groupId: "more-votes", rank: 1 },
+      { groupId: "more-votes", rank: 3 },
+      { groupId: "sparse-best", rank: 1 },
+    ],
+  );
+  assert.deepEqual(results.map((result) => result.groupId), ["sparse-best", "more-votes"]);
+  assert.deepEqual(results.map((result) => result.averageScore), [3, 2]);
+});
+
+test("ranking ignores malformed and unknown items and reports the exact distribution", () => {
+  const results = rankResults(
+    [{ id: "b", label: "回答 B" }, { id: "a", label: "回答 A" }],
+    [
+      { groupId: "a", rank: 3 }, { groupId: "a", rank: 1 },
+      { groupId: "b", rank: 2 }, { groupId: "b", rank: 2 },
+      { groupId: "missing", rank: 1 }, { groupId: "a", rank: 0 },
+      { groupId: "a", rank: 1.5 }, { groupId: "b", rank: Number.NaN },
+    ],
+  );
+  assert.deepEqual(results.map((result) => result.groupId), ["a", "b"]);
+  assert.deepEqual(results.map((result) => result.ratingCount), [2, 2]);
+  assert.deepEqual(results.map((result) => result.rankCounts), [[1, 0, 1], [0, 2, 0]]);
+  assert.deepEqual(results.map((result) => result.averageScore), [2, 2]);
+  assert.deepEqual(results.map((result) => result.finalRank), [1, 2]);
+  assert.deepEqual(results.map((result) => result.tied), [false, false]);
+});
+
+test("equal averages are ties only when every rank count is equal", () => {
+  const results = rankResults(
+    [{ id: "b", label: "回答 B" }, { id: "a", label: "回答 A" }],
+    [
+      { groupId: "a", rank: 1 }, { groupId: "a", rank: 3 }, { groupId: "a", rank: 4 },
+      { groupId: "b", rank: 2 }, { groupId: "b", rank: 2 }, { groupId: "b", rank: 4 },
+    ],
+  );
+  assert.deepEqual(results.map((result) => result.groupId), ["a", "b"]);
+  assert.deepEqual(results.map((result) => result.finalRank), [1, 2]);
+  assert.deepEqual(results.map((result) => result.tied), [false, false]);
 });
 
 test("consensus scoring removes each student's own group and reindexes the remaining answers", () => {
@@ -107,6 +180,33 @@ test("consensus scoring removes each student's own group and reindexes the remai
   ]);
   assert.deepEqual(first, [{ groupId: "b", rank: 1 }, { groupId: "c", rank: 2 }]);
   assert.deepEqual(second, first, "moving the student's own answer must not change other groups' effective ranks");
+
+  const mixedUsers = rankingsExcludingOwnGroup([
+    { userId: "u2", ownGroupId: "b", groupId: "a", rank: 3 },
+    { userId: "u1", ownGroupId: "a", groupId: "c", rank: 3 },
+    { userId: "u2", ownGroupId: "b", groupId: "b", rank: 2 },
+    { userId: "u1", ownGroupId: "a", groupId: "a", rank: 1 },
+    { userId: "u2", ownGroupId: "b", groupId: "c", rank: 1 },
+    { userId: "u1", ownGroupId: "a", groupId: "b", rank: 2 },
+  ]);
+  assert.deepEqual(mixedUsers, [
+    { groupId: "c", rank: 1 }, { groupId: "a", rank: 2 },
+    { groupId: "b", rank: 1 }, { groupId: "c", rank: 2 },
+  ]);
+});
+
+test("answer windows and complete ranking orders reject bypass attempts", () => {
+  assert.equal(classroomAnswerWindowError("answering", "2026-08-08T10:00:01.000Z", "2026-08-08T10:00:00.000Z"), null);
+  assert.equal(classroomAnswerWindowError("answering", "2026-08-08T10:00:00.000Z", "2026-08-08T10:00:00.000Z"), "ANSWER_DEADLINE_PASSED");
+  assert.equal(classroomAnswerWindowError("presenting", null, "2026-08-08T10:00:00.000Z"), "ANSWERING_CLOSED");
+
+  const expected = ["group-a", "group-b", "group-c"];
+  assert.deepEqual(completeClassroomRankingOrder(["group-c", "group-a", "group-b"], expected), ["group-c", "group-a", "group-b"]);
+  assert.equal(completeClassroomRankingOrder(["group-a", "group-b"], expected), null);
+  assert.equal(completeClassroomRankingOrder(["group-a", "group-a", "group-c"], expected), null);
+  assert.equal(completeClassroomRankingOrder(["group-a", "group-b", "group-x"], expected), null);
+  assert.equal(completeClassroomRankingOrder(["group-a", 2, "group-c"], expected), null);
+  assert.equal(completeClassroomRankingOrder("group-a,group-b,group-c", expected), null);
 });
 
 test("course names are normalized and bounded", () => {

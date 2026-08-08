@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ sessionId: string }> };
 
 export async function POST(request: Request, context: Context): Promise<Response> {
-  return withClassroomApi(async () => {
+  return withClassroomApi(request, async () => {
     const api = await classroomApiContext(request, true);
     const sessionId = classroomSessionId((await context.params).sessionId);
     if (!sessionId) throw new ClassroomApiError(404, "SESSION_NOT_FOUND", "找不到這次課堂。");

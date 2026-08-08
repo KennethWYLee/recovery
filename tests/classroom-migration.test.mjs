@@ -11,6 +11,8 @@ const migrationUrls = [
   new URL("../drizzle/0005_course_roster.sql", import.meta.url),
   new URL("../drizzle/0006_course_question_bank.sql", import.meta.url),
   new URL("../drizzle/0007_student_live_flow.sql", import.meta.url),
+  new URL("../drizzle/0008_classroom_schema_state.sql", import.meta.url),
+  new URL("../drizzle/0009_classroom_observability.sql", import.meta.url),
 ];
 
 async function classroomDatabase() {
@@ -38,6 +40,8 @@ test("classroom migration creates the reviewed course boundary", async () => {
     "classroom_courses",
     "classroom_group_responses",
     "classroom_groups",
+    "classroom_incidents",
+    "classroom_operation_logs",
     "classroom_question_memberships",
     "classroom_question_ranking_items",
     "classroom_question_ranking_submissions",
@@ -46,11 +50,151 @@ test("classroom migration creates the reviewed course boundary", async () => {
     "classroom_ranking_items",
     "classroom_ranking_submissions",
     "classroom_rate_limits",
+    "classroom_schema_state",
     "classroom_seed_state",
     "classroom_session_participants",
     "classroom_sessions",
     "classroom_users",
   ]);
+  db.close();
+});
+
+test("schema state identifies the exact application contract", async () => {
+  const db = await classroomDatabase();
+  const state = db.prepare("SELECT schema_version, schema_fingerprint FROM classroom_schema_state WHERE singleton_id = 1").get();
+  assert.equal(state.schema_version, 9);
+  assert.equal(state.schema_fingerprint, "classroom-schema-v9-20260808");
+  db.close();
+});
+
+test("observability schema stores bounded operation evidence and verifiable incidents", async () => {
+  const db = await classroomDatabase();
+  const operationColumns = db.prepare("PRAGMA table_info(classroom_operation_logs)").all().map((row) => row.name);
+  assert.deepEqual(operationColumns, [
+    "id", "request_id", "actor_user_id", "actor_kind", "method", "route", "scope_type", "scope_id",
+    "outcome", "status_code", "error_code", "duration_ms", "capture_kind", "test_mode", "environment",
+    "security_relevant", "release", "occurred_at",
+  ]);
+  const incidentColumns = db.prepare("PRAGMA table_info(classroom_incidents)").all().map((row) => row.name);
+  assert.deepEqual(incidentColumns, [
+    "id", "title", "severity", "status", "source_request_id", "verification_request_id", "symptom",
+    "root_cause", "resolution", "fix_release", "regression_check", "regression_command", "regression_evidence",
+    "verification_result", "created_by_user_id", "updated_by_user_id", "version", "detected_at", "resolved_at",
+    "verified_at", "created_at", "updated_at",
+  ]);
+
+  const indexes = db.prepare(`SELECT name FROM sqlite_schema
+    WHERE type = 'index' AND name LIKE 'classroom_%' AND tbl_name IN ('classroom_operation_logs', 'classroom_incidents')
+    ORDER BY name`).all().map((row) => row.name);
+  assert.deepEqual(indexes, [
+    "classroom_incidents_severity_time_idx",
+    "classroom_incidents_source_request_idx",
+    "classroom_incidents_status_time_idx",
+    "classroom_incidents_verification_request_idx",
+    "classroom_operation_logs_outcome_time_idx",
+    "classroom_operation_logs_request_unique",
+    "classroom_operation_logs_route_time_idx",
+    "classroom_operation_logs_scope_time_idx",
+    "classroom_operation_logs_security_time_idx",
+    "classroom_operation_logs_time_idx",
+  ]);
+
+  const now = "2026-08-08T00:00:00.000Z";
+  db.prepare(`INSERT INTO classroom_users
+    (id, email, display_name, role, status, created_at, last_seen_at)
+    VALUES ('teacher-observability', 'observability@ntub.edu.tw', '系統管理員', 'teacher', 'active', ?, ?)`).run(now, now);
+  const insertLog = db.prepare(`INSERT INTO classroom_operation_logs
+    (id, request_id, actor_user_id, actor_kind, method, route, scope_type, scope_id, outcome, status_code,
+     error_code, duration_ms, capture_kind, test_mode, environment, security_relevant, release, occurred_at)
+    VALUES (?, ?, 'teacher-observability', ?, 'GET', '/api/classroom/courses', ?, NULL, ?, ?, NULL, ?, ?, 0,
+      'production', 0, 'release-1', ?)`);
+  insertLog.run("oplog-valid", "req-00000000-0000-4000-8000-000000000001", "administrator", "system", "success", 200, 25, "sample", now);
+  assert.throws(
+    () => insertLog.run("oplog-bad-status", "req-00000000-0000-4000-8000-000000000002", "administrator", "system", "success", 700, 25, "sample", now),
+    /CHECK constraint/iu,
+  );
+  assert.throws(
+    () => insertLog.run("oplog-bad-duration", "req-00000000-0000-4000-8000-000000000003", "administrator", "system", "success", 200, 120001, "sample", now),
+    /CHECK constraint/iu,
+  );
+  assert.throws(
+    () => insertLog.run("oplog-bad-capture", "req-00000000-0000-4000-8000-000000000004", "administrator", "system", "success", 200, 25, "body", now),
+    /CHECK constraint/iu,
+  );
+  assert.throws(
+    () => insertLog.run("oplog-duplicate", "req-00000000-0000-4000-8000-000000000001", "administrator", "system", "success", 200, 25, "sample", now),
+    /UNIQUE/iu,
+  );
+  const verificationTime = "2026-08-08T00:00:01.000Z";
+  insertLog.run("oplog-verification", "req-00000000-0000-4000-8000-000000000005", "administrator", "system", "success", 200, 25, "mutation", verificationTime);
+
+  const insertResolvedIncident = db.prepare(`INSERT INTO classroom_incidents
+    (id, title, severity, status, source_request_id, verification_request_id, symptom, root_cause, resolution,
+     fix_release, regression_check, regression_command, regression_evidence, verification_result,
+     created_by_user_id, updated_by_user_id, version, detected_at, resolved_at, verified_at, created_at, updated_at)
+    VALUES (?, '資料庫結構不一致', 'high', 'resolved', ?, ?, '課堂資料無法取得', ?, ?, ?, ?, ?, ?, ?,
+      'teacher-observability', 'teacher-observability', 1, ?, ?, ?, ?, ?)`);
+  const validResolved = [
+    "req-00000000-0000-4000-8000-000000000001",
+    "req-00000000-0000-4000-8000-000000000005",
+    "資料庫 migration 未隨應用程式部署",
+    "完成 migration 後重新部署並驗證",
+    "release-1",
+    "重新取得課程資料",
+    "npm run test:integration",
+    "整合測試與正式請求均成功",
+    "passed",
+    now,
+    verificationTime,
+    verificationTime,
+    now,
+    verificationTime,
+  ];
+  insertResolvedIncident.run("incident-resolved-valid", ...validResolved);
+  const invalidResolvedCases = [
+    ["missing-source", 0, null],
+    ["missing-verification", 1, null],
+    ["same-request", 1, validResolved[0]],
+    ["missing-root-cause", 2, ""],
+    ["missing-resolution", 3, ""],
+    ["missing-release", 4, ""],
+    ["unverified-release", 4, "classroom-0.3.0-unverified"],
+    ["missing-regression-check", 5, ""],
+    ["missing-regression-command", 6, ""],
+    ["missing-regression-evidence", 7, ""],
+    ["verification-not-passed", 8, "failed"],
+    ["missing-resolved-at", 10, null],
+    ["missing-verified-at", 11, null],
+  ];
+  for (const [label, index, replacement] of invalidResolvedCases) {
+    const values = [...validResolved];
+    values[index] = replacement;
+    assert.throws(
+      () => insertResolvedIncident.run(`incident-resolved-${label}`, ...values),
+      /CHECK constraint/iu,
+      `resolved incident accepted invalid evidence: ${label}`,
+    );
+  }
+
+  const insertIncident = db.prepare(`INSERT INTO classroom_incidents
+    (id, title, severity, status, source_request_id, verification_request_id, symptom, root_cause, resolution,
+     fix_release, regression_check, regression_command, regression_evidence, verification_result,
+     created_by_user_id, updated_by_user_id, version, detected_at, resolved_at, verified_at, created_at, updated_at)
+    VALUES (?, '資料庫結構不一致', ?, ?, 'req-00000000-0000-4000-8000-000000000001', NULL,
+      '課堂資料無法取得', '', '', '', '', '', '', ?, 'teacher-observability', 'teacher-observability', ?, ?, NULL, NULL, ?, ?)`);
+  insertIncident.run("incident-valid", "high", "investigating", "not_run", 1, now, now, now);
+  assert.throws(
+    () => insertIncident.run("incident-bad-severity", "urgent", "investigating", "not_run", 1, now, now, now),
+    /CHECK constraint/iu,
+  );
+  assert.throws(
+    () => insertIncident.run("incident-bad-result", "high", "resolved", "unknown", 1, now, now, now),
+    /CHECK constraint/iu,
+  );
+  assert.throws(
+    () => insertIncident.run("incident-bad-version", "high", "open", "not_run", 0, now, now, now),
+    /CHECK constraint/iu,
+  );
   db.close();
 });
 
@@ -103,6 +247,9 @@ test("only reviewed requests can become active allowlist entries", async () => {
     (email, user_id, status, approved_by_user_id, approved_at, updated_at)
     VALUES ('student@ntub.edu.tw', 'student-1', 'active', 'admin-1', ?, ?)`).run(now, now);
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM classroom_access_allowlist WHERE status = 'active'").get().count, 1);
+  db.prepare("UPDATE classroom_access_allowlist SET status = 'revoked', updated_at = ? WHERE email = 'student@ntub.edu.tw'").run(now);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM classroom_access_allowlist WHERE status = 'active'").get().count, 0);
+  assert.equal(db.prepare("SELECT status FROM classroom_access_allowlist WHERE email = 'student@ntub.edu.tw'").get().status, "revoked");
   db.close();
 });
 
