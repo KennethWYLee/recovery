@@ -28,13 +28,9 @@ import {
   guardedClassroomResponseWrite,
   questionAdvanceEvidenceFailure,
 } from "./classroom-live-security";
+import { ClassroomWorkflowError } from "./classroom-errors";
 
-export class ClassroomWorkflowError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string) {
-    super(message);
-    this.name = "ClassroomWorkflowError";
-  }
-}
+export { ClassroomWorkflowError } from "./classroom-errors";
 
 type SessionRow = {
   id: string; course_id: string; title: string; join_code: string; phase: ClassroomSessionPhase;
@@ -866,39 +862,4 @@ export async function submitClassroomRanking(
   const rankingFailure = await guardedClassroomRankingBatch(db, statements, sessionId, questionId);
   if (rankingFailure) throw new ClassroomWorkflowError(rankingFailure.status, rankingFailure.code, rankingFailure.message);
   return classroomSessionSnapshot(db, actor, sessionId, questionId);
-}
-
-function csvCell(value: string | number | boolean | null): string {
-  let text = value === null ? "" : String(value);
-  if (/^[=+\-@]/u.test(text)) text = `'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
-
-export async function classroomSessionCsv(db: D1Database, actor: ClassroomActor, sessionId: string): Promise<string> {
-  if (!actor.isAdmin) throw new ClassroomWorkflowError(403, "SESSION_EXPORT_REQUIRED", "只有系統管理員可匯出課堂原始資料。");
-  const session = await requireSession(db, actor, sessionId);
-  const questions = await db.prepare("SELECT id, question_text, position FROM classroom_questions WHERE session_id = ? ORDER BY position")
-    .bind(sessionId).all<{ id: string; question_text: string; position: number }>();
-  const rows: Array<Array<string | number | boolean | null>> = [[
-    "record_type", "session_id", "session_title", "question_number", "question", "group_label",
-    "group_response", "student_name", "student_email", "rank", "score", "average_score", "submitted_at",
-  ]];
-  for (const question of questions.results) {
-    const snapshot = await classroomSessionSnapshot(db, actor, sessionId, question.id);
-    for (const group of snapshot.groups) {
-      const result = snapshot.results.find((item) => item.groupId === group.id);
-      rows.push(["group_response", session.id, session.title, question.position, question.question_text, group.label, group.response.content, null, null, null, null, result?.averageScore ?? null, group.response.updatedAt]);
-    }
-    for (const ranking of snapshot.rawRankings) ranking.orderedGroupIds.forEach((groupId, index) => rows.push([
-      "individual_ranking", session.id, session.title, question.position, question.question_text,
-      snapshot.groups.find((group) => group.id === groupId)?.label ?? groupId, null,
-      ranking.displayName, ranking.email, index + 1, ranking.orderedGroupIds.length - index, null, ranking.submittedAt,
-    ]));
-    snapshot.teacherRanking?.orderedGroupIds.forEach((groupId, index, order) => rows.push([
-      "teacher_ranking", session.id, session.title, question.position, question.question_text,
-      snapshot.groups.find((group) => group.id === groupId)?.label ?? groupId, null,
-      "教師", null, index + 1, order.length - index, null, snapshot.teacherRanking?.submittedAt ?? null,
-    ]));
-  }
-  return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
 }

@@ -1,7 +1,8 @@
-import { classroomSessionCsv } from "@/db/classroom-export";
+import { classroomParticipationReport } from "@/db/classroom-participation";
 import {
   ClassroomApiError,
   classroomApiContext,
+  classroomData,
   classroomSessionId,
   withClassroomApi,
 } from "../../../_shared";
@@ -14,13 +15,6 @@ export async function GET(request: Request, context: Context): Promise<Response>
     const api = await classroomApiContext(request, true);
     const sessionId = classroomSessionId((await context.params).sessionId);
     if (!sessionId) throw new ClassroomApiError(404, "SESSION_NOT_FOUND", "找不到這次課堂。");
-    const csv = await classroomSessionCsv(api.db, api.actor, sessionId);
-    return new Response(csv, {
-      headers: {
-        "cache-control": "no-store, private",
-        "content-disposition": `attachment; filename="classroom-${sessionId}.csv"`,
-        "content-type": "text/csv; charset=utf-8",
-      },
-    });
+    return classroomData({ report: await classroomParticipationReport(api.db, api.actor, sessionId) });
   });
 }

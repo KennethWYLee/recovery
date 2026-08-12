@@ -141,6 +141,36 @@ export type ClassroomRankingResult = {
   tied: boolean;
 };
 
+export type ClassroomStudentQuestionParticipation = {
+  questionId: string;
+  eligible: boolean;
+  rankingCompleted: boolean;
+  representativeSubmitted: boolean;
+};
+
+export type ClassroomStudentParticipation = {
+  userId: string;
+  displayName: string;
+  email: string;
+  attendance: "on_time" | "late";
+  joinedPhase: ClassroomSessionPhase;
+  checkedInAt: string;
+  groupLabel: string | null;
+  eligibleQuestionCount: number;
+  rankingOpportunityCount: number;
+  completedRankingCount: number;
+  representativeSubmissionCount: number;
+  completionRate: number | null;
+  questions: ClassroomStudentQuestionParticipation[];
+};
+
+export type ClassroomParticipationReport = {
+  generatedAt: string;
+  sessionId: string;
+  questions: Array<Pick<ClassroomQuestion, "id" | "text" | "position" | "phase">>;
+  students: ClassroomStudentParticipation[];
+};
+
 export type ClassroomSessionSnapshot = {
   serverNow: string;
   session: ClassroomSession;

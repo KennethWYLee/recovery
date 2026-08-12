@@ -105,6 +105,56 @@ test("Given a student joined after a question started, they remain an observer f
   db.close();
 });
 
+test("student participation separates late arrival from missed rankings after arrival", async () => {
+  const db = await liveDatabase({ phase: "published" });
+  db.prepare(`INSERT INTO classroom_session_participants
+    (id, session_id, user_id, group_id, attendance, joined_phase, can_rank, checked_in_at, grouped_at, updated_at)
+    VALUES ('participant-1', 'session-1', 'student-1', 'group-1', 'on_time', 'check_in', 1, ?, ?, ?),
+           ('participant-2', 'session-1', 'student-2', 'group-2', 'late', 'answering', 1, ?, ?, ?)`)
+    .run(NOW, NOW, NOW, NOW, NOW, NOW);
+  db.prepare(`INSERT INTO classroom_question_memberships
+    (id, question_id, user_id, group_id, can_rank, captured_at)
+    VALUES ('membership-q1-s1', 'question-1', 'student-1', 'group-1', 1, ?)`).run(NOW);
+  db.prepare(`INSERT INTO classroom_questions
+    (id, session_id, question_text, ranking_criteria, source_question_bank_id, phase,
+     answer_duration_seconds, answer_deadline_at, position, version, opened_at,
+     responses_locked_at, ranking_locked_at, published_at, created_by_user_id, created_at, updated_at)
+    VALUES ('question-2', 'session-1', '第二題', '請排序。', NULL, 'locked', 300, ?, 2, 1, ?, ?, ?, NULL, 'teacher-1', ?, ?)`)
+    .run(NOW, NOW, NOW, NOW, NOW, NOW);
+  db.prepare(`INSERT INTO classroom_question_memberships
+    (id, question_id, user_id, group_id, can_rank, captured_at)
+    VALUES ('membership-q2-s1', 'question-2', 'student-1', 'group-1', 1, ?),
+           ('membership-q2-s2', 'question-2', 'student-2', 'group-2', 1, ?)`)
+    .run(NOW, NOW);
+  db.prepare(`INSERT INTO classroom_question_ranking_submissions
+    (id, question_id, user_id, version, is_current, status, invalid_reason, submitted_at)
+    VALUES ('ranking-q1-s1', 'question-1', 'student-1', 1, 1, 'valid', NULL, ?),
+           ('ranking-q2-s2', 'question-2', 'student-2', 1, 1, 'valid', NULL, ?)`)
+    .run(NOW, NOW);
+  db.prepare("UPDATE classroom_question_responses SET updated_by_user_id = 'student-1' WHERE id = 'response-1'").run();
+
+  const rows = db.prepare(`SELECT p.user_id, q.id AS question_id,
+      MAX(CASE WHEN m.user_id IS NOT NULL AND m.can_rank = 1 THEN 1 ELSE 0 END) AS eligible,
+      MAX(CASE WHEN m.user_id IS NOT NULL AND s.id IS NOT NULL THEN 1 ELSE 0 END) AS ranking_completed,
+      MAX(CASE WHEN r.updated_by_user_id = p.user_id AND r.status IN ('submitted','locked') THEN 1 ELSE 0 END) AS representative_submitted
+    FROM classroom_session_participants p
+    JOIN classroom_questions q ON q.session_id = p.session_id AND q.phase != 'draft'
+    LEFT JOIN classroom_question_memberships m ON m.question_id = q.id AND m.user_id = p.user_id
+    LEFT JOIN classroom_question_ranking_submissions s
+      ON s.question_id = q.id AND s.user_id = p.user_id AND s.is_current = 1 AND s.status = 'valid'
+    LEFT JOIN classroom_question_responses r ON r.question_id = q.id AND r.updated_by_user_id = p.user_id
+    WHERE p.session_id = 'session-1' GROUP BY p.user_id, q.id ORDER BY p.user_id, q.position`).all();
+
+  assert.deepEqual(rows.map((row) => [row.user_id, row.question_id, row.eligible, row.ranking_completed]), [
+    ["student-1", "question-1", 1, 1],
+    ["student-1", "question-2", 1, 0],
+    ["student-2", "question-1", 0, 0],
+    ["student-2", "question-2", 1, 1],
+  ]);
+  assert.equal(rows.find((row) => row.user_id === "student-1" && row.question_id === "question-1").representative_submitted, 1);
+  db.close();
+});
+
 test("Given the answer deadline passed, only non-empty responses are locked", async () => {
   const db = await liveDatabase({ phase: "answering" });
   db.prepare("UPDATE classroom_question_responses SET content = '', status = 'draft' WHERE group_id = 'group-6'").run();

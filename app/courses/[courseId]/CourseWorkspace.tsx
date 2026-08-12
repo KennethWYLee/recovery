@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type 
 import { courseTermLabel, QUESTION_PHASE_LABELS, rankingPosition, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
 import { StudentConsensusResults } from "./StudentConsensusResults";
+import { StudentParticipationPanel } from "./StudentParticipationPanel";
 import { StudentProgressiveRanking } from "./StudentProgressiveRanking";
 import { TeacherRankingPanel } from "./TeacherRankingPanel";
 import { rankingStartsComplete, shouldPrepareRanking, useProgressiveRanking } from "./useProgressiveRanking";
@@ -1035,30 +1036,25 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
                 </div>
               </section>
             )}
-            <aside className="course-summary-strip">
-              <span>
-                <UsersRound />
-                <strong>{snapshot.completion.checkedIn}</strong>位本次課堂學生
-              </span>
-              <span>
-                <UserCheck />
-                <strong>{snapshot.groups.length || snapshot.session.groupCount}</strong>組
-              </span>
-              <span>
-                <ClipboardCheck />
-                <strong>{snapshot.questions.length}</strong>個問題
-              </span>
-              {actor.isAdmin && (
-                <a href={`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/export`}>
-                  <Download />
-                  匯出全部資料
-                </a>
-              )}
-            </aside>
+            <TeacherSessionSummary actor={actor} snapshot={snapshot} />
           </>
         )}
       </main>
     </div>
+  );
+}
+
+function TeacherSessionSummary({ actor, snapshot }: { actor: Actor; snapshot: ClassroomSessionSnapshot }) {
+  return (
+    <>
+      {actor.isAdmin && snapshot.session.phase === "answering" && <StudentParticipationPanel sessionId={snapshot.session.id} />}
+      <aside className="course-summary-strip">
+        <span><UsersRound /><strong>{snapshot.completion.checkedIn}</strong>位本次課堂學生</span>
+        <span><UserCheck /><strong>{snapshot.groups.length || snapshot.session.groupCount}</strong>組</span>
+        <span><ClipboardCheck /><strong>{snapshot.questions.length}</strong>個問題</span>
+        {actor.isAdmin && <a href={`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/export`}><Download />匯出全部資料</a>}
+      </aside>
+    </>
   );
 }
 

@@ -58,6 +58,7 @@ test("production bundle exposes only the classroom product and preserves securit
   assert.match(worker, /\/api\/classroom\/observability/);
   assert.match(worker, /\/api\/classroom\/observability\/verification/);
   assert.match(worker, /\/api\/classroom\/sessions/);
+  assert.match(worker, /\/participation/);
   assert.match(worker, /\/questions/);
   assert.match(worker, /question-bank/);
   assert.match(worker, /\/api\/classroom\/join/);
@@ -103,6 +104,8 @@ test("client bundles contain course management and access review without removed
   assert.match(client, /正在確認權限/);
   assert.match(client, /驗證須晚於問題/);
   assert.match(client, /學生測試模式/);
+  assert.match(client, /哪些學生參與較少/);
+  assert.match(client, /遲到前未取得參與資格的題目不列入分母/);
   assert.match(css, /focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /@media/);

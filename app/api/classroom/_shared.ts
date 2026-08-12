@@ -6,7 +6,7 @@ import {
   loadOrProvisionClassroomActor,
   type ClassroomActor,
 } from "@/db/classroom";
-import { ClassroomWorkflowError } from "@/db/classroom-live";
+import { ClassroomWorkflowError } from "@/db/classroom-errors";
 import { recordClassroomOperationLog } from "@/db/classroom-observability";
 import {
   demoStudentActorForCourse,

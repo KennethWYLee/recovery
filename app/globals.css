@@ -487,6 +487,37 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .raw-ranking-panel th, .raw-ranking-panel td { padding: 11px 16px; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
 .raw-ranking-panel th { color: var(--muted); background: var(--surface-subtle); font-size: 12px; }
 .raw-ranking-panel td { color: var(--text-strong); }
+.student-participation-panel { margin-top: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.student-participation-panel > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 20px 22px; border-bottom: 1px solid var(--border-soft); }
+.student-participation-panel > header > div:first-child { display: grid; gap: 3px; max-width: 760px; }
+.student-participation-panel > header > div:last-child { display: flex; gap: 8px; }
+.student-participation-panel > header p { margin: 0; color: var(--primary); font-weight: 800; }
+.student-participation-panel > header h2 { margin: 0; color: var(--text-strong); font-size: 21px; }
+.student-participation-panel > header span, .student-participation-panel > footer { color: var(--muted); font-size: 13px; line-height: 1.55; }
+.participation-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--border-soft); border-bottom: 1px solid var(--border-soft); }
+.participation-summary > span { display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 0 10px; min-width: 0; padding: 15px 18px; background: var(--surface-subtle); }
+.participation-summary svg { grid-row: 1 / 3; width: 22px; color: var(--primary); }
+.participation-summary small { color: var(--muted); }
+.participation-summary strong { overflow: hidden; color: var(--text-strong); font-size: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.participation-table-wrap { max-height: 540px; overflow: auto; }
+.participation-table-wrap table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
+.participation-table-wrap th, .participation-table-wrap td { min-width: 118px; padding: 11px 13px; background: var(--surface); border-right: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
+.participation-table-wrap th { position: sticky; top: 0; z-index: 2; color: var(--muted); background: var(--surface-subtle); font-size: 12px; white-space: nowrap; }
+.participation-table-wrap th:first-child, .participation-table-wrap td:first-child { position: sticky; left: 0; z-index: 1; min-width: 190px; }
+.participation-table-wrap th:first-child { z-index: 3; }
+.participation-table-wrap td strong, .participation-table-wrap td small { display: block; }
+.participation-table-wrap td small { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.participation-table-wrap tr.needs-attention td { background: #fffaf2; }
+.participation-table-wrap tr.needs-attention td:first-child { background: #fff7e8; }
+.participation-status { display: inline-flex; padding: 4px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.participation-status.completed { color: var(--success); background: var(--success-soft); }
+.participation-status.participating { color: var(--primary); background: var(--primary-soft); }
+.participation-status.pending { color: var(--warning); background: var(--warning-soft); }
+.participation-status.missing { color: var(--danger); background: var(--danger-soft); }
+.participation-status.not-eligible { color: var(--muted); background: var(--surface-subtle); }
+.student-participation-panel > footer { padding: 13px 18px; background: var(--surface-subtle); }
+.participation-message { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 150px; padding: 24px; color: var(--muted); }
+.participation-message.error { color: var(--danger); }
 .course-summary-strip { display: flex; justify-content: flex-end; gap: 18px; margin-top: 18px; color: var(--muted); }
 .course-summary-strip > span { display: inline-flex; align-items: center; gap: 6px; }
 .course-summary-strip svg { width: 16px; color: var(--primary); }
@@ -785,6 +816,12 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 }
 
 @media (max-width: 640px) {
+  .student-participation-panel > header { align-items: stretch; flex-direction: column; padding: 17px; }
+  .student-participation-panel > header > div:last-child { width: 100%; }
+  .student-participation-panel > header .button { flex: 1; justify-content: center; }
+  .participation-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .participation-summary > span { padding: 13px; }
+  .participation-table-wrap { max-height: 460px; }
   .student-live-main { width: min(100% - 20px, 920px); padding-top: 18px; }
   .student-live-heading { align-items: flex-start; }
   .student-live-heading h1 { font-size: 25px; }
