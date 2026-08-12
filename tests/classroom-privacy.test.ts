@@ -5,6 +5,7 @@ import {
   anonymousAnswerLabel,
   classroomGroupsForViewer,
   classroomQuestionGroupId,
+  studentMaySeeGroupNames,
 } from "../lib/classroom-privacy.ts";
 
 function group(id: string, label: string, position: number): ClassroomGroup {
@@ -90,6 +91,19 @@ test("named mode keeps only the teacher-approved group label", () => {
   assert.deepEqual(visible[0].members, []);
   assert.equal(visible[0].representativeUserId, null);
   assert.equal(Object.hasOwn(visible[0], "position"), false);
+});
+
+test("students cannot see group names while answers are being compared", () => {
+  for (const phase of ["answering", "presenting", "ranking", "locked"]) {
+    assert.equal(studentMaySeeGroupNames(phase, false), false, phase);
+  }
+});
+
+test("teacher may reveal group names only after publishing the result", () => {
+  assert.equal(studentMaySeeGroupNames("published", false), true);
+  assert.equal(studentMaySeeGroupNames("archived", false), true);
+  assert.equal(studentMaySeeGroupNames("published", true), false);
+  assert.equal(studentMaySeeGroupNames(null, false), false);
 });
 
 test("an active question uses only its captured membership and never the session-group fallback", () => {

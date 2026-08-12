@@ -28,6 +28,20 @@ export function classroomQuestionGroupId(
 }
 
 /**
+ * Group names may only be disclosed after the teacher has published a result.
+ * Answer presentation and individual ranking always use anonymous labels so a
+ * session setting cannot accidentally expose the source group while students
+ * are still deciding their order.
+ */
+export function studentMaySeeGroupNames(
+  questionPhase: string | null | undefined,
+  keepPublishedResultsAnonymous: boolean,
+): boolean {
+  return !keepPublishedResultsAnonymous
+    && (questionPhase === "published" || questionPhase === "archived");
+}
+
+/**
  * Produces the group DTO that may cross the classroom API boundary.
  *
  * `ClassroomGroup` remains the public TypeScript contract for compatibility

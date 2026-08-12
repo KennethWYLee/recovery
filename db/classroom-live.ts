@@ -15,7 +15,7 @@ import {
   type ClassroomSessionPhase,
   type ClassroomSessionSnapshot,
 } from "@/lib/classroom-domain";
-import { classroomGroupsForViewer, classroomQuestionGroupId } from "@/lib/classroom-privacy";
+import { classroomGroupsForViewer, classroomQuestionGroupId, studentMaySeeGroupNames } from "@/lib/classroom-privacy";
 import { classroomId, classroomNow, type ClassroomActor } from "./classroom";
 import {
   guardedClassroomRankingBatch,
@@ -279,7 +279,7 @@ export async function classroomSessionSnapshot(
       },
     };
   });
-  const groups = classroomGroupsForViewer(internalGroups, actor.isAdmin, session.anonymousGroups);
+  const groups = classroomGroupsForViewer(internalGroups, actor.isAdmin, !studentMaySeeGroupNames(question?.phase, session.anonymousGroups));
 
   const groupLabels = groups.map((group) => ({ id: group.id, label: group.label }));
   const summaryCountRows = await db.prepare(

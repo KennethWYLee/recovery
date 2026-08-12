@@ -6,6 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { courseTermLabel, QUESTION_PHASE_LABELS, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
+import { StudentConsensusResults } from "./StudentConsensusResults";
 
 type Actor = {
   id: string;
@@ -111,8 +112,8 @@ function EmptySession({ course, onCreated }: { course: ClassroomCourse; onCreate
           <label className="check-field">
             <input type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} />
             <span>
-              <strong>排序時隱藏組別</strong>
-              <small>顯示回答 A、B、C</small>
+              <strong>公布後仍隱藏組別</strong>
+              <small>排序時一律匿名；關閉後只在公布結果時顯示組名</small>
             </span>
           </label>
           <label className="check-field">
@@ -1192,7 +1193,6 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
                     return (
                       <article key={group.id}>
                         <span>{answerLabels[group.id] ?? `回答 ${String.fromCharCode(65 + index)}`}</span>
-                        {group.id === snapshot.currentUser.groupId && <em>本組回答</em>}
                         <p>{group.response.content}</p>
                       </article>
                     );
@@ -1230,16 +1230,10 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
                     if (!group) return null;
                     return (
                       <li key={group.id} draggable onDragStart={() => setDragRank(group.id)} onDragEnd={() => setDragRank(null)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropRank(index)} className={dragRank === group.id ? "dragging" : ""}>
-                        <span className="rank-number">
-                          {rankingOrder.length - index}
-                          <small>分</small>
-                        </span>
                         <GripVertical />
                         <div className="ranking-answer">
                           <p>{group.response.content}</p>
-                          <small>
-                            {answerLabels[group.id] ?? "匿名回答"} · 目前第 {index + 1} 名 {group.id === snapshot.currentUser.groupId ? "· 本組回答" : ""}
-                          </small>
+                          <small>{answerLabels[group.id] ?? "匿名回答"}</small>
                         </div>
                         <span className="rank-controls">
                           <button aria-label="上移" disabled={index === 0} onClick={() => moveRank(index, -1)}>
@@ -1266,34 +1260,7 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
                 <p>教師確認結果後，會公布全班排序共識。</p>
               </section>
             )}
-            {["published", "archived"].includes(question.phase) && (
-              <section className="student-focus-card student-consensus">
-                <header>
-                  <div>
-                    <p>全班排序共識</p>
-                    <h2>大家如何比較這些回答</h2>
-                  </div>
-                  <span>{snapshot.completion.rankedStudents} 人完成排序</span>
-                </header>
-                <ol>
-                  {snapshot.results.map((result) => {
-                    const group = snapshot.groups.find((item) => item.id === result.groupId);
-                    return (
-                      <li key={result.groupId}>
-                        <strong>{result.tied ? `並列第 ${result.finalRank} 名` : `第 ${result.finalRank} 名`}</strong>
-                        <p>{group?.response.content}</p>
-                        <footer>
-                          <span>{result.ratingCount} 份有效排序</span>
-                          <b>
-                            平均 {result.averageScore.toFixed(2)}／{result.maximumScore} 分
-                          </b>
-                        </footer>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </section>
-            )}
+            {["published", "archived"].includes(question.phase) && <StudentConsensusResults snapshot={snapshot} />}
           </>
         )}
       </main>
@@ -1373,7 +1340,8 @@ function SessionSettings({ snapshot, pending, onSave }: { snapshot: ClassroomSes
       <label className="check-field">
         <input type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} />
         <span>
-          <strong>排序時隱藏組別</strong>
+          <strong>公布後仍隱藏組別</strong>
+          <small>學生排序時一律匿名；關閉後只在公布結果時顯示組名。</small>
         </span>
       </label>
       <label className="check-field">

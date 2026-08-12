@@ -706,13 +706,23 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .student-answers article > em { margin-left: 8px; padding: 3px 7px; color: #17453f; background: #e2f4f0; border-radius: 999px; font-size: 12px; font-style: normal; font-weight: 800; }
 .student-answers article > p { margin: 10px 0 0; color: var(--text-strong); font-size: 17px; line-height: 1.7; white-space: pre-wrap; }
 .student-ranking-card > .ranking-list { margin-top: 22px; }
+.student-ranking-card .ranking-list li { grid-template-columns: 20px minmax(0, 1fr) auto; padding: 18px; }
+.student-ranking-card .ranking-answer p { font-size: 17px; line-height: 1.72; }
 .student-ranking-card > .button { width: calc(100% - 44px); margin: 0 22px 22px; }
 .student-consensus > ol { display: grid; gap: 12px; margin: 0; padding: 22px; list-style: none; }
 .student-consensus li { padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 11px; }
-.student-consensus li > strong { color: var(--primary); font-size: 19px; }
+.consensus-answer-label { color: var(--primary); font-size: 14px; font-weight: 850; }
 .student-consensus li > p { margin: 9px 0 16px; color: var(--text-strong); font-size: 17px; line-height: 1.65; white-space: pre-wrap; }
-.student-consensus li > footer { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
+.student-consensus li > footer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; color: var(--muted); }
 .student-consensus li > footer b { color: var(--text-strong); }
+.result-distribution { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+.result-distribution summary { color: var(--primary); font-size: 13px; font-weight: 800; cursor: pointer; }
+.result-distribution > div { display: grid; gap: 7px; margin-top: 12px; }
+.result-distribution > div > span { display: grid; grid-template-columns: 70px minmax(80px, 1fr) 28px; align-items: center; gap: 9px; }
+.result-distribution small { color: var(--muted); }
+.result-distribution i { height: 7px; overflow: hidden; background: var(--border-soft); border-radius: 999px; }
+.result-distribution i b { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
+.result-distribution strong { color: var(--text-strong); text-align: right; }
 
 @media (max-width: 900px) {
   .course-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -751,6 +761,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .ranking-list { margin-inline: 12px; }
   .ranking-list li { grid-template-columns: 36px 16px minmax(0, 1fr); }
   .rank-controls { grid-column: 3; grid-template-columns: 1fr 1fr; }
+  .student-ranking-card .ranking-list li { grid-template-columns: 16px minmax(0, 1fr); }
+  .student-ranking-card .rank-controls { grid-column: 2; }
 }
 @media (max-width: 620px) {
   .course-topbar { min-height: 64px; padding-inline: 14px; }
