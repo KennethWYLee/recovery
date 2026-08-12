@@ -506,6 +506,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .join-code-panel > div { display: grid; }
 .join-code-panel strong { color: var(--text-strong); font-size: 16px; }
 .join-code-panel small { color: var(--muted); }
+.join-code-panel .test-class-code { display: inline-block; margin-left: 8px; padding: 3px 8px; color: var(--primary); background: var(--primary-soft); border-radius: 6px; font-size: 13px; font-weight: 850; letter-spacing: .03em; }
 .join-code-panel input { min-height: 42px; padding: 8px 12px; color: var(--text-strong); background: #fff; border: 1px solid var(--border); border-radius: 8px; font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .workspace-heading-actions { display: flex; gap: 9px; }
 .student-test-banner { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; padding: 14px 16px; color: #17453f; background: #e2f4f0; border: 1px solid #9ed6cc; border-radius: 11px; }
