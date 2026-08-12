@@ -3,6 +3,14 @@
 import { useCallback, useState } from "react";
 import { moveSelectedRankingChoice, selectNextRankingChoice, undoLastRankingChoice } from "@/lib/classroom-mobile-ranking";
 
+export function shouldPrepareRanking(isAdmin: boolean, phase: string): boolean {
+  return phase === "ranking" || !isAdmin && phase === "presenting";
+}
+
+export function rankingStartsComplete(isAdmin: boolean, savedOrderIsComplete: boolean): boolean {
+  return isAdmin || savedOrderIsComplete;
+}
+
 export function useProgressiveRanking() {
   const [rankingOrder, setRankingOrder] = useState<string[]>([]);
   const [rankingSelectionCount, setRankingSelectionCount] = useState(0);

@@ -462,6 +462,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .ranking-monitor svg { width: 48px; height: 48px; color: var(--primary); }
 .ranking-monitor strong { margin-top: 14px; color: var(--text-strong); font-size: 24px; }
 .ranking-monitor span { max-width: 440px; margin-top: 6px; color: var(--muted); }
+.teacher-ranking-layout { display: grid; grid-template-columns: minmax(250px, .7fr) minmax(0, 1.3fr); gap: 18px; padding: 18px; }
+.teacher-ranking-layout .ranking-monitor { min-height: 280px; padding: 26px; background: var(--surface-subtle); border: 1px solid var(--border-soft); border-radius: 12px; }
+.teacher-ranking-workspace { min-width: 0; }
 
 .results-layout { grid-template-columns: minmax(0, 1fr); }
 .results-table { overflow: hidden; }
@@ -748,6 +751,13 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .result-distribution i { height: 7px; overflow: hidden; background: var(--border-soft); border-radius: 999px; }
 .result-distribution i b { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
 .result-distribution strong { color: var(--text-strong); text-align: right; }
+.ranking-comparison { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.ranking-comparison > span { display: grid; gap: 2px; min-width: 112px; padding: 9px 12px; background: var(--surface-subtle); border: 1px solid var(--border-soft); border-radius: 8px; }
+.ranking-comparison small { color: var(--muted); font-size: 11px; }
+.ranking-comparison strong { color: var(--text-strong); font-size: 14px; }
+.ranking-comparison em { align-self: center; padding: 6px 9px; border-radius: 999px; font-size: 12px; font-style: normal; font-weight: 800; }
+.ranking-comparison em.same { color: var(--success); background: var(--success-soft); }
+.ranking-comparison em.different { color: var(--warning); background: var(--warning-soft); }
 
 @media (max-width: 900px) {
   .course-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1000,6 +1010,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .observability-dialog form > footer { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
 
 @media (max-width: 980px) {
+  .teacher-ranking-layout { grid-template-columns: 1fr; }
   .observability-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .observability-grid, .observability-grid.events-grid { grid-template-columns: 1fr; }
   .observability-method { grid-template-columns: 42px minmax(0, 1fr); }

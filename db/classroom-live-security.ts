@@ -14,8 +14,10 @@ export async function questionAdvanceEvidenceFailure(
 ): Promise<ClassroomLiveGuardFailure | null> {
   if (phase !== "ranking" && phase !== "locked") return null;
   const valid = await db.prepare(
-    `SELECT COUNT(DISTINCT user_id) AS count FROM classroom_question_ranking_submissions
-     WHERE question_id = ? AND is_current = 1 AND status = 'valid'`,
+    `SELECT COUNT(DISTINCT s.user_id) AS count
+     FROM classroom_question_ranking_submissions s
+     JOIN classroom_question_memberships m ON m.question_id = s.question_id AND m.user_id = s.user_id
+     WHERE s.question_id = ? AND s.is_current = 1 AND s.status = 'valid'`,
   ).bind(questionId).first<{ count: number }>();
   const count = valid?.count ?? 0;
   if (phase === "ranking" && count === 0) {
@@ -27,6 +29,16 @@ export async function questionAdvanceEvidenceFailure(
       code: "NOT_ENOUGH_RANKINGS_TO_PUBLISH",
       message: `至少需要 ${minimumRankings} 位學生完成有效排序，才能公布彙整結果。`,
     };
+  }
+  if (phase === "ranking" || phase === "locked") {
+    const teacher = await db.prepare(
+      `SELECT 1 AS present FROM classroom_question_ranking_submissions s
+       JOIN classroom_questions q ON q.id = s.question_id AND q.created_by_user_id = s.user_id
+       WHERE s.question_id = ? AND s.is_current = 1 AND s.status = 'valid' LIMIT 1`,
+    ).bind(questionId).first<{ present: number }>();
+    if (!teacher) {
+      return { status: 409, code: "TEACHER_RANKING_REQUIRED", message: "教師尚未完成本題排序，暫時不能結束排序或公布結果。" };
+    }
   }
   return null;
 }

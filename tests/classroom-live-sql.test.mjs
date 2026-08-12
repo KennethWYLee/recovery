@@ -223,16 +223,28 @@ test("a ranking batch rolls back when the teacher locks the question before inse
   db.close();
 });
 
-test("published aggregation requires at least three distinct current valid rankings", async () => {
+test("publishing counts three students and requires a separate teacher ranking", async () => {
   const db = await liveDatabase({ phase: "locked", studentCount: 3 });
   for (let index = 1; index <= 3; index += 1) {
+    db.prepare(`INSERT INTO classroom_question_memberships
+      (id, question_id, user_id, group_id, can_rank, captured_at)
+      VALUES (?, 'question-1', ?, ?, 1, ?)`).run(`membership-${index}`, `student-${index}`, `group-${index}`, NOW);
     db.prepare(`INSERT INTO classroom_question_ranking_submissions
       (id, question_id, user_id, version, is_current, status, invalid_reason, submitted_at)
       VALUES (?, 'question-1', ?, 1, 1, 'valid', NULL, ?)`).run(`ranking-${index}`, `student-${index}`, NOW);
-    const count = db.prepare(`SELECT COUNT(DISTINCT user_id) AS count FROM classroom_question_ranking_submissions
-      WHERE question_id = 'question-1' AND is_current = 1 AND status = 'valid'`).get().count;
+    const count = db.prepare(`SELECT COUNT(DISTINCT s.user_id) AS count
+      FROM classroom_question_ranking_submissions s
+      JOIN classroom_question_memberships m ON m.question_id = s.question_id AND m.user_id = s.user_id
+      WHERE s.question_id = 'question-1' AND s.is_current = 1 AND s.status = 'valid'`).get().count;
     assert.equal(count >= 3, index >= 3);
   }
+  db.prepare(`INSERT INTO classroom_question_ranking_submissions
+    (id, question_id, user_id, version, is_current, status, invalid_reason, submitted_at)
+    VALUES ('ranking-teacher', 'question-1', 'teacher-1', 1, 1, 'valid', NULL, ?)`).run(NOW);
+  const teacher = db.prepare(`SELECT 1 AS present FROM classroom_question_ranking_submissions s
+    JOIN classroom_questions q ON q.id = s.question_id AND q.created_by_user_id = s.user_id
+    WHERE s.question_id = 'question-1' AND s.is_current = 1 AND s.status = 'valid'`).get();
+  assert.equal(teacher.present, 1);
   db.close();
 });
 
@@ -252,15 +264,21 @@ test("Given 50 valid rankings, the summary query counts students once despite si
         .run(`item-${student}-${rank}`, `ranking-${student}`, `group-${rank}`, rank);
     }
   }
+  db.prepare(`INSERT INTO classroom_question_ranking_submissions
+    (id, question_id, user_id, version, is_current, status, invalid_reason, submitted_at)
+    VALUES ('ranking-teacher', 'question-1', 'teacher-1', 1, 1, 'valid', NULL, ?)`).run(NOW);
   const summary = db.prepare(`SELECT q.id,
       COUNT(DISTINCT CASE WHEN r.status IN ('submitted','locked') THEN r.id END) AS submitted_groups,
-      COUNT(DISTINCT CASE WHEN s.is_current = 1 AND s.status = 'valid' THEN s.user_id END) AS ranked_students
+      COUNT(DISTINCT CASE WHEN s.is_current = 1 AND s.status = 'valid' AND m.user_id IS NOT NULL THEN s.user_id END) AS ranked_students,
+      MAX(CASE WHEN s.is_current = 1 AND s.status = 'valid' AND s.user_id = q.created_by_user_id THEN 1 ELSE 0 END) AS teacher_ranked
     FROM classroom_questions q
     LEFT JOIN classroom_question_responses r ON r.question_id = q.id
     LEFT JOIN classroom_question_ranking_submissions s ON s.question_id = q.id
+    LEFT JOIN classroom_question_memberships m ON m.question_id = s.question_id AND m.user_id = s.user_id
     WHERE q.session_id = 'session-1' GROUP BY q.id`).get();
   assert.equal(summary.submitted_groups, 6);
   assert.equal(summary.ranked_students, 50);
+  assert.equal(summary.teacher_ranked, 1);
   db.close();
 });
 

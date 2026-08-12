@@ -15,8 +15,8 @@ import {
   type ClassroomRole,
 } from "@/lib/classroom-domain";
 import { enforceClassroomRateLimitScope } from "./classroom-rate-limit";
+import { ensureDemoTeacherRankings } from "./classroom-demo-ranking";
 export { enforceClassroomMutationRateLimit } from "./classroom-rate-limit";
-
 export type ClassroomActor = {
   id: string;
   email: string;
@@ -287,7 +287,7 @@ async function ensureDemoClassroom(db: D1Database, actor: ClassroomActor): Promi
   const sessionId = "session-demo-classroom";
   const existing = await db.prepare("SELECT id FROM classroom_sessions WHERE id = ?")
     .bind(sessionId).first<{ id: string }>();
-  if (existing) return;
+  if (existing) return ensureDemoTeacherRankings(db);
 
   const now = classroomNow();
   const earlier = (minutes: number) => new Date(Date.parse(now) - minutes * 60_000).toISOString();
@@ -467,7 +467,7 @@ async function ensureDemoClassroom(db: D1Database, actor: ClassroomActor): Promi
       (id, actor_user_id, action, resource_type, resource_id, details_json, occurred_at)
      VALUES ('class-audit-demo-seed', ?, 'demo.seed', 'classroom_session', ?, ?, ?)`,
   ).bind(actor.id, sessionId, JSON.stringify({ synthetic: true, students: 24, groups: 6, questions: 3 }), now));
-  await runClassroomBatches(db, statements);
+  await runClassroomBatches(db, statements).then(() => ensureDemoTeacherRankings(db));
 }
 
 function mapCourse(row: {

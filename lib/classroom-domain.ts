@@ -120,8 +120,14 @@ export type ClassroomRawRankingItem = {
 export type ClassroomQuestionSummary = ClassroomQuestion & {
   submittedGroups: number;
   rankedStudents: number;
+  teacherRanked: boolean;
   leaderLabel: string | null;
   leaderAverageScore: number | null;
+};
+
+export type ClassroomSavedRanking = {
+  submittedAt: string;
+  orderedGroupIds: string[];
 };
 
 export type ClassroomRankingResult = {
@@ -158,6 +164,7 @@ export type ClassroomSessionSnapshot = {
     hasSubmittedRanking: boolean;
     orderedGroupIds: string[];
   };
+  teacherRanking: ClassroomSavedRanking | null;
   results: ClassroomRankingResult[];
   rawRankings: Array<{
     userId: string;
@@ -367,4 +374,9 @@ export function completeClassroomRankingOrder(value: unknown, expectedGroupIds: 
   const submitted = value as string[];
   if (submitted.length !== expectedGroupIds.length || new Set(submitted).size !== submitted.length) return null;
   return expectedGroupIds.every((id) => submitted.includes(id)) ? submitted : null;
+}
+
+export function rankingPosition(orderedGroupIds: readonly string[], groupId: string): number | null {
+  const index = orderedGroupIds.indexOf(groupId);
+  return index >= 0 ? index + 1 : null;
 }

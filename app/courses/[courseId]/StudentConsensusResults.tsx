@@ -1,4 +1,4 @@
-import type { ClassroomRankingResult, ClassroomSessionSnapshot } from "@/lib/classroom-domain";
+import { rankingPosition, type ClassroomRankingResult, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 
 function RankDistribution({ result }: { result: ClassroomRankingResult }) {
   return (
@@ -30,14 +30,22 @@ export function StudentConsensusResults({ snapshot }: { snapshot: ClassroomSessi
       <ol>
         {snapshot.results.map((result) => {
           const group = snapshot.groups.find((item) => item.id === result.groupId);
+          const teacherRank = rankingPosition(snapshot.teacherRanking?.orderedGroupIds ?? [], result.groupId);
+          const ownRank = rankingPosition(snapshot.currentUser.orderedGroupIds, result.groupId);
+          const difference = teacherRank === null ? null : teacherRank - result.finalRank;
           return (
             <li key={result.groupId}>
               <span className="consensus-answer-label">{result.label}</span>
               <p>{group?.response.content}</p>
+              <div className="ranking-comparison" aria-label="名次比較">
+                <span><small>全班共識</small><strong>第 {result.finalRank} 名</strong></span>
+                <span><small>教師排序</small><strong>{teacherRank === null ? "尚未提供" : `第 ${teacherRank} 名`}</strong></span>
+                <span><small>你的排序</small><strong>{ownRank === null ? "未參與" : `第 ${ownRank} 名`}</strong></span>
+                {difference !== null && <em className={difference === 0 ? "same" : "different"}>{difference === 0 ? "全班與教師一致" : `相差 ${Math.abs(difference)} 名`}</em>}
+              </div>
               <footer>
                 <b>共識分數 {result.averageScore.toFixed(2)}／{result.maximumScore}</b>
                 <span>{result.ratingCount} 份有效排序</span>
-                <span>{result.tied ? `並列第 ${result.finalRank} 位` : `第 ${result.finalRank} 位`}</span>
               </footer>
               <RankDistribution result={result} />
             </li>

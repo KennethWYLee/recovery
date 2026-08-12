@@ -25,7 +25,7 @@
     "audit:all": "npm audit --audit-level=moderate",
     "quality:code": "node scripts/check-code-quality.mjs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .wrangler",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern tmp --ignore-pattern .next --ignore-pattern .wrangler",
     "gate:static": "npm run typecheck && npm run lint && npm run quality:code",
     "gate:build": "npm run build && npm run test:integration",
     "gate:ci": "npm run test:security && npm run security:secrets && npm run audit:all && npm run gate:static && npm run test:unit:coverage && npm run test:acceptance && npm run test:workflow && npm run test:mutation && npm run gate:build"

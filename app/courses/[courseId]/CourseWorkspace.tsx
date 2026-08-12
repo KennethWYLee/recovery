@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, CheckCircle2, ClipboardCheck, Clock3, Copy, Download, Eye, GripVertical, Hash, History, LockKeyhole, LogOut, LibraryBig, Plus, RefreshCw, RotateCcw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ClipboardCheck, Clock3, Copy, Download, Eye, GripVertical, Hash, History, LockKeyhole, LogOut, LibraryBig, Plus, RefreshCw, RotateCcw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
-import { courseTermLabel, QUESTION_PHASE_LABELS, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
+import { courseTermLabel, QUESTION_PHASE_LABELS, rankingPosition, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
 import { StudentConsensusResults } from "./StudentConsensusResults";
 import { StudentProgressiveRanking } from "./StudentProgressiveRanking";
-import { useProgressiveRanking } from "./useProgressiveRanking";
+import { TeacherRankingPanel } from "./TeacherRankingPanel";
+import { rankingStartsComplete, shouldPrepareRanking, useProgressiveRanking } from "./useProgressiveRanking";
 
 type Actor = {
   id: string;
@@ -63,6 +64,11 @@ function shuffle<T>(values: T[]): T[] {
 
 function displayGroup(group: ClassroomGroup, anonymous: boolean, groups: ClassroomGroup[]) {
   return anonymous ? `回答 ${String.fromCharCode(65 + groups.findIndex((item) => item.id === group.id))}` : group.label;
+}
+
+function questionAdvanceIsDisabled(pending: boolean, phase: string, rankedStudents: number, teacherSubmitted: boolean): boolean {
+  if (pending) return true;
+  return phase === "ranking" && (rankedStudents === 0 || !teacherSubmitted);
 }
 
 function EmptySession({ course, onCreated }: { course: ClassroomCourse; onCreated: () => void }) {
@@ -260,7 +266,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
           setResponseText(currentGroup?.response.content ?? "");
         }
         const currentQuestion = data.snapshot?.question;
-        if (data.snapshot && currentQuestion && ["presenting", "ranking"].includes(currentQuestion.phase) && !data.actor.isAdmin) {
+        if (data.snapshot && currentQuestion && shouldPrepareRanking(data.actor.isAdmin, currentQuestion.phase)) {
           const eligible = data.snapshot.groups.filter((group) => ["submitted", "locked"].includes(group.response.status) && group.response.content.trim().length > 0).map((group) => group.id);
           const savedOrder = data.snapshot.currentUser.orderedGroupIds;
           const savedOrderIsComplete = savedOrder.length === eligible.length
@@ -270,7 +276,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
           if (rankingKey !== rankingKeyRef.current) {
             rankingKeyRef.current = rankingKey;
             const initialOrder = savedOrderIsComplete ? savedOrder : shuffle(eligible);
-            initializeRanking(initialOrder, savedOrderIsComplete);
+            initializeRanking(initialOrder, rankingStartsComplete(data.actor.isAdmin, savedOrderIsComplete));
             setAnswerLabels(Object.fromEntries(initialOrder.map((groupId, index) => [groupId, `回答 ${String.fromCharCode(65 + index)}`])));
           }
         }
@@ -554,7 +560,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
           testStudentId,
         }),
       }),
-      "完整排序已送出。",
+      actor.isAdmin ? "教師排序已送出。" : "完整排序已送出。",
     );
   }
 
@@ -951,7 +957,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
                                 第1名 {item.leaderLabel} · 平均 {item.leaderAverageScore?.toFixed(2)} 分
                               </em>
                             )}
-                            {["ranking", "locked"].includes(item.phase) && <em>{item.rankedStudents} 人已排序</em>}
+                            {["ranking", "locked"].includes(item.phase) && <em>{item.rankedStudents} 位學生 · 教師{item.teacherRanked ? "已" : "尚未"}排序</em>}
                           </div>
                         </button>
                       </li>
@@ -1016,7 +1022,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
                           <span>{question.phase === "locked" ? "學生目前仍看不到排名；確認後再正式公布。" : question.phase === "published" ? "結果已固定並對學生公開。" : "同一時間只會開放一個問題。"}</span>
                           <button
                             className="button primary"
-                            disabled={pending || (question.phase === "ranking" && snapshot.completion.rankedStudents === 0)}
+                            disabled={questionAdvanceIsDisabled(pending, question.phase, snapshot.completion.rankedStudents, snapshot.currentUser.hasSubmittedRanking)}
                             onClick={() => void advanceQuestion()}
                           >
                             {questionAdvanceLabels[question.phase]}
@@ -1569,23 +1575,10 @@ function PresentationStage({ snapshot }: { snapshot: ClassroomSessionSnapshot })
 }
 
 function RankingStage({ snapshot, actor, rankingOrder, dragRank, setDragRank, moveRank, dropRank, pending, submitRanking }: { snapshot: ClassroomSessionSnapshot; actor: Actor; rankingOrder: string[]; dragRank: string | null; setDragRank: (value: string | null) => void; moveRank: (index: number, offset: number) => void; dropRank: (index: number) => void; pending: boolean; submitRanking: () => Promise<void> }) {
-  if (actor.isAdmin)
-    return (
-      <div className="ranking-monitor">
-        <BarChart3 />
-        <strong>
-          {snapshot.completion.rankedStudents} / {snapshot.completion.eligibleStudents} 位已完成
-        </strong>
-        <span>排序期間只顯示完成進度，不對學生顯示暫時名次，避免影響後提交者。</span>
-        <div className="progress-track">
-          <span
-            style={{
-              width: `${snapshot.completion.eligibleStudents ? (snapshot.completion.rankedStudents / snapshot.completion.eligibleStudents) * 100 : 0}%`,
-            }}
-          />
-        </div>
-      </div>
-    );
+  if (actor.isAdmin) {
+    if (!snapshot.currentUser.canRank) return <div className="stage-empty"><LockKeyhole /><h2>本題由另一位教師建立</h2><p>只有建立本題的教師可以提交教師排序；你仍可查看學生完成進度。</p></div>;
+    return <TeacherRankingPanel snapshot={snapshot} order={rankingOrder} dragging={dragRank} pending={pending} onDrag={setDragRank} onMove={moveRank} onDrop={dropRank} onSubmit={() => void submitRanking()} />;
+  }
   return (
     <div className="ranking-workspace">
       <header>
@@ -1646,24 +1639,31 @@ function ResultsStage({ snapshot, actor }: { snapshot: ClassroomSessionSnapshot;
       <article className="results-table">
         <header>
           <div>
-            <p>全班排序結果</p>
-            <h2>平均分數越高，整體排名越高</h2>
+            <p>全班與教師排序</p>
+            <h2>逐份回答比較共識與教師判斷</h2>
           </div>
           <span>{snapshot.completion.rankedStudents} 份有效排序</span>
         </header>
         <ol>
           {snapshot.results.map((result) => {
             const group = snapshot.groups.find((item) => item.id === result.groupId);
+            const teacherRank = rankingPosition(snapshot.teacherRanking?.orderedGroupIds ?? [], result.groupId);
+            const difference = teacherRank === null ? null : teacherRank - result.finalRank;
             return (
               <li key={result.groupId}>
                 <p className="result-response">{group?.response.content || "未提供回答內容"}</p>
+                <div className="ranking-comparison">
+                  <span><small>全班共識</small><strong>第 {result.finalRank} 名</strong></span>
+                  <span><small>教師排序</small><strong>{teacherRank === null ? "尚未提供" : `第 ${teacherRank} 名`}</strong></span>
+                  {difference !== null && <em className={difference === 0 ? "same" : "different"}>{difference === 0 ? "一致" : `相差 ${Math.abs(difference)} 名`}</em>}
+                </div>
                 <footer className="result-meta">
                   <span>
                     <b>{result.label}</b>
                     <small>{result.ratingCount} 人完成評選</small>
                   </span>
                   <span>
-                    <strong>{result.tied ? `並列第 ${result.finalRank} 名` : `第 ${result.finalRank} 名`}</strong>
+                    <strong>{result.tied ? `全班並列第 ${result.finalRank} 名` : `全班第 ${result.finalRank} 名`}</strong>
                     <em>
                       平均 {result.averageScore.toFixed(2)} 分／最高 {result.maximumScore} 分
                     </em>

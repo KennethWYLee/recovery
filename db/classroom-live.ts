@@ -4,19 +4,25 @@ import {
   completeClassroomRankingOrder,
   nextQuestionPhase,
   normalizeSessionText,
-  rankResults,
-  rankingsExcludingOwnGroup,
   type ClassroomGroup,
   type ClassroomParticipant,
   type ClassroomQuestion,
   type ClassroomQuestionPhase,
   type ClassroomQuestionSummary,
+  type ClassroomSavedRanking,
   type ClassroomSession,
   type ClassroomSessionPhase,
   type ClassroomSessionSnapshot,
 } from "@/lib/classroom-domain";
 import { classroomGroupsForViewer, classroomQuestionGroupId, studentMaySeeGroupNames } from "@/lib/classroom-privacy";
 import { classroomId, classroomNow, type ClassroomActor } from "./classroom";
+import {
+  classroomCurrentRanking,
+  classroomRankingResults,
+  classroomRawStudentRankings,
+  classroomStudentSubmissionUserIds,
+  classroomTeacherRanking,
+} from "./classroom-ranking";
 import {
   guardedClassroomRankingBatch,
   guardedClassroomResponseWrite,
@@ -33,22 +39,22 @@ export class ClassroomWorkflowError extends Error {
 type SessionRow = {
   id: string; course_id: string; title: string; join_code: string; phase: ClassroomSessionPhase;
   group_count: number; effective_group_capacity: number; anonymous_groups: number;
-  allow_ranking_edits: number; admission_open: number; qr_enabled: number; version: number;
+  allow_ranking_edits: number; admission_open: number; qr_enabled: number; version: number; created_by_user_id: string;
   created_at: string; updated_at: string;
 };
 
 type QuestionRow = {
   id: string; session_id: string; question_text: string; ranking_criteria: string;
-  phase: ClassroomQuestionPhase; answer_duration_seconds: number; answer_deadline_at: string | null;
+  phase: ClassroomQuestionPhase; answer_duration_seconds: number; answer_deadline_at: string | null; created_by_user_id: string;
   position: number; version: number; created_at: string; updated_at: string;
 };
 
 const QUESTION_COLUMNS = `id, session_id, question_text, ranking_criteria, phase,
-  answer_duration_seconds, answer_deadline_at, position, version, created_at, updated_at`;
+  answer_duration_seconds, answer_deadline_at, position, version, created_by_user_id, created_at, updated_at`;
 
 const SESSION_COLUMNS = `id, course_id, title, join_code, phase, group_count,
   effective_group_capacity, anonymous_groups, allow_ranking_edits,
-  admission_open, qr_enabled, version, created_at, updated_at`;
+  admission_open, qr_enabled, version, created_by_user_id, created_at, updated_at`;
 const MINIMUM_RANKINGS_TO_PUBLISH = 3;
 
 function mapSession(row: SessionRow): ClassroomSession {
@@ -125,6 +131,39 @@ function placeholders(rows: number, columns: number): string {
   return Array.from({ length: rows }, () => `(${Array.from({ length: columns }, () => "?").join(", ")})`).join(", ");
 }
 
+function actorMayRankQuestion(actor: ClassroomActor, question: QuestionRow | undefined, membershipCanRank: boolean): boolean {
+  if (!question) return false;
+  return actor.isAdmin ? question.phase === "ranking" && question.created_by_user_id === actor.id : membershipCanRank;
+}
+
+function actorHasCurrentRanking(actor: ClassroomActor, current: ClassroomSavedRanking | null, studentUsers: Set<string>): boolean {
+  return actor.isAdmin ? Boolean(current) : studentUsers.has(actor.id);
+}
+
+async function snapshotRankingState(db: D1Database, actor: ClassroomActor, question: ClassroomQuestion | null, showResults: boolean) {
+  if (!question) return { currentRanking: null, teacherRanking: null, rawRankings: [] };
+  const currentRanking = await classroomCurrentRanking(db, question.id, actor.id);
+  const teacherRanking = showResults ? await classroomTeacherRanking(db, question.id) : null;
+  const rawRankings = actor.isAdmin && ["ranking", "locked", "published", "archived"].includes(question.phase)
+    ? await classroomRawStudentRankings(db, question.id) : [];
+  return { currentRanking, teacherRanking, rawRankings };
+}
+
+async function requireRankingActor(db: D1Database, actor: ClassroomActor, question: QuestionRow): Promise<void> {
+  if (actor.isAdmin) {
+    if (question.created_by_user_id !== actor.id) {
+      throw new ClassroomWorkflowError(403, "TEACHER_RANKING_OWNER_REQUIRED", "只有建立本題的教師可以提交教師排序。");
+    }
+    return;
+  }
+  const membership = await db.prepare(
+    "SELECT can_rank FROM classroom_question_memberships WHERE question_id = ? AND user_id = ?",
+  ).bind(question.id, actor.id).first<{ can_rank: number }>();
+  if (membership?.can_rank !== 1) {
+    throw new ClassroomWorkflowError(403, "RANKING_NOT_ALLOWED", "你目前不能提交這一題的排序。");
+  }
+}
+
 export async function createClassroomSession(
   db: D1Database,
   actor: ClassroomActor,
@@ -189,27 +228,6 @@ export async function activeClassroomSession(
     "SELECT id FROM classroom_sessions WHERE course_id = ? AND phase != 'archived' ORDER BY created_at DESC LIMIT 1",
   ).bind(courseId).first<{ id: string }>();
   return row ? classroomSessionSnapshot(db, actor, row.id, questionId) : null;
-}
-
-async function rankingResultsForQuestion(
-  db: D1Database, questionId: string, groups: Array<{ id: string; label: string }>,
-) {
-  const eligibleRows = await db.prepare(
-    `SELECT group_id FROM classroom_question_responses
-     WHERE question_id = ? AND status IN ('submitted','locked') AND length(trim(content)) > 0`,
-  ).bind(questionId).all<{ group_id: string }>();
-  const eligible = new Set(eligibleRows.results.map((row) => row.group_id));
-  const rows = await db.prepare(
-    `SELECT s.user_id, m.group_id AS own_group_id, i.group_id, i.rank
-     FROM classroom_question_ranking_items i
-     JOIN classroom_question_ranking_submissions s ON s.id = i.submission_id
-     JOIN classroom_question_memberships m ON m.question_id = s.question_id AND m.user_id = s.user_id
-     WHERE s.question_id = ? AND s.is_current = 1 AND s.status = 'valid'`,
-  ).bind(questionId).all<{ user_id: string; own_group_id: string; group_id: string; rank: number }>();
-  const effective = rankingsExcludingOwnGroup(rows.results.map((row) => ({
-    userId: row.user_id, ownGroupId: row.own_group_id, groupId: row.group_id, rank: row.rank,
-  })));
-  return rankResults(groups.filter((group) => eligible.has(group.id)), effective);
 }
 
 export async function classroomSessionSnapshot(
@@ -285,28 +303,28 @@ export async function classroomSessionSnapshot(
   const summaryCountRows = await db.prepare(
     `SELECT q.id,
             COUNT(DISTINCT CASE WHEN r.status IN ('submitted','locked') THEN r.id END) AS submitted_groups,
-            COUNT(DISTINCT CASE WHEN s.is_current = 1 AND s.status = 'valid' THEN s.user_id END) AS ranked_students
+            COUNT(DISTINCT CASE WHEN s.is_current = 1 AND s.status = 'valid' AND m.user_id IS NOT NULL THEN s.user_id END) AS ranked_students,
+            MAX(CASE WHEN s.is_current = 1 AND s.status = 'valid' AND s.user_id = q.created_by_user_id THEN 1 ELSE 0 END) AS teacher_ranked
      FROM classroom_questions q
      LEFT JOIN classroom_question_responses r ON r.question_id = q.id
      LEFT JOIN classroom_question_ranking_submissions s ON s.question_id = q.id
+     LEFT JOIN classroom_question_memberships m ON m.question_id = s.question_id AND m.user_id = s.user_id
      WHERE q.session_id = ?
      GROUP BY q.id`,
-  ).bind(sessionId).all<{ id: string; submitted_groups: number; ranked_students: number }>();
+  ).bind(sessionId).all<{ id: string; submitted_groups: number; ranked_students: number; teacher_ranked: number }>();
   const summaryCounts = new Map(summaryCountRows.results.map((row) => [row.id, row]));
   const summaries: ClassroomQuestionSummary[] = visibleRows.map((row) => ({
     ...mapQuestion(row),
     submittedGroups: summaryCounts.get(row.id)?.submitted_groups ?? 0,
     rankedStudents: summaryCounts.get(row.id)?.ranked_students ?? 0,
+    teacherRanked: summaryCounts.get(row.id)?.teacher_ranked === 1,
     leaderLabel: null,
     leaderAverageScore: null,
   }));
 
-  const submittedRows = question ? await db.prepare(
-    "SELECT user_id FROM classroom_question_ranking_submissions WHERE question_id = ? AND is_current = 1 AND status = 'valid'",
-  ).bind(question.id).all<{ user_id: string }>() : { results: [] as Array<{ user_id: string }> };
-  const submittedUsers = new Set(submittedRows.results.map((row) => row.user_id));
+  const submittedUsers = question ? await classroomStudentSubmissionUserIds(db, question.id) : new Set<string>();
   const showResults = Boolean(question && (actor.isAdmin ? ["locked", "published", "archived"].includes(question.phase) : ["published", "archived"].includes(question.phase)));
-  const results = showResults && question ? await rankingResultsForQuestion(db, question.id, groupLabels) : [];
+  const results = showResults && question ? await classroomRankingResults(db, question.id, groupLabels) : [];
   if (question?.phase === "published" && results[0]) {
     const summary = summaries.find((item) => item.id === question.id);
     if (summary) {
@@ -314,35 +332,8 @@ export async function classroomSessionSnapshot(
       summary.leaderAverageScore = results[0].averageScore;
     }
   }
-  const currentRankingRows = question ? await db.prepare(
-    `SELECT i.group_id, i.rank
-     FROM classroom_question_ranking_submissions s
-     JOIN classroom_question_ranking_items i ON i.submission_id = s.id
-     WHERE s.question_id = ? AND s.user_id = ? AND s.is_current = 1 AND s.status = 'valid'
-     ORDER BY i.rank`,
-  ).bind(question.id, actor.id).all<{ group_id: string; rank: number }>() : { results: [] as Array<{ group_id: string; rank: number }> };
-  const orderedGroupIds = currentRankingRows.results.map((row) => row.group_id);
-  const rawRankings: ClassroomSessionSnapshot["rawRankings"] = [];
-  if (actor.isAdmin && question && ["ranking", "locked", "published", "archived"].includes(question.phase)) {
-    const rows = await db.prepare(
-      `SELECT s.user_id, u.display_name, u.email, s.submitted_at, i.group_id, i.rank
-       FROM classroom_question_ranking_submissions s
-       JOIN classroom_users u ON u.id = s.user_id
-       JOIN classroom_question_ranking_items i ON i.submission_id = s.id
-       WHERE s.question_id = ? AND s.is_current = 1 AND s.status = 'valid'
-       ORDER BY s.submitted_at, u.display_name, i.rank`,
-    ).bind(question.id).all<{
-      user_id: string; display_name: string; email: string; submitted_at: string; group_id: string; rank: number;
-    }>();
-    for (const row of rows.results) {
-      let ranking = rawRankings.find((item) => item.userId === row.user_id);
-      if (!ranking) {
-        ranking = { userId: row.user_id, displayName: row.display_name, email: row.email, submittedAt: row.submitted_at, orderedGroupIds: [] };
-        rawRankings.push(ranking);
-      }
-      ranking.orderedGroupIds[row.rank - 1] = row.group_id;
-    }
-  }
+  const { currentRanking, teacherRanking, rawRankings } = await snapshotRankingState(db, actor, question, showResults);
+  const orderedGroupIds = currentRanking?.orderedGroupIds ?? [];
   const eligible = question ? await db.prepare(
     "SELECT COUNT(*) AS count FROM classroom_question_memberships WHERE question_id = ? AND can_rank = 1",
   ).bind(question.id).first<{ count: number }>() : null;
@@ -360,11 +351,11 @@ export async function classroomSessionSnapshot(
       participantId: currentParticipant?.id ?? null, groupId: questionGroupId,
       isRepresentative: internalGroups.some((group) => group.id === questionGroupId && group.representativeUserId === actor.id),
       participatesInQuestion: Boolean(membership),
-      canRank: membership?.can_rank === 1,
-      hasSubmittedRanking: submittedUsers.has(actor.id),
+      canRank: actorMayRankQuestion(actor, selectedRow, membership?.can_rank === 1),
+      hasSubmittedRanking: actorHasCurrentRanking(actor, currentRanking, submittedUsers),
       orderedGroupIds,
     },
-    results, rawRankings,
+    teacherRanking, results, rawRankings,
   };
 }
 
@@ -831,10 +822,7 @@ export async function submitClassroomRanking(
   const session = await requireSession(db, actor, sessionId);
   const question = await requireQuestion(db, sessionId, questionId);
   if (question.phase !== "ranking") throw new ClassroomWorkflowError(409, "RANKING_CLOSED", "目前不是個人排序階段。");
-  const membership = await db.prepare(
-    "SELECT group_id, can_rank FROM classroom_question_memberships WHERE question_id = ? AND user_id = ?",
-  ).bind(questionId, actor.id).first<{ group_id: string; can_rank: number }>();
-  if (!membership || membership.can_rank !== 1) throw new ClassroomWorkflowError(403, "RANKING_NOT_ALLOWED", "你目前不能提交這一題的排序。");
+  await requireRankingActor(db, actor, question);
   const groupRows = await db.prepare(
     `SELECT g.id FROM classroom_groups g
      JOIN classroom_question_responses r ON r.group_id = g.id AND r.question_id = ?
@@ -872,7 +860,9 @@ export async function submitClassroomRanking(
     `INSERT INTO classroom_audit_events
       (id, actor_user_id, action, resource_type, resource_id, details_json, occurred_at)
      VALUES (?, ?, 'ranking.submit', 'classroom_question', ?, ?, ?)`,
-  ).bind(classroomId("class-audit"), actor.id, questionId, JSON.stringify({ version, rankedGroups: submitted.length }), now));
+  ).bind(classroomId("class-audit"), actor.id, questionId, JSON.stringify({
+    version, rankedGroups: submitted.length, kind: actor.isAdmin ? "teacher" : "student",
+  }), now));
   const rankingFailure = await guardedClassroomRankingBatch(db, statements, sessionId, questionId);
   if (rankingFailure) throw new ClassroomWorkflowError(rankingFailure.status, rankingFailure.code, rankingFailure.message);
   return classroomSessionSnapshot(db, actor, sessionId, questionId);
@@ -903,6 +893,11 @@ export async function classroomSessionCsv(db: D1Database, actor: ClassroomActor,
       "individual_ranking", session.id, session.title, question.position, question.question_text,
       snapshot.groups.find((group) => group.id === groupId)?.label ?? groupId, null,
       ranking.displayName, ranking.email, index + 1, ranking.orderedGroupIds.length - index, null, ranking.submittedAt,
+    ]));
+    snapshot.teacherRanking?.orderedGroupIds.forEach((groupId, index, order) => rows.push([
+      "teacher_ranking", session.id, session.title, question.position, question.question_text,
+      snapshot.groups.find((group) => group.id === groupId)?.label ?? groupId, null,
+      "教師", null, index + 1, order.length - index, null, snapshot.teacherRanking?.submittedAt ?? null,
     ]));
   }
   return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;

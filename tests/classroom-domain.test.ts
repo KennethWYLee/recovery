@@ -15,6 +15,7 @@ import {
   normalizeSessionText,
   previousSessionPhase,
   rankResults,
+  rankingPosition,
   rankingsExcludingOwnGroup,
   validAcademicTerm,
   validAcademicYear,
@@ -24,6 +25,11 @@ import {
   validGroupCount,
   validSessionPhase,
 } from "../lib/classroom-domain.ts";
+
+test("ranking position returns a one-based position or null", () => {
+  assert.equal(rankingPosition(["group-b", "group-a", "group-c"], "group-a"), 2);
+  assert.equal(rankingPosition(["group-b", "group-a", "group-c"], "group-missing"), null);
+});
 
 test("the teacher receives the six confirmed courses without duplicates", () => {
   assert.deepEqual(CLASSROOM_DEFAULT_COURSES, [

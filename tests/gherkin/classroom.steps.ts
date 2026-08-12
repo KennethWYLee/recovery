@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { Before, Given, Then, When } from "@cucumber/cucumber";
 import {
   rankResults,
+  rankingPosition,
   rankingsExcludingOwnGroup,
   type ClassroomGroup,
   type ClassroomRawRankingItem,
@@ -17,6 +18,8 @@ let storedGroups: ClassroomGroup[] = [];
 let visibleGroups: ClassroomGroup[] = [];
 let incidentInput: Record<string, unknown> = {};
 let incident: ClassroomIncidentDraft | null = null;
+let teacherOrder: string[] = [];
+let consensusWithoutTeacher: ClassroomRankingResult[] = [];
 
 Before(() => {
   rawRankings = [];
@@ -26,6 +29,45 @@ Before(() => {
   visibleGroups = [];
   incidentInput = {};
   incident = null;
+  teacherOrder = [];
+  consensusWithoutTeacher = [];
+});
+
+Given("三位學生與教師都完成同一題的完整排序", () => {
+  teacherOrder = ["group-c", "group-a", "group-b"];
+  rawRankings = [
+    { userId: "student-a", ownGroupId: "group-a", groupId: "group-a", rank: 1 },
+    { userId: "student-a", ownGroupId: "group-a", groupId: "group-b", rank: 2 },
+    { userId: "student-a", ownGroupId: "group-a", groupId: "group-c", rank: 3 },
+    { userId: "student-b", ownGroupId: "group-b", groupId: "group-a", rank: 1 },
+    { userId: "student-b", ownGroupId: "group-b", groupId: "group-b", rank: 2 },
+    { userId: "student-b", ownGroupId: "group-b", groupId: "group-c", rank: 3 },
+    { userId: "student-c", ownGroupId: "group-c", groupId: "group-a", rank: 1 },
+    { userId: "student-c", ownGroupId: "group-c", groupId: "group-b", rank: 2 },
+    { userId: "student-c", ownGroupId: "group-c", groupId: "group-c", rank: 3 },
+  ];
+});
+
+When("系統分別計算全班共識與教師名次", () => {
+  const groups = [
+    { id: "group-a", label: "回答 A" },
+    { id: "group-b", label: "回答 B" },
+    { id: "group-c", label: "回答 C" },
+  ];
+  const studentItems = rankingsExcludingOwnGroup(rawRankings);
+  consensusWithoutTeacher = rankResults(groups, studentItems);
+});
+
+Then("教師排序不會計入全班共識分數", () => {
+  assert.equal(consensusWithoutTeacher[0].groupId, "group-a");
+  assert.equal(teacherOrder[0], "group-c");
+});
+
+Then("每份回答都能找到全班名次與教師名次", () => {
+  for (const result of consensusWithoutTeacher) {
+    assert.ok(result.finalRank >= 1);
+    assert.ok(rankingPosition(teacherOrder, result.groupId));
+  }
 });
 
 Given("三組學生都完成包含自己組的完整排序", () => {
