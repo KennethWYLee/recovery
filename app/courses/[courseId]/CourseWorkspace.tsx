@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, CheckCircle2, ClipboardCheck, Clock3, Copy, Download, Eye, GripVertical, Hash, History, LockKeyhole, LogOut, LibraryBig, Plus, RefreshCw, RotateCcw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { courseTermLabel, QUESTION_PHASE_LABELS, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
 import { StudentConsensusResults } from "./StudentConsensusResults";
+import { StudentProgressiveRanking } from "./StudentProgressiveRanking";
+import { useProgressiveRanking } from "./useProgressiveRanking";
 
 type Actor = {
   id: string;
@@ -23,6 +25,24 @@ type WorkspacePayload = {
   snapshot: ClassroomSessionSnapshot | null;
 };
 type Envelope<T> = { data?: T; error?: { message?: string } };
+
+function workspaceSnapshotSignature(snapshot: ClassroomSessionSnapshot | null): string {
+  if (!snapshot) return "empty";
+  return [
+    snapshot.session.version, snapshot.question?.id ?? "none", snapshot.question?.version ?? 0,
+    snapshot.question?.phase ?? "none", snapshot.completion.checkedIn,
+    snapshot.completion.submittedGroups, snapshot.completion.rankedStudents,
+    snapshot.groups.map((group) => `${group.id}:${group.response.version}:${group.response.status}`).join(","),
+    snapshot.currentUser.groupId ?? "none", snapshot.currentUser.hasSubmittedRanking ? 1 : 0,
+  ].join("|");
+}
+
+function applyLoadedWorkspace(data: WorkspacePayload, quiet: boolean, signatureRef: MutableRefObject<string>, setPayload: Dispatch<SetStateAction<WorkspacePayload | null>>) {
+  const signature = workspaceSnapshotSignature(data.snapshot);
+  if (quiet && signature === signatureRef.current) return;
+  signatureRef.current = signature;
+  setPayload(data);
+}
 
 async function apiData<T>(response: Response): Promise<T> {
   const body = (await response.json().catch(() => null)) as Envelope<T> | null;
@@ -180,10 +200,9 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [dragParticipant, setDragParticipant] = useState<string | null>(null);
-  const [dragRank, setDragRank] = useState<string | null>(null);
   const [responseText, setResponseText] = useState("");
   const [responseSaveState, setResponseSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [rankingOrder, setRankingOrder] = useState<string[]>([]);
+  const { rankingOrder, rankingSelectionCount, dragRank, setDragRank, initializeRanking, chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, moveRank, dropRank } = useProgressiveRanking();
   const [answerLabels, setAnswerLabels] = useState<Record<string, string>>({});
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [answerDurationMinutes, setAnswerDurationMinutes] = useState(5);
@@ -202,6 +221,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const rankingKeyRef = useRef("");
   const expiryKeyRef = useRef("");
   const selectedQuestionRef = useRef<string | null>(null);
+  const snapshotSignatureRef = useRef("");
 
   const questionBankCategories = useMemo(() => [...new Set(questionBankItems.map((item) => item.category))].sort((left, right) => left.localeCompare(right, "zh-Hant")), [questionBankItems]);
   const visibleQuestionBankItems = useMemo(() => {
@@ -250,31 +270,31 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
           if (rankingKey !== rankingKeyRef.current) {
             rankingKeyRef.current = rankingKey;
             const initialOrder = savedOrderIsComplete ? savedOrder : shuffle(eligible);
-            setRankingOrder(initialOrder);
+            initializeRanking(initialOrder, savedOrderIsComplete);
             setAnswerLabels(Object.fromEntries(initialOrder.map((groupId, index) => [groupId, `回答 ${String.fromCharCode(65 + index)}`])));
           }
         }
-        setPayload(data);
+        applyLoadedWorkspace(data, quiet, snapshotSignatureRef, setPayload);
       } catch (cause) {
         if (!quiet) setError(cause instanceof Error ? cause.message : "目前無法取得課堂資料。");
       }
     },
-    [courseId, testStudentId],
+    [courseId, initializeRanking, testStudentId],
   );
 
+  const snapshot = payload?.snapshot ?? null;
+  const question = snapshot?.question ?? null;
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
   useEffect(() => {
     const timer = window.setInterval(() => {
-      if (!pending) void load(true);
-    }, 5000);
+      if (!pending && document.visibilityState === "visible") void load(true);
+    }, !payload?.actor.isAdmin && question?.phase === "answering" ? 8_000 : 6_000);
     return () => window.clearInterval(timer);
-  }, [load, pending]);
+  }, [load, pending, payload?.actor.isAdmin, question?.phase]);
 
-  const snapshot = payload?.snapshot ?? null;
-  const question = snapshot?.question ?? null;
   const myGroup = useMemo(() => snapshot?.groups.find((group) => group.id === snapshot.currentUser.groupId) ?? null, [snapshot]);
 
   useEffect(() => {
@@ -318,6 +338,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   useEffect(() => {
     if (!payload || payload.actor.isAdmin || !snapshot || !question || question.phase !== "answering" || !myGroup || snapshot.currentUser.isRepresentative) return;
     const refreshResponse = async () => {
+      if (document.visibilityState !== "visible") return;
       const search = new URLSearchParams({ questionId: question.id });
       if (testStudentId) search.set("testStudentId", testStudentId);
       try {
@@ -339,7 +360,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
         /* The regular snapshot refresh remains the fallback. */
       }
     };
-    const timer = window.setInterval(() => void refreshResponse(), 1_750);
+    const timer = window.setInterval(() => void refreshResponse(), 3_000);
     return () => window.clearInterval(timer);
   }, [payload, snapshot, question, myGroup, testStudentId]);
 
@@ -515,6 +536,11 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
   async function submitRanking() {
     if (!snapshot || !question) return;
+    const expectedAnswers = snapshot.groups.filter((group) => ["submitted", "locked"].includes(group.response.status) && group.response.content.trim().length > 0).length;
+    if (rankingSelectionCount !== expectedAnswers) {
+      setError("請先替每一份回答排定名次，再送出完整排序。");
+      return;
+    }
     await applySnapshot(
       fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/ranking`, {
         method: "PUT",
@@ -530,29 +556,6 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
       }),
       "完整排序已送出。",
     );
-  }
-
-  function moveRank(index: number, offset: number) {
-    const target = index + offset;
-    if (target < 0 || target >= rankingOrder.length) return;
-    setRankingOrder((current) => {
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-  }
-
-  function dropRank(targetIndex: number) {
-    if (!dragRank) return;
-    setRankingOrder((current) => {
-      const source = current.indexOf(dragRank);
-      if (source < 0 || source === targetIndex) return current;
-      const next = [...current];
-      const [moved] = next.splice(source, 1);
-      next.splice(targetIndex, 0, moved);
-      return next;
-    });
-    setDragRank(null);
   }
 
   function selectTestStudent(userId: string) {
@@ -632,7 +635,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     published: "封存這個問題",
   };
 
-  if (!actor.isAdmin && snapshot) return <StudentClassroomView actor={actor} course={course} snapshot={snapshot} identity={identity} testMode={testMode} error={error} notice={notice} responseText={responseText} setResponseText={setResponseText} responseSaveState={responseSaveState} rankingOrder={rankingOrder} answerLabels={answerLabels} dragRank={dragRank} setDragRank={setDragRank} moveRank={moveRank} dropRank={dropRank} pending={pending} saveResponse={saveResponse} submitRanking={submitRanking} refresh={() => load(false)} exitStudentTestMode={exitStudentTestMode} />;
+  if (!actor.isAdmin && snapshot) return <StudentClassroomView actor={actor} course={course} snapshot={snapshot} identity={identity} testMode={testMode} error={error} notice={notice} responseText={responseText} setResponseText={setResponseText} responseSaveState={responseSaveState} rankingOrder={rankingOrder} rankingSelectionCount={rankingSelectionCount} answerLabels={answerLabels} pending={pending} saveResponse={saveResponse} submitRanking={submitRanking} chooseNextRank={chooseNextRank} undoLastRank={undoLastRank} restartRanking={restartRanking} moveSelectedRank={moveSelectedRank} refresh={() => load(false)} exitStudentTestMode={exitStudentTestMode} />;
 
   return (
     <div className="course-shell">
@@ -1053,7 +1056,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   );
 }
 
-function StudentClassroomView({ actor, course, snapshot, identity, testMode, error, notice, responseText, setResponseText, responseSaveState, rankingOrder, answerLabels, dragRank, setDragRank, moveRank, dropRank, pending, saveResponse, submitRanking, refresh, exitStudentTestMode }: { actor: Actor; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot; identity: ClassroomPageIdentity; testMode: boolean; error: string | null; notice: string | null; responseText: string; setResponseText: (value: string) => void; responseSaveState: "idle" | "saving" | "saved" | "error"; rankingOrder: string[]; answerLabels: Record<string, string>; dragRank: string | null; setDragRank: (value: string | null) => void; moveRank: (index: number, offset: number) => void; dropRank: (index: number) => void; pending: boolean; saveResponse: (submit: boolean) => Promise<void>; submitRanking: () => Promise<void>; refresh: () => void; exitStudentTestMode: () => void }) {
+function StudentClassroomView({ actor, course, snapshot, identity, testMode, error, notice, responseText, setResponseText, responseSaveState, rankingOrder, rankingSelectionCount, answerLabels, pending, saveResponse, submitRanking, chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, refresh, exitStudentTestMode }: { actor: Actor; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot; identity: ClassroomPageIdentity; testMode: boolean; error: string | null; notice: string | null; responseText: string; setResponseText: (value: string) => void; responseSaveState: "idle" | "saving" | "saved" | "error"; rankingOrder: string[]; rankingSelectionCount: number; answerLabels: Record<string, string>; pending: boolean; saveResponse: (submit: boolean) => Promise<void>; submitRanking: () => Promise<void>; chooseNextRank: (groupId: string) => void; undoLastRank: () => void; restartRanking: () => void; moveSelectedRank: (index: number, offset: number) => void; refresh: () => void; exitStudentTestMode: () => void }) {
   const [now, setNow] = useState(() => Date.now());
   const [serverOffset, setServerOffset] = useState(0);
   const question = snapshot.question;
@@ -1215,43 +1218,19 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
               </section>
             )}
             {question.phase === "ranking" && snapshot.currentUser.canRank && (!snapshot.currentUser.hasSubmittedRanking || snapshot.session.allowRankingEdits) && (
-              <section className="student-focus-card student-ranking-card">
-                <header>
-                  <div>
-                    <p>個人完整排序</p>
-                    <h2>把所有回答由最佳排到相對較弱</h2>
-                    <small>請包含本組回答；系統會保存完整排序，但計算共識時排除你對本組的排序。</small>
-                  </div>
-                  <span>{rankingOrder.length} 份回答</span>
-                </header>
-                <ol className="ranking-list">
-                  {rankingOrder.map((groupId, index) => {
-                    const group = eligibleGroups.find((item) => item.id === groupId);
-                    if (!group) return null;
-                    return (
-                      <li key={group.id} draggable onDragStart={() => setDragRank(group.id)} onDragEnd={() => setDragRank(null)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropRank(index)} className={dragRank === group.id ? "dragging" : ""}>
-                        <GripVertical />
-                        <div className="ranking-answer">
-                          <p>{group.response.content}</p>
-                          <small>{answerLabels[group.id] ?? "匿名回答"}</small>
-                        </div>
-                        <span className="rank-controls">
-                          <button aria-label="上移" disabled={index === 0} onClick={() => moveRank(index, -1)}>
-                            <ArrowUp />
-                          </button>
-                          <button aria-label="下移" disabled={index === rankingOrder.length - 1} onClick={() => moveRank(index, 1)}>
-                            <ArrowDown />
-                          </button>
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ol>
-                <button className="button primary wide" disabled={pending || rankingOrder.length !== eligibleGroups.length} onClick={() => void submitRanking()}>
-                  <ClipboardCheck />
-                  {snapshot.currentUser.hasSubmittedRanking ? "更新完整排序" : "送出完整排序"}
-                </button>
-              </section>
+              <StudentProgressiveRanking
+                groups={eligibleGroups}
+                order={rankingOrder}
+                labels={answerLabels}
+                selectedCount={rankingSelectionCount}
+                pending={pending}
+                hasSubmittedRanking={snapshot.currentUser.hasSubmittedRanking}
+                onChoose={chooseNextRank}
+                onUndo={undoLastRank}
+                onRestart={restartRanking}
+                onMove={moveSelectedRank}
+                onSubmit={() => void submitRanking()}
+              />
             )}
             {question.phase === "locked" && (
               <section className="student-focus-card student-waiting">

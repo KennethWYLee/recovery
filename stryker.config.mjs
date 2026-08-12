@@ -1,6 +1,7 @@
 const strykerConfig = {
   mutate: [
     "lib/classroom-domain.ts:295-370",
+    "lib/classroom-mobile-ranking.ts",
     "lib/classroom-observability.ts:22-100",
     "lib/classroom-observability.ts:129-179",
     "lib/classroom-privacy.ts",

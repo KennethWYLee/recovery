@@ -708,6 +708,30 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .student-ranking-card > .ranking-list { margin-top: 22px; }
 .student-ranking-card .ranking-list li { grid-template-columns: 20px minmax(0, 1fr) auto; padding: 18px; }
 .student-ranking-card .ranking-answer p { font-size: 17px; line-height: 1.72; }
+.progressive-ranking { overflow: hidden; }
+.ranking-progress-label { color: var(--primary); font-size: 21px; white-space: nowrap; }
+.ranking-progress { height: 8px; background: var(--border-soft); }
+.ranking-progress span { display: block; height: 100%; background: var(--primary); transition: width .2s ease; }
+.selected-ranking, .ranking-candidates { padding: 22px 24px 4px; }
+.selected-ranking + .ranking-candidates { border-top: 1px solid var(--border-soft); }
+.ranking-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.ranking-section-heading > div { display: flex; align-items: center; gap: 8px; color: var(--text-strong); }
+.ranking-section-heading > div svg { width: 19px; color: var(--success); }
+.ranking-section-heading > span { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.ranking-section-heading button { display: inline-flex; align-items: center; min-height: 44px; gap: 6px; padding: 8px 11px; color: var(--muted); background: var(--surface-subtle); border: 1px solid var(--border-soft); border-radius: 8px; font-weight: 750; cursor: pointer; }
+.ranking-section-heading button svg { width: 16px; }
+.selected-ranking ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.selected-ranking li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 16px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 11px; }
+.selected-ranking li > div { min-width: 0; }
+.selected-ranking li p, .ranking-choice p { margin: 6px 0 0; color: var(--text-strong); font-size: 16px; line-height: 1.65; white-space: pre-wrap; }
+.selected-ranking li small, .ranking-choice small { color: var(--muted); font-weight: 800; }
+.selected-rank-number { display: grid; place-items: center; min-width: 66px; min-height: 44px; padding: 6px 9px; color: #fff; background: var(--primary); border-radius: 8px; font-size: 13px; }
+.selected-ranking .rank-controls button { width: 44px; height: 44px; }
+.ranking-choice-list { display: grid; gap: 11px; }
+.ranking-choice { position: relative; width: 100%; min-height: 112px; padding: 17px 18px 48px; color: inherit; text-align: left; background: #fff; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.ranking-choice:hover, .ranking-choice:focus-visible { border-color: var(--primary); box-shadow: 0 8px 22px rgba(28, 90, 173, .12); outline: none; transform: translateY(-1px); }
+.ranking-choice > span { position: absolute; right: 14px; bottom: 12px; padding: 7px 10px; color: var(--primary); background: var(--primary-soft); border-radius: 7px; font-size: 13px; font-weight: 850; }
+.ranking-submit { width: calc(100% - 48px); min-height: 50px; margin: 20px 24px 24px; justify-content: center; }
 .student-ranking-card > .button { width: calc(100% - 44px); margin: 0 22px 22px; }
 .student-consensus > ol { display: grid; gap: 12px; margin: 0; padding: 22px; list-style: none; }
 .student-consensus li { padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 11px; }
@@ -763,6 +787,18 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .rank-controls { grid-column: 3; grid-template-columns: 1fr 1fr; }
   .student-ranking-card .ranking-list li { grid-template-columns: 16px minmax(0, 1fr); }
   .student-ranking-card .rank-controls { grid-column: 2; }
+  .progressive-ranking > header { gap: 10px; }
+  .ranking-progress-label { align-self: flex-start; }
+  .selected-ranking, .ranking-candidates { padding: 18px 14px 4px; }
+  .ranking-section-heading { align-items: flex-start; flex-direction: column; }
+  .ranking-section-heading > span { width: 100%; justify-content: stretch; }
+  .ranking-section-heading button { flex: 1; justify-content: center; }
+  .selected-ranking li { grid-template-columns: minmax(0, 1fr) auto; }
+  .selected-rank-number { grid-column: 1 / -1; justify-self: start; }
+  .selected-ranking .rank-controls { grid-column: 2; }
+  .ranking-choice { min-height: 132px; padding: 16px 15px 52px; }
+  .ranking-choice > span { left: 14px; right: 14px; min-height: 36px; text-align: center; }
+  .ranking-submit { width: calc(100% - 28px); margin: 18px 14px 20px; }
 }
 @media (max-width: 620px) {
   .course-topbar { min-height: 64px; padding-inline: 14px; }
