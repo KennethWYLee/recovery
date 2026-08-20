@@ -105,6 +105,25 @@ test("Given a student joined after a question started, they remain an observer f
   db.close();
 });
 
+test("students can revisit archived questions only when their results were published", async () => {
+  const db = await liveDatabase({ phase: "archived" });
+  db.prepare("UPDATE classroom_questions SET published_at = ? WHERE id = 'question-1'").run(NOW);
+  db.prepare(`INSERT INTO classroom_questions
+    (id, session_id, question_text, ranking_criteria, source_question_bank_id, phase,
+     answer_duration_seconds, answer_deadline_at, position, version, opened_at,
+     responses_locked_at, ranking_locked_at, published_at, created_by_user_id, created_at, updated_at)
+    VALUES ('question-unpublished', 'session-1', '未公布即封存', '不應顯示', NULL, 'archived',
+      300, NULL, 2, 1, ?, ?, ?, NULL, 'teacher-1', ?, ?)`).run(NOW, NOW, NOW, NOW, NOW);
+
+  const visible = db.prepare(`SELECT id FROM classroom_questions
+    WHERE session_id = 'session-1'
+      AND phase != 'draft' AND (phase != 'archived' OR published_at IS NOT NULL)
+    ORDER BY position`).all().map((row) => row.id);
+
+  assert.deepEqual(visible, ["question-1"]);
+  db.close();
+});
+
 test("student participation separates late arrival from missed rankings after arrival", async () => {
   const db = await liveDatabase({ phase: "published" });
   db.prepare(`INSERT INTO classroom_session_participants

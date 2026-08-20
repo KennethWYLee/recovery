@@ -15,6 +15,7 @@ import {
   normalizeSessionText,
   previousSessionPhase,
   rankResults,
+  rankingOrderExcludingGroup,
   rankingPosition,
   rankingsExcludingOwnGroup,
   validAcademicTerm,
@@ -29,6 +30,14 @@ import {
 test("ranking position returns a one-based position or null", () => {
   assert.equal(rankingPosition(["group-b", "group-a", "group-c"], "group-a"), 2);
   assert.equal(rankingPosition(["group-b", "group-a", "group-c"], "group-missing"), null);
+});
+
+test("student result comparison removes the student's own group before reindexing", () => {
+  const comparable = rankingOrderExcludingGroup(["own", "group-b", "group-c"], "own");
+  assert.deepEqual(comparable, ["group-b", "group-c"]);
+  assert.equal(rankingPosition(comparable, "group-b"), 1);
+  assert.equal(rankingPosition(comparable, "own"), null);
+  assert.deepEqual(rankingOrderExcludingGroup(["group-a"], null), ["group-a"]);
 });
 
 test("the teacher receives the six confirmed courses without duplicates", () => {

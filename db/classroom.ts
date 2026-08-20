@@ -360,36 +360,36 @@ async function ensureDemoClassroom(db: D1Database, actor: ClassroomActor): Promi
 
   const questions = [
     {
-      id: "question-demo-1", phase: "published", position: 1,
+      id: "question-demo-1", phase: "published", position: 1, memberCount: 24,
       text: "尖峰促銷時，同一件商品只剩 1 件，兩位顧客同時結帳。系統應如何避免超賣？",
       criteria: "請依方案能否避免超賣、說明是否完整，以及失敗時是否能安全處理進行排序。",
-      opened: earlier(105), locked: earlier(82), rankingLocked: earlier(67), published: earlier(64),
+      opened: earlier(105), deadline: null, locked: earlier(82), rankingLocked: earlier(67), published: earlier(64),
     },
     {
-      id: "question-demo-2", phase: "published", position: 2,
+      id: "question-demo-2", phase: "published", position: 2, memberCount: 24,
       text: "訂單查詢從 0.4 秒變成 8 秒。現有 Log 顯示資料庫讀取量突然增加，你會先檢查什麼？",
       criteria: "請依定位順序是否合理、是否使用可核對資料，以及改善方式是否會造成新風險進行排序。",
-      opened: earlier(58), locked: earlier(41), rankingLocked: earlier(27), published: earlier(24),
+      opened: earlier(58), deadline: null, locked: earlier(41), rankingLocked: earlier(27), published: earlier(24),
     },
     {
-      id: "question-demo-3", phase: "answering", position: 3,
+      id: "question-demo-3", phase: "answering", position: 3, memberCount: 21,
       text: "商品價格在尖峰期間被錯誤改為 0 元。你會如何停止影響、找出原因並安全恢復？",
       criteria: "請依處理順序、證據使用、資料修正與後續預防是否完整進行排序。",
-      opened: earlier(12), locked: null, rankingLocked: null, published: null,
+      opened: earlier(12), deadline: new Date(Date.now() + 5 * 60 * 1_000).toISOString(), locked: null, rankingLocked: null, published: null,
     },
   ] as const;
   for (const question of questions) {
     statements.push(db.prepare(
       `INSERT OR IGNORE INTO classroom_questions
-        (id, session_id, question_text, ranking_criteria, phase, position, version, opened_at,
+        (id, session_id, question_text, ranking_criteria, phase, position, version, answer_duration_seconds, answer_deadline_at, opened_at,
          responses_locked_at, ranking_locked_at, published_at, created_by_user_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, 1, 300, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       question.id, sessionId, question.text, question.criteria, question.phase, question.position,
-      question.opened, question.locked, question.rankingLocked, question.published,
+      question.deadline, question.opened, question.locked, question.rankingLocked, question.published,
       actor.id, earlier(110 - question.position * 5), question.published ?? question.opened,
     ));
-    for (let index = 0; index < 24; index += 1) {
+    for (let index = 0; index < question.memberCount; index += 1) {
       const number = index + 1;
       statements.push(db.prepare(
         `INSERT OR IGNORE INTO classroom_question_memberships

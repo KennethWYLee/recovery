@@ -15,6 +15,7 @@
 - 每位學生完整排列包含自己組在內的所有回答；計算時移除自己組並重新編排名次。第一名獲得最高分，平均分數相同時依第一名票數、第二名票數等依序比較，所有名次分布相同才並列。
 - 答案展示與個人排序階段一律以匿名回答呈現，不傳回真實組名、組員或代表身分；教師只能在結果公布後決定是否揭露組名。
 - 學生在手機或電腦上依序點選第1名至最後一名；畫面即時顯示目前排序、完成進度及取消／重排操作。公布結果依全班共識由上而下顯示回答，名次分布預設收合。
+- 學生可切換目前問題與已公布的歷史問題；比較個人排序時，系統會先排除本組並重新編排名次，避免與全班共識使用不同基準。
 - 排序結束後先鎖定結果，教師確認並公布後學生才能查看。
 - 每題保留分組快照、回答、個人原始排序、版本與操作紀錄。
 - 管理員可在示範課程選擇虛擬學生，實際驗證指定代表、一般組員與遲到學生的畫面及權限，並重設第三題的示範資料。
@@ -41,12 +42,14 @@ npm run dev
 npm run gate:ci
 npm run test:unit:coverage
 npm run test:acceptance
+npm run test:simulation
+npm run test:api-simulation
 npm run test:mutation
 npm run quality:code
 npm run audit:production
 ```
 
-Node 測試輸出的 coverage 百分比只涵蓋命令列明確列入的 `lib` 規則模組，不代表整套系統的程式碼覆蓋率。資料庫流程另以 SQL workflow 測試驗證；UI 與 API route 以 build 與 integration 測試驗證。
+Node 測試輸出的 coverage 百分比只涵蓋命令列明確列入的 `lib` 規則模組，不代表整套系統的程式碼覆蓋率。`test:simulation` 會以正式資料庫結構模擬1位教師、50位準時學生、6組及1位遲到學生的完整課堂流程。`test:api-simulation` 是尚未納入 CI 的隔離本機演練；只有命令成功結束並產生 `evidence/api-simulation/latest.json`，才可列為通過。資料庫流程另以 SQL workflow 測試驗證；UI 與 API route 以 build 與 integration 測試驗證。
 
 部署後另以 `$env:CLASSROOM_PUBLIC_URL='https://...'; npm run test:hosted-auth` 確認外部請求無法偽造登入身分。營運紀錄只保存錯誤、異動、慢請求及部分成功讀取樣本；畫面中的比例與延遲不得解讀為完整流量。
 

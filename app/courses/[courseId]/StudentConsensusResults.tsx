@@ -1,4 +1,9 @@
-import { rankingPosition, type ClassroomRankingResult, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
+import {
+  rankingOrderExcludingGroup,
+  rankingPosition,
+  type ClassroomRankingResult,
+  type ClassroomSessionSnapshot,
+} from "@/lib/classroom-domain";
 
 function RankDistribution({ result }: { result: ClassroomRankingResult }) {
   return (
@@ -18,6 +23,10 @@ function RankDistribution({ result }: { result: ClassroomRankingResult }) {
 }
 
 export function StudentConsensusResults({ snapshot }: { snapshot: ClassroomSessionSnapshot }) {
+  const comparableStudentOrder = rankingOrderExcludingGroup(
+    snapshot.currentUser.orderedGroupIds,
+    snapshot.currentUser.groupId,
+  );
   return (
     <section className="student-focus-card student-consensus">
       <header>
@@ -31,7 +40,8 @@ export function StudentConsensusResults({ snapshot }: { snapshot: ClassroomSessi
         {snapshot.results.map((result) => {
           const group = snapshot.groups.find((item) => item.id === result.groupId);
           const teacherRank = rankingPosition(snapshot.teacherRanking?.orderedGroupIds ?? [], result.groupId);
-          const ownRank = rankingPosition(snapshot.currentUser.orderedGroupIds, result.groupId);
+          const isOwnGroup = result.groupId === snapshot.currentUser.groupId;
+          const ownRank = isOwnGroup ? null : rankingPosition(comparableStudentOrder, result.groupId);
           const difference = teacherRank === null ? null : teacherRank - result.finalRank;
           return (
             <li key={result.groupId}>
@@ -40,7 +50,7 @@ export function StudentConsensusResults({ snapshot }: { snapshot: ClassroomSessi
               <div className="ranking-comparison" aria-label="名次比較">
                 <span><small>全班共識</small><strong>第 {result.finalRank} 名</strong></span>
                 <span><small>教師排序</small><strong>{teacherRank === null ? "尚未提供" : `第 ${teacherRank} 名`}</strong></span>
-                <span><small>你的排序</small><strong>{ownRank === null ? "未參與" : `第 ${ownRank} 名`}</strong></span>
+                <span><small>你的排序</small><strong>{isOwnGroup ? "本組，不列入" : ownRank === null ? "未參與" : `第 ${ownRank} 名`}</strong></span>
                 {difference !== null && <em className={difference === 0 ? "same" : "different"}>{difference === 0 ? "全班與教師一致" : `相差 ${Math.abs(difference)} 名`}</em>}
               </div>
               <footer>

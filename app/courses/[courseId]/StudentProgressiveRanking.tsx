@@ -54,7 +54,7 @@ export function StudentProgressiveRanking({
           <div className="ranking-section-heading">
             <div><Check /><strong>目前排序</strong></div>
             <span>
-              <button type="button" disabled={pending || selectedCount === 0} onClick={onUndo}><Undo2 />取消上一步</button>
+              <button type="button" disabled={pending || selectedCount === 0} onClick={onUndo}><Undo2 />重選最後一名</button>
               <button type="button" disabled={pending} onClick={onRestart}><RotateCcw />重新排序</button>
             </span>
           </div>

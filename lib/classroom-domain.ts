@@ -410,3 +410,12 @@ export function rankingPosition(orderedGroupIds: readonly string[], groupId: str
   const index = orderedGroupIds.indexOf(groupId);
   return index >= 0 ? index + 1 : null;
 }
+
+export function rankingOrderExcludingGroup(
+  orderedGroupIds: readonly string[],
+  excludedGroupId: string | null,
+): string[] {
+  return excludedGroupId
+    ? orderedGroupIds.filter((groupId) => groupId !== excludedGroupId)
+    : [...orderedGroupIds];
+}

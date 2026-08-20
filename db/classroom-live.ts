@@ -5,7 +5,6 @@ import {
   nextQuestionPhase,
   normalizeSessionText,
   type ClassroomGroup,
-  type ClassroomParticipant,
   type ClassroomQuestion,
   type ClassroomQuestionPhase,
   type ClassroomQuestionSummary,
@@ -28,6 +27,12 @@ import {
   guardedClassroomResponseWrite,
   questionAdvanceEvidenceFailure,
 } from "./classroom-live-security";
+import {
+  snapshotParticipantTotals,
+  snapshotParticipants,
+  snapshotQuestionCounts,
+  snapshotQuestionVisibilitySql,
+} from "./classroom-snapshot-queries";
 import { ClassroomWorkflowError } from "./classroom-errors";
 
 export { ClassroomWorkflowError } from "./classroom-errors";
@@ -231,22 +236,8 @@ export async function classroomSessionSnapshot(
 ): Promise<ClassroomSessionSnapshot> {
   const sessionRow = await requireSession(db, actor, sessionId);
   const session = mapSession(sessionRow);
-  const participantRows = await db.prepare(
-    `SELECT p.id, p.user_id, u.display_name, u.email, p.group_id, p.attendance,
-            p.joined_phase, p.can_rank, p.checked_in_at
-     FROM classroom_session_participants p
-     JOIN classroom_users u ON u.id = p.user_id
-     WHERE p.session_id = ? ORDER BY p.checked_in_at, u.display_name`,
-  ).bind(sessionId).all<{
-    id: string; user_id: string; display_name: string; email: string; group_id: string | null;
-    attendance: "on_time" | "late"; joined_phase: ClassroomSessionPhase; can_rank: number; checked_in_at: string;
-  }>();
-  const participants: ClassroomParticipant[] = participantRows.results.map((row) => ({
-    id: row.id, userId: row.user_id, displayName: row.display_name,
-    email: actor.isAdmin ? row.email : null, groupId: row.group_id,
-    attendance: row.attendance, joinedPhase: row.joined_phase,
-    canRank: row.can_rank === 1, checkedInAt: row.checked_in_at,
-  }));
+  const participants = await snapshotParticipants(db, actor, sessionId);
+  const participantTotals = await snapshotParticipantTotals(db, sessionId, participants, actor.isAdmin);
   const baseGroupRows = await db.prepare(
     `SELECT id, label, position, representative_user_id
      FROM classroom_groups WHERE session_id = ? ORDER BY position`,
@@ -255,7 +246,7 @@ export async function classroomSessionSnapshot(
   const questionRows = await db.prepare(
     `SELECT ${QUESTION_COLUMNS}
      FROM classroom_questions WHERE session_id = ?
-       ${actor.isAdmin ? "" : "AND phase NOT IN ('draft','archived')"}
+       ${snapshotQuestionVisibilitySql(actor.isAdmin)}
      ORDER BY position`,
   ).bind(sessionId).all<QuestionRow>();
   const visibleRows = questionRows.results;
@@ -296,19 +287,8 @@ export async function classroomSessionSnapshot(
   const groups = classroomGroupsForViewer(internalGroups, actor.isAdmin, !studentMaySeeGroupNames(question?.phase, session.anonymousGroups));
 
   const groupLabels = groups.map((group) => ({ id: group.id, label: group.label }));
-  const summaryCountRows = await db.prepare(
-    `SELECT q.id,
-            COUNT(DISTINCT CASE WHEN r.status IN ('submitted','locked') THEN r.id END) AS submitted_groups,
-            COUNT(DISTINCT CASE WHEN s.is_current = 1 AND s.status = 'valid' AND m.user_id IS NOT NULL THEN s.user_id END) AS ranked_students,
-            MAX(CASE WHEN s.is_current = 1 AND s.status = 'valid' AND s.user_id = q.created_by_user_id THEN 1 ELSE 0 END) AS teacher_ranked
-     FROM classroom_questions q
-     LEFT JOIN classroom_question_responses r ON r.question_id = q.id
-     LEFT JOIN classroom_question_ranking_submissions s ON s.question_id = q.id
-     LEFT JOIN classroom_question_memberships m ON m.question_id = s.question_id AND m.user_id = s.user_id
-     WHERE q.session_id = ?
-     GROUP BY q.id`,
-  ).bind(sessionId).all<{ id: string; submitted_groups: number; ranked_students: number; teacher_ranked: number }>();
-  const summaryCounts = new Map(summaryCountRows.results.map((row) => [row.id, row]));
+  const summaryCountRows = await snapshotQuestionCounts(db, sessionId, question?.id ?? null, actor.isAdmin);
+  const summaryCounts = new Map(summaryCountRows.map((row) => [row.id, row]));
   const summaries: ClassroomQuestionSummary[] = visibleRows.map((row) => ({
     ...mapQuestion(row),
     submittedGroups: summaryCounts.get(row.id)?.submitted_groups ?? 0,
@@ -337,8 +317,8 @@ export async function classroomSessionSnapshot(
     serverNow: classroomNow(), session, questions: summaries, question,
     participants: actor.isAdmin ? participants : [], groups,
     completion: {
-      checkedIn: participants.length,
-      grouped: participants.filter((participant) => participant.groupId).length,
+      checkedIn: participantTotals.checked_in,
+      grouped: participantTotals.grouped,
       submittedGroups: internalGroups.filter((group) => ["submitted", "locked"].includes(group.response.status)).length,
       rankedStudents: submittedUsers.size,
       eligibleStudents: eligible?.count ?? 0,

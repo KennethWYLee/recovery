@@ -31,7 +31,7 @@ test("不存在的回答與錯誤進度不會破壞排序", () => {
   });
 });
 
-test("取消上一步只移除最後選定的名次", () => {
+test("重選最後一名只移除最後選定的名次", () => {
   assert.deepEqual(undoLastRankingChoice(["c", "b", "a"], 2), {
     order: ["c", "b", "a"],
     selectedCount: 1,

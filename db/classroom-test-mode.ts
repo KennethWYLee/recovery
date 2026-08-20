@@ -84,6 +84,7 @@ export async function resetDemoClassroom(
     "草擬中：停止新交易、保留證據、確認影響範圍。",
   ];
   const now = new Date().toISOString();
+  const answerDeadline = new Date(Date.now() + 5 * 60 * 1_000).toISOString();
   const statements: D1PreparedStatement[] = [
     db.prepare(
       `UPDATE classroom_questions SET phase = 'archived', version = version + 1, updated_at = ?
@@ -95,10 +96,18 @@ export async function resetDemoClassroom(
     ).bind(DEMO_QUESTION_ID),
     db.prepare("DELETE FROM classroom_question_ranking_submissions WHERE question_id = ?").bind(DEMO_QUESTION_ID),
     db.prepare(
+      `DELETE FROM classroom_question_memberships
+       WHERE question_id = ? AND user_id IN (
+         SELECT user_id FROM classroom_session_participants
+         WHERE session_id = ? AND attendance = 'late' AND joined_phase = 'answering'
+       )`,
+    ).bind(DEMO_QUESTION_ID, DEMO_SESSION_ID),
+    db.prepare(
       `UPDATE classroom_questions SET phase = 'answering', version = version + 1,
-         responses_locked_at = NULL, ranking_locked_at = NULL, published_at = NULL, updated_at = ?
+         opened_at = ?, answer_deadline_at = ?, responses_locked_at = NULL,
+         ranking_locked_at = NULL, published_at = NULL, updated_at = ?
        WHERE id = ? AND session_id = ?`,
-    ).bind(now, DEMO_QUESTION_ID, DEMO_SESSION_ID),
+    ).bind(now, answerDeadline, now, DEMO_QUESTION_ID, DEMO_SESSION_ID),
     db.prepare(
       `UPDATE classroom_sessions SET phase = 'answering', admission_open = 0,
          version = version + 1, updated_at = ? WHERE id = ? AND course_id = ?`,
@@ -127,8 +136,8 @@ export async function resetDemoClassroom(
      VALUES (?, ?, 'demo.reset', 'classroom_session', ?, ?, ?)`,
   ).bind(`class-audit-${crypto.randomUUID()}`, viewer.id, DEMO_SESSION_ID, JSON.stringify({ synthetic: true }), now));
   const results = await db.batch(statements);
-  if ((results[3]?.meta.changes ?? 0) !== 1 || (results[4]?.meta.changes ?? 0) !== 1
-    || results.slice(5, 11).some((result) => (result.meta.changes ?? 0) !== 1)) {
+  if ((results[4]?.meta.changes ?? 0) !== 1 || (results[5]?.meta.changes ?? 0) !== 1
+    || results.slice(6, 12).some((result) => (result.meta.changes ?? 0) !== 1)) {
     throw new Error("The sample classroom data is incomplete and could not be reset safely.");
   }
 }

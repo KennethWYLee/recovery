@@ -9,6 +9,7 @@ import type { ClassroomPageIdentity } from "../classroom-page-identity";
 import { StudentConsensusResults } from "./StudentConsensusResults";
 import { StudentParticipationPanel } from "./StudentParticipationPanel";
 import { StudentProgressiveRanking } from "./StudentProgressiveRanking";
+import { StudentQuestionPicker } from "./StudentQuestionPicker";
 import { TeacherRankingPanel } from "./TeacherRankingPanel";
 import { rankingStartsComplete, shouldPrepareRanking, useProgressiveRanking } from "./useProgressiveRanking";
 
@@ -566,14 +567,13 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   }
 
   function selectTestStudent(userId: string) {
-    responseKeyRef.current = "";
-    rankingKeyRef.current = "";
-    selectedQuestionRef.current = null;
-    setTestStudentId(userId);
+    responseKeyRef.current = ""; rankingKeyRef.current = "";
+    selectedQuestionRef.current = null; setTestStudentId(userId);
     setShowStudentTestPicker(false);
     setNotice(null);
   }
 
+  function selectStudentQuestion(questionId: string) { responseKeyRef.current = ""; rankingKeyRef.current = ""; selectedQuestionRef.current = questionId; void load(false, questionId); }
   function exitStudentTestMode() {
     responseKeyRef.current = "";
     rankingKeyRef.current = "";
@@ -642,7 +642,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     published: "封存這個問題",
   };
 
-  if (!actor.isAdmin && snapshot) return <StudentClassroomView actor={actor} course={course} snapshot={snapshot} identity={identity} testMode={testMode} error={error} notice={notice} responseText={responseText} setResponseText={setResponseText} responseSaveState={responseSaveState} rankingOrder={rankingOrder} rankingSelectionCount={rankingSelectionCount} answerLabels={answerLabels} pending={pending} saveResponse={saveResponse} submitRanking={submitRanking} chooseNextRank={chooseNextRank} undoLastRank={undoLastRank} restartRanking={restartRanking} moveSelectedRank={moveSelectedRank} refresh={() => load(false)} exitStudentTestMode={exitStudentTestMode} />;
+  if (!actor.isAdmin && snapshot) return <StudentClassroomView actor={actor} course={course} snapshot={snapshot} identity={identity} testMode={testMode} error={error} notice={notice} responseText={responseText} setResponseText={setResponseText} responseSaveState={responseSaveState} rankingOrder={rankingOrder} rankingSelectionCount={rankingSelectionCount} answerLabels={answerLabels} pending={pending} saveResponse={saveResponse} submitRanking={submitRanking} chooseNextRank={chooseNextRank} undoLastRank={undoLastRank} restartRanking={restartRanking} moveSelectedRank={moveSelectedRank} refresh={() => load(false)} selectQuestion={selectStudentQuestion} exitStudentTestMode={exitStudentTestMode} />;
 
   return (
     <div className="course-shell">
@@ -1058,11 +1058,10 @@ function TeacherSessionSummary({ actor, snapshot }: { actor: Actor; snapshot: Cl
   );
 }
 
-function StudentClassroomView({ actor, course, snapshot, identity, testMode, error, notice, responseText, setResponseText, responseSaveState, rankingOrder, rankingSelectionCount, answerLabels, pending, saveResponse, submitRanking, chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, refresh, exitStudentTestMode }: { actor: Actor; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot; identity: ClassroomPageIdentity; testMode: boolean; error: string | null; notice: string | null; responseText: string; setResponseText: (value: string) => void; responseSaveState: "idle" | "saving" | "saved" | "error"; rankingOrder: string[]; rankingSelectionCount: number; answerLabels: Record<string, string>; pending: boolean; saveResponse: (submit: boolean) => Promise<void>; submitRanking: () => Promise<void>; chooseNextRank: (groupId: string) => void; undoLastRank: () => void; restartRanking: () => void; moveSelectedRank: (index: number, offset: number) => void; refresh: () => void; exitStudentTestMode: () => void }) {
+function StudentClassroomView({ actor, course, snapshot, identity, testMode, error, notice, responseText, setResponseText, responseSaveState, rankingOrder, rankingSelectionCount, answerLabels, pending, saveResponse, submitRanking, chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, refresh, selectQuestion, exitStudentTestMode }: { actor: Actor; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot; identity: ClassroomPageIdentity; testMode: boolean; error: string | null; notice: string | null; responseText: string; setResponseText: (value: string) => void; responseSaveState: "idle" | "saving" | "saved" | "error"; rankingOrder: string[]; rankingSelectionCount: number; answerLabels: Record<string, string>; pending: boolean; saveResponse: (submit: boolean) => Promise<void>; submitRanking: () => Promise<void>; chooseNextRank: (groupId: string) => void; undoLastRank: () => void; restartRanking: () => void; moveSelectedRank: (index: number, offset: number) => void; refresh: () => void; selectQuestion: (questionId: string) => void; exitStudentTestMode: () => void }) {
   const [now, setNow] = useState(() => Date.now());
   const [serverOffset, setServerOffset] = useState(0);
-  const question = snapshot.question;
-  const myGroup = snapshot.groups.find((group) => group.id === snapshot.currentUser.groupId) ?? null;
+  const question = snapshot.question; const myGroup = snapshot.groups.find((group) => group.id === snapshot.currentUser.groupId) ?? null;
   useEffect(() => {
     const timer = window.setTimeout(() => setServerOffset(new Date(snapshot.serverNow).getTime() - Date.now()), 0);
     return () => window.clearTimeout(timer);
@@ -1122,6 +1121,7 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
         )}
         {error && <div className="workspace-alert error" role="alert">{error}</div>}
         {notice && <div className="workspace-alert success" role="status">{notice}</div>}
+        <StudentQuestionPicker questions={snapshot.questions} question={question} pending={pending} onSelect={selectQuestion} />
         {!question && (
           <section className="student-focus-card student-waiting">
             <Clock3 />

@@ -13,7 +13,7 @@
       "expiresOn": "2026-11-30"
     },
     "db/classroom-live.ts": {
-      "baselineLines": 866,
+      "baselineLines": 845,
       "reason": "既有即時課堂交易集中於單一資料模組；須依交易邊界逐步拆分並維持一致性。",
       "ownerRole": "後端資料層維護者",
       "expiresOn": "2026-11-30"
@@ -33,7 +33,7 @@
       "expiresOn": "2026-10-31"
     },
     "app/courses/[courseId]/CourseWorkspace.tsx::CourseWorkspace": {
-      "baselineLines": 842,
+      "baselineLines": 841,
       "baselineComplexity": 60,
       "reason": "既有教師工作區整合資料載入、狀態控制及多個階段畫面；將依課堂階段拆成可測元件。",
       "ownerRole": "前端維護者",

@@ -15,6 +15,8 @@
     "test:unit:coverage": "node --experimental-strip-types --experimental-test-coverage --test-coverage-lines=90 --test-coverage-branches=80 --test-coverage-functions=80 --test tests/classroom-access.test.ts tests/classroom-auth.test.ts tests/classroom-domain.test.ts tests/classroom-input.test.ts tests/classroom-mobile-ranking.test.ts tests/classroom-observability.test.ts tests/classroom-privacy.test.ts tests/classroom-question-bank.test.ts tests/classroom-roster.test.ts tests/classroom-migration.test.mjs",
     "test:workflow": "node --test tests/classroom-live-sql.test.mjs tests/classroom-observability-sql.test.mjs",
     "test:acceptance": "cross-env NODE_OPTIONS=--experimental-strip-types cucumber-js --import tests/gherkin/**/*.ts features/**/*.feature --format progress",
+    "test:simulation": "node --experimental-strip-types --test tests/classroom-full-session-simulation.test.mjs",
+    "test:api-simulation": "node scripts/run-classroom-api-simulation.mjs",
     "test:mutation:unit": "node --experimental-strip-types --test tests/classroom-domain.test.ts tests/classroom-mobile-ranking.test.ts tests/classroom-observability.test.ts tests/classroom-privacy.test.ts",
     "test:mutation": "stryker run",
     "test:integration": "node --test tests/rendered-html.test.mjs",
@@ -28,7 +30,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern tmp --ignore-pattern .next --ignore-pattern .wrangler",
     "gate:static": "npm run typecheck && npm run lint && npm run quality:code",
     "gate:build": "npm run build && npm run test:integration",
-    "gate:ci": "npm run test:security && npm run security:secrets && npm run audit:all && npm run gate:static && npm run test:unit:coverage && npm run test:acceptance && npm run test:workflow && npm run test:mutation && npm run gate:build"
+    "gate:ci": "npm run test:security && npm run security:secrets && npm run audit:all && npm run gate:static && npm run test:unit:coverage && npm run test:acceptance && npm run test:workflow && npm run test:simulation && npm run test:mutation && npm run gate:build"
   },
   "dependencies": {
     "cross-env": "^10.1.0",
@@ -64,7 +66,7 @@
     "fast-uri": "3.1.5",
     "js-yaml": "4.3.1",
     "minimatch": "10.2.5",
-    "nanoid": "3.3.17",
+    "nanoid": "3.3.18",
     "postcss": "8.5.23",
     "qs": "6.15.3",
     "sharp": "0.35.3",
