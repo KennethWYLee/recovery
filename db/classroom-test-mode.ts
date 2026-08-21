@@ -10,6 +10,7 @@ type DemoStudentRow = {
 
 const DEMO_SESSION_ID = "session-demo-classroom";
 const DEMO_QUESTION_ID = "question-demo-3";
+const DEMO_ANSWER_WINDOW_MINUTES = 20;
 
 function mapDemoStudent(row: DemoStudentRow): ClassroomActor {
   return { id: row.id, email: row.email, displayName: row.display_name, role: "student", isAdmin: false };
@@ -84,7 +85,7 @@ export async function resetDemoClassroom(
     "草擬中：停止新交易、保留證據、確認影響範圍。",
   ];
   const now = new Date().toISOString();
-  const answerDeadline = new Date(Date.now() + 5 * 60 * 1_000).toISOString();
+  const answerDeadline = new Date(Date.now() + DEMO_ANSWER_WINDOW_MINUTES * 60 * 1_000).toISOString();
   const statements: D1PreparedStatement[] = [
     db.prepare(
       `UPDATE classroom_questions SET phase = 'archived', version = version + 1, updated_at = ?

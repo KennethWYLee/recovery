@@ -5,6 +5,7 @@ const strykerConfig = {
     "lib/classroom-observability.ts:22-100",
     "lib/classroom-observability.ts:129-179",
     "lib/classroom-privacy.ts",
+    "lib/classroom-workspace-state.ts",
   ],
   testRunner: "command",
   commandRunner: {
