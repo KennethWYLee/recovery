@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-08-21T03:01:01.279Z",
+  "synthetic": true,
+  "scenario": {
+    "teachers": 1,
+    "students": 24,
+    "eligibleStudents": 21,
+    "lateObservers": 3,
+    "groups": 6,
+    "questions": 1
+  },
+  "requests": {
+    "total": 270,
+    "successful": 170,
+    "expectedRejected": 100,
+    "localRuntimeReconnects": 0,
+    "unexpectedFailures": 0,
+    "elapsedMs": 40288,
+    "requestsPerSecond": 6.7,
+    "latencyMs": {
+      "p50": 478,
+      "p95": 5509,
+      "maximum": 7529
+    }
+  },
+  "checks": {
+    "anonymousStudentPayloads": "passed",
+    "representativeOnlyResponses": "passed",
+    "responseVersionConflict": "passed",
+    "concurrentRankingEdits": "passed",
+    "fiftyRequestReadBurst": "passed",
+    "cancelledReadRecovery": "passed",
+    "invalidInputBoundaries": "passed",
+    "lateStudentBoundary": "passed",
+    "teacherRankingSeparated": "passed",
+    "publishedConsensus": "passed",
+    "historicalVisibility": "passed",
+    "mutationRateLimit": "passed"
+  }
+}

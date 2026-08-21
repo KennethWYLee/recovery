@@ -66,7 +66,7 @@ export function StudentProgressiveRanking({
                 <li key={group.id}>
                   <strong className="selected-rank-number">第 {index + 1} 名</strong>
                   <div>
-                    <small>{labels[group.id] ?? "匿名回答"}</small>
+                    <small>{labels[group.id] ?? group.label}</small>
                     <p>{group.response.content}</p>
                   </div>
                   <span className="rank-controls">
@@ -92,7 +92,7 @@ export function StudentProgressiveRanking({
               if (!group) return null;
               return (
                 <button type="button" key={group.id} className="ranking-choice" disabled={pending} onClick={() => onChoose(group.id)}>
-                  <small>{labels[group.id] ?? "匿名回答"}</small>
+                  <small>{labels[group.id] ?? group.label}</small>
                   <p>{group.response.content}</p>
                   <span>選為第 {selectedCount + 1} 名</span>
                 </button>

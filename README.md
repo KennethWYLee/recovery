@@ -49,7 +49,7 @@ npm run quality:code
 npm run audit:production
 ```
 
-Node 測試輸出的 coverage 百分比只涵蓋命令列明確列入的 `lib` 規則模組，不代表整套系統的程式碼覆蓋率。`test:simulation` 會以正式資料庫結構模擬1位教師、50位準時學生、6組及1位遲到學生的完整課堂流程。`test:api-simulation` 是尚未納入 CI 的隔離本機演練；只有命令成功結束並產生 `evidence/api-simulation/latest.json`，才可列為通過。資料庫流程另以 SQL workflow 測試驗證；UI 與 API route 以 build 與 integration 測試驗證。
+Node 測試輸出的 coverage 百分比只涵蓋命令列明確列入的 `lib` 規則模組，不代表整套系統的程式碼覆蓋率。`test:simulation` 會以正式資料庫結構模擬1位教師、50位準時學生、6組及1位遲到學生的完整課堂流程。`test:api-simulation` 會直接執行正式建置後的 Worker 與隔離 D1，使用24個不同虛擬學生身分，並驗證50個同時讀取、並行排序、指定代表、版本衝突、遲到權限、輸入限制、取消讀取後恢復、歷史結果及限流；命令成功並產生 `evidence/api-simulation/latest.json` 才算通過。資料庫流程另以 SQL workflow 測試驗證；需操作瀏覽器的觸控、拖曳及畫面理解留到 Chrome 驗證。
 
 部署後另以 `$env:CLASSROOM_PUBLIC_URL='https://...'; npm run test:hosted-auth` 確認外部請求無法偽造登入身分。營運紀錄只保存錯誤、異動、慢請求及部分成功讀取樣本；畫面中的比例與延遲不得解讀為完整流量。
 

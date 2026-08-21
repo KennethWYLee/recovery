@@ -1,68 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ClipboardCheck, Clock3, Copy, Download, Eye, GripVertical, Hash, History, LockKeyhole, LogOut, LibraryBig, Plus, RefreshCw, RotateCcw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ClipboardCheck, Clock3, Copy, Download, Eye, GripVertical, Hash, History, LockKeyhole, LogOut, LibraryBig, Plus, RefreshCw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { classroomApiData as apiData } from "@/lib/classroom-api-client";
 import { courseTermLabel, QUESTION_PHASE_LABELS, rankingPosition, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
 import { StudentConsensusResults } from "./StudentConsensusResults";
 import { StudentParticipationPanel } from "./StudentParticipationPanel";
 import { StudentProgressiveRanking } from "./StudentProgressiveRanking";
 import { StudentQuestionPicker } from "./StudentQuestionPicker";
+import { StudentTestPicker, StudentTestResetDialog } from "./StudentTestTools";
 import { TeacherRankingPanel } from "./TeacherRankingPanel";
-import { rankingStartsComplete, shouldPrepareRanking, useProgressiveRanking } from "./useProgressiveRanking";
-
-type Actor = {
-  id: string;
-  email: string;
-  displayName: string;
-  role: "teacher" | "student";
-  isAdmin: boolean;
-};
-type WorkspacePayload = {
-  actor: Actor;
-  viewer: Actor;
-  testMode: boolean;
-  course: ClassroomCourse;
-  snapshot: ClassroomSessionSnapshot | null;
-};
-type Envelope<T> = { data?: T; error?: { message?: string } };
-
-function workspaceSnapshotSignature(snapshot: ClassroomSessionSnapshot | null): string {
-  if (!snapshot) return "empty";
-  return [
-    snapshot.session.version, snapshot.question?.id ?? "none", snapshot.question?.version ?? 0,
-    snapshot.question?.phase ?? "none", snapshot.completion.checkedIn,
-    snapshot.completion.submittedGroups, snapshot.completion.rankedStudents,
-    snapshot.groups.map((group) => `${group.id}:${group.response.version}:${group.response.status}`).join(","),
-    snapshot.currentUser.groupId ?? "none", snapshot.currentUser.hasSubmittedRanking ? 1 : 0,
-  ].join("|");
-}
-
-function applyLoadedWorkspace(data: WorkspacePayload, quiet: boolean, signatureRef: MutableRefObject<string>, setPayload: Dispatch<SetStateAction<WorkspacePayload | null>>) {
-  const signature = workspaceSnapshotSignature(data.snapshot);
-  if (quiet && signature === signatureRef.current) return;
-  signatureRef.current = signature;
-  setPayload(data);
-}
-
-async function apiData<T>(response: Response): Promise<T> {
-  const body = (await response.json().catch(() => null)) as Envelope<T> | null;
-  if (!response.ok || body?.data === undefined) throw new Error(body?.error?.message ?? "目前無法處理課堂資料。");
-  return body.data;
-}
-
-function shuffle<T>(values: T[]): T[] {
-  const next = [...values];
-  const random = new Uint32Array(Math.max(1, next.length));
-  crypto.getRandomValues(random);
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const target = random[index] % (index + 1);
-    [next[index], next[target]] = [next[target], next[index]];
-  }
-  return next;
-}
+import { useProgressiveRanking } from "./useProgressiveRanking";
+import { useWorkspaceLoader } from "./useWorkspaceLoader";
+import type { WorkspaceActor as Actor, WorkspacePayload } from "./workspace-types";
 
 function displayGroup(group: ClassroomGroup, anonymous: boolean, groups: ClassroomGroup[]) {
   return anonymous ? `回答 ${String.fromCharCode(65 + groups.findIndex((item) => item.id === group.id))}` : group.label;
@@ -210,7 +163,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const [dragParticipant, setDragParticipant] = useState<string | null>(null);
   const [responseText, setResponseText] = useState("");
   const [responseSaveState, setResponseSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const { rankingOrder, rankingSelectionCount, dragRank, setDragRank, initializeRanking, chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, moveRank, dropRank } = useProgressiveRanking();
+  const { rankingOrder, rankingSelectionCount, dragRank, setDragRank, initializeRanking, resetRanking, chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, moveRank, dropRank } = useProgressiveRanking();
   const [answerLabels, setAnswerLabels] = useState<Record<string, string>>({});
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [answerDurationMinutes, setAnswerDurationMinutes] = useState(5);
@@ -224,12 +177,23 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStudentTestPicker, setShowStudentTestPicker] = useState(false);
+  const [showStudentTestReset, setShowStudentTestReset] = useState(false);
   const [testStudentId, setTestStudentId] = useState<string | null>(null);
   const responseKeyRef = useRef("");
   const rankingKeyRef = useRef("");
   const expiryKeyRef = useRef("");
   const selectedQuestionRef = useRef<string | null>(null);
   const snapshotSignatureRef = useRef("");
+  const loaderRefs = useMemo(() => ({ responseKey: responseKeyRef, rankingKey: rankingKeyRef,
+    selectedQuestion: selectedQuestionRef, snapshotSignature: snapshotSignatureRef }), []);
+  const loaderSetters = useMemo(() => ({ setPayload, setError, setPending, setResponseText, setAnswerLabels }), []);
+  const { load, cancelLoading } = useWorkspaceLoader({
+    courseId,
+    testStudentId,
+    refs: loaderRefs,
+    setters: loaderSetters,
+    initializeRanking,
+  });
 
   const questionBankCategories = useMemo(() => [...new Set(questionBankItems.map((item) => item.category))].sort((left, right) => left.localeCompare(right, "zh-Hant")), [questionBankItems]);
   const visibleQuestionBankItems = useMemo(() => {
@@ -248,47 +212,6 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
         return right.updatedAt.localeCompare(left.updatedAt) || left.title.localeCompare(right.title, "zh-Hant");
       });
   }, [questionBankItems, questionBankSearch, questionBankCategory, questionBankUsage, questionBankSort]);
-
-  const load = useCallback(
-    async (quiet = false, questionId?: string | null, testStudentOverride?: string | null) => {
-      if (!quiet) setError(null);
-      const selected = questionId === undefined ? selectedQuestionRef.current : questionId;
-      const activeTestStudent = testStudentOverride === undefined ? testStudentId : testStudentOverride;
-      try {
-        const search = new URLSearchParams();
-        if (selected) search.set("questionId", selected);
-        if (activeTestStudent) search.set("testStudentId", activeTestStudent);
-        const suffix = search.size ? `?${search.toString()}` : "";
-        const data = await apiData<WorkspacePayload>(await fetch(`/api/classroom/courses/${encodeURIComponent(courseId)}/session${suffix}`, { cache: "no-store", headers: { accept: "application/json" } }));
-        selectedQuestionRef.current = data.snapshot?.question?.id ?? null;
-        const currentGroup = data.snapshot?.groups.find((group) => group.id === data.snapshot?.currentUser.groupId);
-        const responseKey = data.snapshot?.question && currentGroup ? `${data.snapshot.question.id}:${currentGroup.response.version}` : "";
-        if (responseKey && responseKey !== responseKeyRef.current) {
-          responseKeyRef.current = responseKey;
-          setResponseText(currentGroup?.response.content ?? "");
-        }
-        const currentQuestion = data.snapshot?.question;
-        if (data.snapshot && currentQuestion && shouldPrepareRanking(data.actor.isAdmin, currentQuestion.phase)) {
-          const eligible = data.snapshot.groups.filter((group) => ["submitted", "locked"].includes(group.response.status) && group.response.content.trim().length > 0).map((group) => group.id);
-          const savedOrder = data.snapshot.currentUser.orderedGroupIds;
-          const savedOrderIsComplete = savedOrder.length === eligible.length
-            && new Set(savedOrder).size === savedOrder.length
-            && eligible.every((groupId) => savedOrder.includes(groupId));
-          const rankingKey = `${currentQuestion.id}:${eligible.join(",")}:${savedOrderIsComplete ? savedOrder.join(",") : "new"}`;
-          if (rankingKey !== rankingKeyRef.current) {
-            rankingKeyRef.current = rankingKey;
-            const initialOrder = savedOrderIsComplete ? savedOrder : shuffle(eligible);
-            initializeRanking(initialOrder, rankingStartsComplete(data.actor.isAdmin, savedOrderIsComplete));
-            setAnswerLabels(Object.fromEntries(initialOrder.map((groupId, index) => [groupId, `回答 ${String.fromCharCode(65 + index)}`])));
-          }
-        }
-        applyLoadedWorkspace(data, quiet, snapshotSignatureRef, setPayload);
-      } catch (cause) {
-        if (!quiet) setError(cause instanceof Error ? cause.message : "目前無法取得課堂資料。");
-      }
-    },
-    [courseId, initializeRanking, testStudentId],
-  );
 
   const snapshot = payload?.snapshot ?? null;
   const question = snapshot?.question ?? null;
@@ -567,24 +490,38 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   }
 
   function selectTestStudent(userId: string) {
+    cancelLoading();
     responseKeyRef.current = ""; rankingKeyRef.current = "";
-    selectedQuestionRef.current = null; setTestStudentId(userId);
+    selectedQuestionRef.current = null;
+    snapshotSignatureRef.current = "";
+    setResponseText("");
+    setResponseSaveState("idle");
+    resetRanking();
+    setAnswerLabels({});
+    setPayload(null);
+    setTestStudentId(userId);
     setShowStudentTestPicker(false);
     setNotice(null);
   }
 
   function selectStudentQuestion(questionId: string) { responseKeyRef.current = ""; rankingKeyRef.current = ""; selectedQuestionRef.current = questionId; void load(false, questionId); }
   function exitStudentTestMode() {
+    cancelLoading();
     responseKeyRef.current = "";
     rankingKeyRef.current = "";
     selectedQuestionRef.current = null;
+    snapshotSignatureRef.current = "";
+    setResponseText("");
+    setResponseSaveState("idle");
+    resetRanking();
+    setAnswerLabels({});
+    setPayload(null);
     setTestStudentId(null);
     setShowStudentTestPicker(false);
     setNotice("已回到系統管理員畫面。");
   }
 
   async function resetStudentTestData() {
-    if (!window.confirm("確定要重設示範課程嗎？虛擬學生在第三題的作答與排序變更將恢復原始狀態。")) return;
     setPending(true);
     setError(null);
     setNotice(null);
@@ -598,8 +535,15 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
       responseKeyRef.current = "";
       rankingKeyRef.current = "";
       selectedQuestionRef.current = null;
+      snapshotSignatureRef.current = "";
+      setResponseText("");
+      setResponseSaveState("idle");
+      resetRanking();
+      setAnswerLabels({});
+      setPayload(null);
       setTestStudentId(null);
       setShowStudentTestPicker(false);
+      setShowStudentTestReset(false);
       await load(false, null, null);
       setNotice("示範課程已恢復，可以重新測試不同學生情境。");
     } catch (cause) {
@@ -712,7 +656,8 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
             </button>
           </section>
         )}
-        {showStudentTestPicker && viewer.isAdmin && course.isDemo && snapshot && <StudentTestPicker snapshot={snapshot} currentUserId={testMode ? actor.id : null} pending={pending} onSelect={selectTestStudent} onReset={() => void resetStudentTestData()} onClose={() => setShowStudentTestPicker(false)} />}
+        {showStudentTestPicker && viewer.isAdmin && course.isDemo && snapshot && <StudentTestPicker snapshot={snapshot} currentUserId={testMode ? actor.id : null} pending={pending} onSelect={selectTestStudent} onReset={() => setShowStudentTestReset(true)} onClose={() => setShowStudentTestPicker(false)} />}
+        <StudentTestResetDialog open={showStudentTestReset} pending={pending} onClose={() => setShowStudentTestReset(false)} onConfirm={() => void resetStudentTestData()} />
         {error && (
           <div className="workspace-alert error" role="alert">
             {error}
@@ -1192,12 +1137,12 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
                   <span>{eligibleGroups.length} 份回答</span>
                 </header>
                 <div>
-                  {rankingOrder.map((groupId, index) => {
+                  {rankingOrder.map((groupId) => {
                     const group = eligibleGroups.find((item) => item.id === groupId);
                     if (!group) return null;
                     return (
                       <article key={group.id}>
-                        <span>{answerLabels[group.id] ?? `回答 ${String.fromCharCode(65 + index)}`}</span>
+                        <span>{answerLabels[group.id] ?? group.label}</span>
                         <p>{group.response.content}</p>
                       </article>
                     );
@@ -1246,51 +1191,6 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
         )}
       </main>
     </div>
-  );
-}
-
-function StudentTestPicker({ snapshot, currentUserId, pending, onSelect, onReset, onClose }: { snapshot: ClassroomSessionSnapshot; currentUserId: string | null; pending: boolean; onSelect: (userId: string) => void; onReset: () => void; onClose: () => void }) {
-  return (
-    <section className="student-test-picker" role="dialog" aria-label="選擇虛擬學生">
-      <header>
-        <div>
-          <UserRoundSearch />
-          <span>
-            <strong>選擇學生情境</strong>
-            <small>進入後會使用該學生的真實作答與排序權限。</small>
-          </span>
-        </div>
-        <button type="button" aria-label="關閉學生測試選擇" onClick={onClose}>
-          <X />
-        </button>
-      </header>
-      <div className="student-test-grid">
-        {snapshot.participants.map((participant) => {
-          const group = snapshot.groups.find((item) => item.id === participant.groupId);
-          const representative = group?.representativeUserId === participant.userId;
-          return (
-            <button type="button" className={participant.userId === currentUserId ? "selected" : ""} key={participant.id} onClick={() => onSelect(participant.userId)}>
-              <span>{participant.displayName.slice(-2)}</span>
-              <div>
-                <strong>{participant.displayName}</strong>
-                <small>
-                  {group?.label ?? "尚未分組"} · {representative ? "指定代表" : "一般組員"}
-                  {participant.attendance === "late" ? " · 遲到加入" : ""}
-                </small>
-              </div>
-              {participant.userId === currentUserId && <em>目前</em>}
-            </button>
-          );
-        })}
-      </div>
-      <footer>
-        <span>重設只影響示範課程的第三題，不會處理正式課程資料。</span>
-        <button type="button" className="button secondary" disabled={pending} onClick={onReset}>
-          <RotateCcw />
-          重設示範資料
-        </button>
-      </footer>
-    </section>
   );
 }
 

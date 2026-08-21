@@ -1,17 +1,14 @@
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { createServer } from "node:net";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
+import { Miniflare } from "miniflare";
 
 const root = process.cwd();
-const sourceVariables = resolve(root, ".dev.vars");
-const generatedConfig = resolve(root, "dist/server/wrangler.json");
-const wrangler = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js", import.meta.url));
+const workerEntry = resolve(root, "dist/server/index.js");
+const workerRoot = resolve(root, "dist/server");
 const reportPath = resolve(root, "evidence/api-simulation/latest.json");
 const migrationFiles = Array.from({ length: 9 }, (_, index) => resolve(
   root,
@@ -29,19 +26,6 @@ const studentIds = Array.from({ length: 24 }, (_, index) => `demo-user-${index +
 const rankingStudentIds = studentIds.slice(0, 21);
 const lateStudentIds = studentIds.slice(21);
 
-function availablePort() {
-  return new Promise((resolvePort, reject) => {
-    const server = createServer();
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      assert.ok(address && typeof address === "object");
-      const port = address.port;
-      server.close((error) => error ? reject(error) : resolvePort(port));
-    });
-  });
-}
-
 function percentile(values, proportion) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((left, right) => left - right);
@@ -53,75 +37,89 @@ function rotatedOrder(groupIds, index) {
   return [...groupIds.slice(offset), ...groupIds.slice(0, offset)];
 }
 
-function applyMigrations(persistence) {
+async function applyMigrations(db) {
   for (const migrationFile of migrationFiles) {
-    const result = spawnSync(process.execPath, [
-      wrangler, "d1", "execute", "DB", "--config", generatedConfig,
-      "--local", "--persist-to", persistence, "--file", migrationFile, "--yes",
-    ], {
-      cwd: root,
-      encoding: "utf8",
-      env: { ...process.env, WRANGLER_LOG_PATH: resolve(root, ".wrangler/wrangler-api-simulation.log") },
-      windowsHide: true,
-    });
-    if (result.status !== 0) {
-      throw new Error(`Migration ${migrationFile} failed.\n${result.stderr || result.stdout}`);
+    const migration = await readFile(migrationFile, "utf8");
+    for (const statement of migration.split("--> statement-breakpoint").map((value) => value.trim()).filter(Boolean)) {
+      await db.prepare(statement).run();
     }
   }
 }
 
-async function waitUntilReady(baseUrl, child, output) {
-  for (let attempt = 0; attempt < 120; attempt += 1) {
-    if (child.exitCode !== null) throw new Error(`Local server stopped before it was ready.\n${output()}`);
-    try {
-      const response = await fetch(`${baseUrl}/api/classroom/courses`);
-      if (response.ok) return;
-    } catch {
-      // The local listener is still starting.
-    }
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
+async function collectWorkerModulePaths(directory) {
+  const paths = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) paths.push(...await collectWorkerModulePaths(path));
+    else if (entry.isFile() && /[.]m?js$/u.test(entry.name)) paths.push(path);
   }
-  throw new Error(`Local server did not become ready.\n${output()}`);
+  return paths;
 }
 
-function createMeasuredClient(baseUrl) {
+async function workerModules() {
+  const paths = await collectWorkerModulePaths(workerRoot);
+  const entrypoint = paths.find((path) => path === workerEntry);
+  assert.ok(entrypoint, "Built Worker entrypoint was not found in the module graph.");
+  return [entrypoint, ...paths.filter((path) => path !== entrypoint)]
+    .map((path) => ({ type: "ESModule", path }));
+}
+
+function createMeasuredClient(baseUrl, dispatchFetch) {
   const records = [];
   const request = async (path, options = {}, acceptedStatuses = [200]) => {
-    const startedAt = performance.now();
-    let response;
-    try {
-      response = await fetch(`${baseUrl}${path}`, {
-        ...options,
-        signal: options.signal ?? AbortSignal.timeout(10_000),
-        headers: {
-          accept: "application/json",
-          ...(options.body ? { "content-type": "application/json", origin: baseUrl } : {}),
-          ...options.headers,
-        },
+    const method = options.method ?? "GET";
+    const maximumAttempts = method === "GET" ? 4 : 1;
+    for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+      const startedAt = performance.now();
+      let response;
+      try {
+        response = await dispatchFetch(`${baseUrl}${path}`, {
+          ...options,
+          signal: options.signal ?? AbortSignal.timeout(10_000),
+          headers: {
+            accept: "application/json",
+            ...(options.body ? { "content-type": "application/json", origin: baseUrl } : {}),
+            ...options.headers,
+          },
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+        const retryable = /network connection lost|fetch failed|other side closed/iu.test(detail);
+        records.push({ method, path: path.replace(/[?].*$/u, ""), status: 0,
+          durationMs: performance.now() - startedAt, errorCode: "LOCAL_RUNTIME_CONNECTION_LOST", transient: retryable });
+        if (retryable && attempt < maximumAttempts) {
+          await new Promise((resolveDelay) => setTimeout(resolveDelay, attempt * 200));
+          continue;
+        }
+        throw new Error(`${method} ${path} did not complete: ${detail}`);
+      }
+      const durationMs = performance.now() - startedAt;
+      const responseText = await response.text();
+      let payload = null;
+      try {
+        payload = JSON.parse(responseText);
+      } catch {
+        payload = null;
+      }
+      const localRuntimeDisconnect = response.status === 500 && /network connection lost/iu.test(responseText);
+      records.push({
+        method,
+        path: path.replace(/[?].*$/u, ""),
+        status: response.status,
+        durationMs,
+        errorCode: localRuntimeDisconnect ? "LOCAL_RUNTIME_CONNECTION_LOST" : payload?.error?.code ?? null,
+        transient: localRuntimeDisconnect,
       });
-    } catch (error) {
-      const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      throw new Error(`${options.method ?? "GET"} ${path} did not complete: ${detail}`);
+      if (localRuntimeDisconnect && attempt < maximumAttempts) {
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, attempt * 200));
+        continue;
+      }
+      if (!acceptedStatuses.includes(response.status)) {
+        throw new Error(`${method} ${path} returned ${response.status}: ${payload?.error?.code ?? "UNKNOWN"}\n${responseText.slice(0, 2_000)}`);
+      }
+      return { response, payload };
     }
-    const durationMs = performance.now() - startedAt;
-    const responseText = await response.text();
-    let payload = null;
-    try {
-      payload = JSON.parse(responseText);
-    } catch {
-      payload = null;
-    }
-    records.push({
-      method: options.method ?? "GET",
-      path: path.replace(/[?].*$/u, ""),
-      status: response.status,
-      durationMs,
-      errorCode: payload?.error?.code ?? null,
-    });
-    if (!acceptedStatuses.includes(response.status)) {
-      throw new Error(`${options.method ?? "GET"} ${path} returned ${response.status}: ${payload?.error?.code ?? "UNKNOWN"}\n${responseText.slice(0, 2_000)}`);
-    }
-    return { response, payload };
+    throw new Error(`${method} ${path} exhausted its local-runtime retry allowance.`);
   };
   return { records, request };
 }
@@ -182,6 +180,58 @@ async function submitRemainingResponses(client) {
   )));
 }
 
+async function verifyResponseRolesAndConflict(client) {
+  const representativeId = "demo-user-13";
+  const memberId = "demo-user-14";
+  const { payload: representativePayload } = await client.request(
+    `/api/classroom/sessions/${DEMO_SESSION_ID}/response?questionId=${DEMO_QUESTION_ID}&testStudentId=${representativeId}`,
+  );
+  const live = representativePayload.data.live;
+  assert.equal(live.isRepresentative, true);
+
+  const { payload: memberPayload } = await client.request(
+    `/api/classroom/sessions/${DEMO_SESSION_ID}/response?questionId=${DEMO_QUESTION_ID}&testStudentId=${memberId}`,
+  );
+  assert.equal(memberPayload.data.live.isRepresentative, false);
+  assert.equal(memberPayload.data.live.response.content, live.response.content);
+
+  const rejected = await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}/response`, {
+    method: "PUT",
+    body: JSON.stringify({
+      testStudentId: memberId,
+      questionId: DEMO_QUESTION_ID,
+      expectedVersion: live.response.version,
+      content: "一般組員不應能修改本組回答。",
+      submit: false,
+    }),
+  }, [403]);
+  assert.equal(rejected.payload.error.code, "REPRESENTATIVE_REQUIRED");
+
+  const drafts = ["先保存證據，再確認影響範圍。", "先確認影響範圍，再保存必要證據。"];
+  const edits = await Promise.all(drafts.map((content) => client.request(
+    `/api/classroom/sessions/${DEMO_SESSION_ID}/response`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        testStudentId: representativeId,
+        questionId: DEMO_QUESTION_ID,
+        expectedVersion: live.response.version,
+        content,
+        submit: false,
+      }),
+    },
+    [200, 409],
+  )));
+  assert.equal(edits.filter(({ response }) => response.status === 200).length, 1);
+  assert.equal(edits.filter(({ payload }) => payload?.error?.code === "RESPONSE_VERSION_CONFLICT").length, 1);
+
+  const { payload: refreshed } = await client.request(
+    `/api/classroom/sessions/${DEMO_SESSION_ID}/response?questionId=${DEMO_QUESTION_ID}&testStudentId=${representativeId}`,
+  );
+  assert.equal(refreshed.data.live.response.version, live.response.version + 1);
+  assert.ok(drafts.includes(refreshed.data.live.response.content));
+}
+
 async function advanceQuestion(client, snapshot, expectedPhase) {
   const { payload } = await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}`, {
     method: "PATCH",
@@ -232,6 +282,60 @@ async function submitTeacherAndConcurrentEdit(client, groupIds) {
   assert.ok(edits.every(({ response }) => response.status === 200 || response.status === 409));
 }
 
+async function verifyRankingInputBoundaries(client, groupIds) {
+  const incomplete = await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}/ranking`, {
+    method: "PUT",
+    body: JSON.stringify({
+      testStudentId: "demo-user-1",
+      questionId: DEMO_QUESTION_ID,
+      orderedGroupIds: groupIds.slice(0, -1),
+    }),
+  }, [400]);
+  assert.equal(incomplete.payload.error.code, "INCOMPLETE_RANKING");
+
+  const crossOrigin = await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}/ranking`, {
+    method: "PUT",
+    headers: { origin: "https://outside.example" },
+    body: JSON.stringify({ questionId: DEMO_QUESTION_ID, orderedGroupIds: groupIds }),
+  }, [403]);
+  assert.equal(crossOrigin.payload.error.code, "CROSS_ORIGIN_REQUEST_REJECTED");
+
+  const malformed = await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}/ranking`, {
+    method: "PUT", body: "{",
+  }, [400]);
+  assert.equal(malformed.payload.error.code, "INVALID_JSON");
+
+  const oversized = await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}/ranking`, {
+    method: "PUT", body: JSON.stringify({ padding: "x".repeat(9_000) }),
+  }, [413]);
+  assert.equal(oversized.payload.error.code, "REQUEST_TOO_LARGE");
+}
+
+async function verifyFiftyRequestReadBurst(client) {
+  const snapshots = await Promise.all(Array.from({ length: 50 }, async (_, index) => {
+    const studentId = studentIds[index % studentIds.length];
+    return client.request(
+      `/api/classroom/courses/${DEMO_COURSE_ID}/session?questionId=${DEMO_QUESTION_ID}&testStudentId=${studentId}`,
+    );
+  }));
+  assert.equal(snapshots.length, 50);
+  assert.ok(snapshots.every(({ payload }) => payload.data.snapshot.question.phase === "ranking"));
+  assert.ok(snapshots.every(({ payload }) => payload.data.snapshot.participants.length === 0));
+}
+
+async function verifyCancelledReadRecovery(client, dispatchFetch, baseUrl) {
+  const response = await dispatchFetch(
+    `${baseUrl}/api/classroom/courses/${DEMO_COURSE_ID}/session?questionId=${DEMO_QUESTION_ID}&testStudentId=demo-user-1`,
+    { headers: { accept: "application/json" } },
+  );
+  assert.equal(response.status, 200);
+  await response.body?.cancel();
+  const { payload } = await client.request(
+    `/api/classroom/courses/${DEMO_COURSE_ID}/session?questionId=${DEMO_QUESTION_ID}&testStudentId=demo-user-1`,
+  );
+  assert.equal(payload.data.snapshot.question.id, DEMO_QUESTION_ID);
+}
+
 async function verifyPublishedResults(client) {
   const views = await loadStudentViews(client, "published");
   for (const { studentId, snapshot } of views) {
@@ -248,10 +352,41 @@ async function verifyPublishedResults(client) {
   }
 }
 
+async function verifyHistoricalVisibility(client) {
+  const visible = await client.request(
+    `/api/classroom/courses/${DEMO_COURSE_ID}/session?questionId=question-demo-1&testStudentId=demo-user-1`,
+  );
+  assert.equal(visible.payload.data.snapshot.question.id, "question-demo-1");
+  assert.ok(visible.payload.data.snapshot.results.length === 6);
+
+  const hidden = await client.request(
+    `/api/classroom/courses/${DEMO_COURSE_ID}/session?questionId=question-demo-2&testStudentId=demo-user-1`,
+  );
+  assert.notEqual(hidden.payload.data.snapshot.question.id, "question-demo-2");
+  assert.ok(hidden.payload.data.snapshot.questions.every((question) => question.id !== "question-demo-2"));
+}
+
+async function verifyMutationRateLimit(client) {
+  let limited = null;
+  for (let attempt = 0; attempt < 130 && !limited; attempt += 1) {
+    const result = await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}/ranking`, {
+      method: "PUT",
+      body: JSON.stringify({ questionId: DEMO_QUESTION_ID, orderedGroupIds: [] }),
+    }, [409, 429]);
+    if (result.response.status === 429) limited = result;
+  }
+  assert.equal(limited?.payload?.error?.code, "RATE_LIMITED");
+  assert.equal(limited?.response.headers.get("retry-after"), "60");
+}
+
 function simulationReport(records, elapsedMs) {
   const durations = records.map((record) => record.durationMs);
-  const expectedErrors = new Set(["RANKING_NOT_ALLOWED", "RANKING_VERSION_CONFLICT"]);
-  const unexpected = records.filter((record) => record.status >= 400 && !expectedErrors.has(record.errorCode));
+  const expectedErrors = new Set([
+    "CROSS_ORIGIN_REQUEST_REJECTED", "INCOMPLETE_RANKING", "INVALID_JSON", "RANKING_CLOSED",
+    "RANKING_NOT_ALLOWED", "RANKING_VERSION_CONFLICT", "RATE_LIMITED", "REPRESENTATIVE_REQUIRED",
+    "REQUEST_TOO_LARGE", "RESPONSE_VERSION_CONFLICT",
+  ]);
+  const unexpected = records.filter((record) => !record.transient && record.status >= 400 && !expectedErrors.has(record.errorCode));
   return {
     generatedAt: new Date().toISOString(),
     synthetic: true,
@@ -265,8 +400,9 @@ function simulationReport(records, elapsedMs) {
     },
     requests: {
       total: records.length,
-      successful: records.filter((record) => record.status < 400).length,
+      successful: records.filter((record) => record.status >= 200 && record.status < 400).length,
       expectedRejected: records.filter((record) => record.status >= 400 && expectedErrors.has(record.errorCode)).length,
+      localRuntimeReconnects: records.filter((record) => record.transient).length,
       unexpectedFailures: unexpected.length,
       elapsedMs: Math.round(elapsedMs),
       requestsPerSecond: Number((records.length / Math.max(elapsedMs / 1_000, 0.001)).toFixed(2)),
@@ -279,22 +415,30 @@ function simulationReport(records, elapsedMs) {
     checks: {
       anonymousStudentPayloads: "passed",
       representativeOnlyResponses: "passed",
+      responseVersionConflict: "passed",
       concurrentRankingEdits: "passed",
+      fiftyRequestReadBurst: "passed",
+      cancelledReadRecovery: "passed",
+      invalidInputBoundaries: "passed",
       lateStudentBoundary: "passed",
       teacherRankingSeparated: "passed",
       publishedConsensus: "passed",
+      historicalVisibility: "passed",
+      mutationRateLimit: "passed",
     },
   };
 }
 
-async function runScenario(baseUrl) {
+async function runScenario(baseUrl, dispatchFetch, db) {
   const startedAt = performance.now();
-  const client = createMeasuredClient(baseUrl);
+  const client = createMeasuredClient(baseUrl, dispatchFetch);
   console.log("[1/8] 重設示範課堂並讀取教師快照");
   let snapshot = await resetAndLoadClassroom(client);
   console.log("[2/8] 並行讀取 24 名學生作答畫面");
   const initialViews = await loadStudentViews(client, "answering");
   assert.equal(initialViews.filter(({ snapshot: view }) => view.currentUser.participatesInQuestion).length, 21);
+  await verifyCancelledReadRecovery(client, dispatchFetch, baseUrl);
+  await verifyResponseRolesAndConflict(client);
   console.log("[3/8] 代表提交其餘小組回答");
   await submitRemainingResponses(client);
   snapshot = (await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}`)).payload.data.snapshot;
@@ -302,9 +446,11 @@ async function runScenario(baseUrl) {
   snapshot = await advanceQuestion(client, snapshot, "ranking");
   console.log("[4/8] 並行讀取 24 名學生排序畫面");
   const rankingViews = await loadStudentViews(client, "ranking");
+  await verifyFiftyRequestReadBurst(client);
+  const groupIds = rankingViews[0].snapshot.groups.map((group) => group.id);
+  await verifyRankingInputBoundaries(client, groupIds);
   console.log("[5/8] 並行提交 21 份學生排序與 3 份遲到拒絕案例");
   await submitStudentRankings(client, rankingViews);
-  const groupIds = rankingViews[0].snapshot.groups.map((group) => group.id);
   console.log("[6/8] 提交教師排序與同帳號並行修改");
   await submitTeacherAndConcurrentEdit(client, groupIds);
   snapshot = (await client.request(`/api/classroom/sessions/${DEMO_SESSION_ID}`)).payload.data.snapshot;
@@ -312,6 +458,9 @@ async function runScenario(baseUrl) {
   await advanceQuestion(client, snapshot, "published");
   console.log("[7/8] 並行核對 24 名學生公布結果");
   await verifyPublishedResults(client);
+  await db.prepare("UPDATE classroom_questions SET phase = 'archived', published_at = NULL WHERE id = 'question-demo-2'").run();
+  await verifyHistoricalVisibility(client);
+  await verifyMutationRateLimit(client);
   console.log("[8/8] 產生可重現測試報告");
   const report = simulationReport(client.records, performance.now() - startedAt);
   assert.equal(report.requests.unexpectedFailures, 0);
@@ -321,45 +470,40 @@ async function runScenario(baseUrl) {
 }
 
 async function main() {
-  assert.ok(existsSync(generatedConfig), "Build output is missing. Run npm run build first.");
-  assert.ok(existsSync(sourceVariables), "Local variables are missing. Copy .dev.vars.example to .dev.vars first.");
-  const port = await availablePort();
-  const baseUrl = `http://127.0.0.1:${port}`;
+  assert.ok(existsSync(workerEntry), "Build output is missing. Run npm run build first.");
+  const baseUrl = "http://127.0.0.1";
   const persistence = await mkdtemp(join(tmpdir(), "classroom-api-simulation-"));
-  applyMigrations(persistence);
-  let serverOutput = "";
-  const child = spawn(process.execPath, [
-    wrangler, "dev", "--config", generatedConfig, "--env-file", sourceVariables,
-    "--local", "--persist-to", persistence, "--port", String(port),
-    "--show-interactive-dev-session=false",
-  ], {
-    cwd: root,
-    env: { ...process.env, WRANGLER_LOG_PATH: resolve(root, ".wrangler/wrangler-api-simulation.log") },
-    windowsHide: true,
-    stdio: ["ignore", "pipe", "pipe"],
+  const bindings = {
+    CLASSROOM_ENVIRONMENT: "development",
+    CLASSROOM_LOCAL_USER_ID: "api-simulation-administrator",
+    CLASSROOM_LOCAL_USER_NAME: "API Simulation Administrator",
+    CLASSROOM_LOCAL_USER_EMAIL: "api-simulation@example.invalid",
+    CLASSROOM_ADMIN_EMAILS: "api-simulation@example.invalid",
+    CLASSROOM_RELEASE: "api-simulation",
+  };
+  const miniflare = new Miniflare({
+    modules: await workerModules(),
+    modulesRoot: workerRoot,
+    compatibilityDate: "2026-07-30",
+    compatibilityFlags: ["nodejs_compat"],
+    bindings,
+    d1Databases: { DB: "classroom-api-simulation" },
+    d1Persist: persistence,
+    serviceBindings: { ASSETS: async () => new Response(null, { status: 404 }) },
   });
-  child.stdout.on("data", (chunk) => { serverOutput = `${serverOutput}${chunk}`.slice(-12_000); });
-  child.stderr.on("data", (chunk) => { serverOutput = `${serverOutput}${chunk}`.slice(-12_000); });
   try {
-    await waitUntilReady(baseUrl, child, () => serverOutput);
-    const report = await runScenario(baseUrl);
+    const db = await miniflare.getD1Database("DB");
+    await applyMigrations(db);
+    const report = await runScenario(baseUrl, (url, init) => miniflare.dispatchFetch(url, init), db);
     console.log("課堂 API 並行演練通過");
     console.log(`- ${report.requests.total} 個請求；非預期失敗 ${report.requests.unexpectedFailures} 個`);
     console.log(`- P50 ${report.requests.latencyMs.p50} ms；P95 ${report.requests.latencyMs.p95} ms；最大 ${report.requests.latencyMs.maximum} ms`);
     console.log(`- 約 ${report.requests.requestsPerSecond} requests/second（本機合成資料）`);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`${detail}\nLocal server output:\n${serverOutput.slice(-8_000)}`);
+    throw new Error(detail);
   } finally {
-    child.kill("SIGTERM");
-    await new Promise((resolveExit) => {
-      if (child.exitCode !== null) return resolveExit();
-      child.once("exit", resolveExit);
-      setTimeout(() => {
-        child.kill("SIGKILL");
-        resolveExit();
-      }, 5_000).unref();
-    });
+    await miniflare.dispose();
     await rm(persistence, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
   }
 }

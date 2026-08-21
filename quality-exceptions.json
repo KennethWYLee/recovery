@@ -7,7 +7,7 @@
   },
   "fileExceptions": {
     "app/courses/[courseId]/CourseWorkspace.tsx": {
-      "baselineLines": 1715,
+      "baselineLines": 1615,
       "reason": "既有課堂工作區同時承載教師與學生流程；須先以行為測試保護，再按畫面責任拆分。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"
@@ -33,17 +33,11 @@
       "expiresOn": "2026-10-31"
     },
     "app/courses/[courseId]/CourseWorkspace.tsx::CourseWorkspace": {
-      "baselineLines": 841,
+      "baselineLines": 833,
       "baselineComplexity": 60,
       "reason": "既有教師工作區整合資料載入、狀態控制及多個階段畫面；將依課堂階段拆成可測元件。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"
-    },
-    "app/courses/[courseId]/CourseWorkspace.tsx::callback:useCallback": {
-      "baselineComplexity": 24,
-      "reason": "既有工作區載入流程同時處理多種回應狀態；將拆分回應解析與錯誤呈現。",
-      "ownerRole": "前端維護者",
-      "expiresOn": "2026-10-31"
     },
     "app/courses/[courseId]/CourseWorkspace.tsx::StudentClassroomView": {
       "baselineLines": 190,

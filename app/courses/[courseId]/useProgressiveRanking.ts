@@ -20,6 +20,11 @@ export function useProgressiveRanking() {
     setRankingOrder(order);
     setRankingSelectionCount(complete ? order.length : 0);
   }, []);
+  const resetRanking = useCallback(() => {
+    setRankingOrder([]);
+    setRankingSelectionCount(0);
+    setDragRank(null);
+  }, []);
   function chooseNextRank(groupId: string) {
     const next = selectNextRankingChoice(rankingOrder, rankingSelectionCount, groupId);
     setRankingOrder(next.order);
@@ -55,7 +60,7 @@ export function useProgressiveRanking() {
   }
 
   return {
-    rankingOrder, rankingSelectionCount, dragRank, setDragRank, initializeRanking,
+    rankingOrder, rankingSelectionCount, dragRank, setDragRank, initializeRanking, resetRanking,
     chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, moveRank, dropRank,
   };
 }
