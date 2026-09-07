@@ -12,7 +12,7 @@ import { StudentParticipationPanel } from "./StudentParticipationPanel";
 import { StudentProgressiveRanking } from "./StudentProgressiveRanking";
 import { StudentQuestionPicker } from "./StudentQuestionPicker";
 import { StudentTestPicker, StudentTestResetDialog } from "./StudentTestTools";
-import { TeacherRankingPanel } from "./TeacherRankingPanel";
+import { TeacherRankingEntry, TeacherRankingPanel } from "./TeacherRankingPanel";
 import { QuestionActions } from "./QuestionActions";
 import { CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
 import { StudentActionFeedback } from "./StudentActionFeedback";
@@ -934,7 +934,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
                           <p>{question.rankingCriteria}</p>
                         </div>
                         <strong className={`question-phase ${question.phase}`}>{QUESTION_PHASE_LABELS[question.phase]}</strong>
-                      </header>
+                      </header><TeacherRankingEntry snapshot={snapshot} />
                       {question.phase === "draft" && (
                         <div className="stage-empty">
                           <Eye />

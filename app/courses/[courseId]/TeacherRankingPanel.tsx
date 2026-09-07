@@ -14,6 +14,20 @@ type Props = {
   onSubmit: () => void;
 };
 
+export function TeacherRankingEntry({ snapshot }: { snapshot: ClassroomSessionSnapshot }) {
+  const phase = snapshot.question?.phase;
+  const editable = phase === "ranking" && snapshot.currentUser.canRank;
+  const description = phase === "ranking"
+    ? editable ? snapshot.currentUser.hasSubmittedRanking ? "已送出，結束排序前仍可修改。" : "尚未送出，請完成教師排序後再結束排序。" : "請由建立本題的教師完成排序。"
+    : phase === "locked" ? "排序已截止；如需修改，請按下方「重新開放排序」。"
+    : ["published", "archived"].includes(phase ?? "") ? "已截止，教師排序列在下方結果中。"
+    : "各組作答結束並完成答案展示後，按「開放個人排序」，即可進行教師排序。";
+  return <aside className="teacher-ranking-entry" aria-label="教師排序入口">
+    <div><strong>教師排序</strong><p>{description}</p></div>
+    {editable && <a className="button primary" href="#teacher-ranking-workspace">{snapshot.currentUser.hasSubmittedRanking ? "查看／修改教師排序" : "進行教師排序"}</a>}
+  </aside>;
+}
+
 export function TeacherRankingPanel({ snapshot, order, dragging, pending, onDrag, onMove, onDrop, onSubmit }: Props) {
   const groups = snapshot.groups.filter((group) => ["submitted", "locked"].includes(group.response.status) && group.response.content.trim());
   return (
@@ -24,9 +38,9 @@ export function TeacherRankingPanel({ snapshot, order, dragging, pending, onDrag
         <span>請教師也完成一份排序。教師排序不納入全班分數，結果公布後才會與全班共識並列顯示。</span>
         <div className="progress-track"><span style={{ width: `${snapshot.completion.eligibleStudents ? (snapshot.completion.rankedStudents / snapshot.completion.eligibleStudents) * 100 : 0}%` }} /></div>
       </section>
-      <section className="ranking-workspace teacher-ranking-workspace">
+      <section id="teacher-ranking-workspace" tabIndex={-1} className="ranking-workspace teacher-ranking-workspace">
         <header>
-          <div><p>教師排序</p><h2>依回答內容拖曳；越上方排名越高</h2></div>
+          <div><p>教師排序</p><h2>按 ↑ ↓ 調整名次，最上方為第 1 名</h2></div>
           <span>{groups.length} 份回答</span>
         </header>
         <ol className="ranking-list">

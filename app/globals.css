@@ -476,6 +476,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .teacher-ranking-layout { display: grid; grid-template-columns: minmax(250px, .7fr) minmax(0, 1.3fr); gap: 18px; padding: 18px; }
 .teacher-ranking-layout .ranking-monitor { min-height: 280px; padding: 26px; background: var(--surface-subtle); border: 1px solid var(--border-soft); border-radius: 12px; }
 .teacher-ranking-workspace { min-width: 0; }
+.teacher-ranking-entry { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px; background: var(--surface-subtle); border-bottom: 1px solid var(--border-soft); }
+.teacher-ranking-entry p { margin: 6px 0 0; color: var(--muted); }
+#teacher-ranking-workspace { scroll-margin-top: 100px; }
 
 .results-layout { grid-template-columns: minmax(0, 1fr); }
 .results-table { overflow: hidden; }
