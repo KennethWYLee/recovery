@@ -15,6 +15,7 @@ import { StudentTestPicker, StudentTestResetDialog } from "./StudentTestTools";
 import { TeacherRankingPanel } from "./TeacherRankingPanel";
 import { QuestionActions } from "./QuestionActions";
 import { CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
+import { StudentActionFeedback } from "./StudentActionFeedback";
 import { useProgressiveRanking } from "./useProgressiveRanking";
 import { useWorkspaceLoader } from "./useWorkspaceLoader";
 import type { WorkspaceActor as Actor, WorkspacePayload } from "./workspace-types";
@@ -1036,8 +1037,7 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
             </button>
           </section>
         )}
-        {error && <div className="workspace-alert error" role="alert">{error}</div>}
-        {notice && <div className="workspace-alert success" role="status">{notice}</div>}
+        <StudentActionFeedback error={error} notice={notice} />
         <StudentQuestionPicker questions={snapshot.questions} question={question} pending={pending} onSelect={selectQuestion} />
         {!question && (
           <section className="student-focus-card student-waiting">
@@ -1155,7 +1155,7 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
               <section className="student-focus-card student-waiting">
                 <LockKeyhole />
                 <h2>全班排序已結束</h2>
-                <p>教師確認結果後，會公布全班排序共識。</p>
+                <p>{snapshot.currentUser.hasSubmittedRanking ? "你的個人排序已由伺服器保存，等待教師公布結果。" : "伺服器未收到你的個人排序，請告知教師；排序鎖定後無法再送出。"}</p>
               </section>
             )}
             {["published", "archived"].includes(question.phase) && <StudentConsensusResults snapshot={snapshot} />}

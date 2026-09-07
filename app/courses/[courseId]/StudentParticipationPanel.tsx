@@ -23,7 +23,7 @@ function participationLabel(
   if (completed) return { label: "個人排序：已送出", kind: "completed" };
   if (["answering", "presenting"].includes(phase)) return { label: "已參與", kind: "participating" };
   if (phase === "ranking") return { label: "個人排序：尚未送出", kind: "pending" };
-  return { label: "個人排序：尚未送出", kind: "missing" };
+  return { label: "個人排序：未收到（已截止）", kind: "missing" };
 }
 
 export function StudentParticipationPanel({ sessionId }: { sessionId: string }) {

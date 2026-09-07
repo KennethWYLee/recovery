@@ -796,7 +796,7 @@ export async function submitClassroomRanking(
 ): Promise<ClassroomSessionSnapshot> {
   const session = await requireSession(db, actor, sessionId);
   const question = await requireQuestion(db, sessionId, questionId);
-  if (question.phase !== "ranking") throw new ClassroomWorkflowError(409, "RANKING_CLOSED", "目前不是個人排序階段。");
+  if (question.phase !== "ranking") throw new ClassroomWorkflowError(409, "RANKING_CLOSED", "目前未開放個人排序，這次送出未被保存。若教師已結束排序，請告知教師。");
   await requireRankingActor(db, actor, question);
   const groupRows = await db.prepare(
     `SELECT g.id FROM classroom_groups g

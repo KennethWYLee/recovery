@@ -40,8 +40,8 @@
       "expiresOn": "2026-11-30"
     },
     "app/courses/[courseId]/CourseWorkspace.tsx::StudentClassroomView": {
-      "baselineLines": 190,
-      "baselineComplexity": 40,
+      "baselineLines": 189,
+      "baselineComplexity": 39,
       "reason": "既有學生畫面依課堂階段切換多種狀態；將各階段拆成獨立且可測的顯示元件。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"

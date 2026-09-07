@@ -330,6 +330,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .workspace-alert { margin: -12px 0 20px; padding: 11px 14px; border-radius: 9px; font-weight: 750; }
 .workspace-alert.error { color: var(--danger); background: var(--danger-soft); border: 1px solid #fda29b; }
 .workspace-alert.success { color: var(--success); background: var(--success-soft); border: 1px solid #abefc6; }
+.student-course-shell .workspace-alert { display: grid; gap: 4px; scroll-margin-top: 90px; }
 .session-create-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .55fr); gap: 18px; }
 .session-create-card, .session-guidance, .live-session-header, .qr-panel, .attendance-panel, .response-workspace, .submission-progress, .ranking-workspace, .results-table { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); }
 .session-create-card { padding: 25px; }
