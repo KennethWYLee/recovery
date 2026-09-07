@@ -134,6 +134,16 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .course-account a:hover, .course-admin-link:hover { color: var(--primary-hover); }
 .course-account svg, .course-admin-link svg { width: 17px; height: 17px; }
 .course-admin-link { color: var(--primary); }
+.workspace-topbar { flex-wrap: wrap; gap: 10px 20px; }
+.workspace-code { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 12px; }
+.workspace-code > span:first-child { color: var(--muted); font-size: 13px; font-weight: 750; }
+.workspace-code-value { color: var(--primary); font-size: 24px; letter-spacing: .12em; font-variant-numeric: tabular-nums; user-select: all; }
+.workspace-code .button { min-height: 44px; padding: 8px 12px; }
+.workspace-code-message { color: var(--muted); font-size: 12px; }
+.workspace-code-message:empty { display: none; }
+@media (max-width: 900px) {
+  .workspace-topbar .workspace-code { order: 3; width: 100%; border-top: 1px solid var(--border); padding-top: 8px; }
+}
 
 .courses-main, .course-workspace-main, .access-review-main { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 56px 0 80px; }
 .courses-heading, .course-workspace-heading, .access-review-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }

@@ -14,6 +14,7 @@ import { StudentQuestionPicker } from "./StudentQuestionPicker";
 import { StudentTestPicker, StudentTestResetDialog } from "./StudentTestTools";
 import { TeacherRankingPanel } from "./TeacherRankingPanel";
 import { QuestionActions } from "./QuestionActions";
+import { CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
 import { useProgressiveRanking } from "./useProgressiveRanking";
 import { useWorkspaceLoader } from "./useWorkspaceLoader";
 import type { WorkspaceActor as Actor, WorkspacePayload } from "./workspace-types";
@@ -586,22 +587,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
   return (
     <div className="course-shell">
-      <header className="course-topbar">
-        <Link href="/courses" className="course-brand">
-          <span aria-hidden="true">課</span>
-          <strong>課堂小組回應與排序</strong>
-        </Link>
-        <div className="course-account">
-          <span>
-            <strong>{actor.displayName}</strong>
-            <small>{testMode ? "學生測試模式" : actor.isAdmin ? "系統管理員" : "學生"}</small>
-          </span>
-          <a href={identity.signOutPath}>
-            <LogOut />
-            登出
-          </a>
-        </div>
-      </header>
+      <CourseWorkspaceHeader displayName={actor.displayName} roleLabel={testMode ? "學生測試模式" : actor.isAdmin ? "系統管理員" : "學生"} signOutPath={identity.signOutPath} joinCode={snapshot?.session.joinCode} />
       <main className="course-workspace-main">
         <Link className="course-back" href="/courses">
           <ArrowLeft />
