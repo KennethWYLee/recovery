@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CourseJoinQrButton } from "./CourseJoinQrButton";
 import {
   Activity,
   Archive,
@@ -363,7 +364,7 @@ export function CoursesApp({ identity }: { identity: ClassroomPageIdentity }) {
           <span className="course-list-icon"><BookOpen /></span>
           <div className="course-list-copy"><small>{courseTermLabel(course)}{course.isDemo ? " · 虛擬資料" : ""}</small><h2>{course.name}</h2><p><UsersRound />{course.studentCount} 位已登入 <span aria-hidden="true">·</span> 名單 {course.rosterCount} 人 <span aria-hidden="true">·</span> 問題庫 {course.questionBankCount} 題 <span aria-hidden="true">·</span> 預設 {course.defaultGroupCount} 組 <span aria-hidden="true">·</span> {course.sessionCount} 次課堂</p></div>
           <div className="course-list-status">{course.activeSessionPhase ? <span className="status-live"><i />{SESSION_PHASE_LABELS[course.activeSessionPhase]}</span> : <span><CheckCircle2 />沒有進行中活動</span>}</div>
-          {actor?.isAdmin && <div className="course-list-actions"><button type="button" aria-label={`管理 ${course.name} 問題庫`} title="問題庫" onClick={() => void openQuestionBank(course)}><LibraryBig /></button><button type="button" aria-label={`管理 ${course.name} 學生名單`} title="學生名單" onClick={() => void openRoster(course)}><ListChecks /></button><button type="button" aria-label={`修改 ${course.name} 名稱`} title="修改名稱" onClick={() => { setTarget(course); setName(course.name); setFormError(null); setDialog("rename"); }}><Pencil /></button><button className="delete" type="button" aria-label={`刪除 ${course.name}`} title="刪除課程" onClick={() => { setTarget(course); setFormError(null); setDialog("delete"); }}><Trash2 /></button></div>}
+          {actor?.isAdmin && <div className="course-list-actions">{course.activeSessionId && <CourseJoinQrButton courseId={course.id} courseName={course.name} />}<button type="button" aria-label={`管理 ${course.name} 問題庫`} title="問題庫" onClick={() => void openQuestionBank(course)}><LibraryBig /></button><button type="button" aria-label={`管理 ${course.name} 學生名單`} title="學生名單" onClick={() => void openRoster(course)}><ListChecks /></button><button type="button" aria-label={`修改 ${course.name} 名稱`} title="修改名稱" onClick={() => { setTarget(course); setName(course.name); setFormError(null); setDialog("rename"); }}><Pencil /></button><button className="delete" type="button" aria-label={`刪除 ${course.name}`} title="刪除課程" onClick={() => { setTarget(course); setFormError(null); setDialog("delete"); }}><Trash2 /></button></div>}
           <Link href={`/courses/${encodeURIComponent(course.id)}`}>開啟課程<ArrowRight /></Link>
         </article>)}
       </div>}

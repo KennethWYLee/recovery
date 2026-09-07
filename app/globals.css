@@ -141,6 +141,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .workspace-code .button { min-height: 44px; padding: 8px 12px; }
 .workspace-code-message { color: var(--muted); font-size: 12px; }
 .workspace-code-message:empty { display: none; }
+.course-load-join { display: grid; gap: 12px; width: min(360px, 100%); text-align: left; }
+.course-load-join label { display: grid; gap: 8px; }
+.course-load-join input { min-height: 44px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 20px; text-transform: uppercase; }
 @media (max-width: 900px) {
   .workspace-topbar .workspace-code { order: 3; width: 100%; border-top: 1px solid var(--border); padding-top: 8px; }
 }
@@ -306,6 +309,13 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .course-list-actions button:hover { color: var(--text-strong); background: var(--surface-subtle); }
 .course-list-actions button.delete:hover { color: var(--danger); background: var(--danger-soft); }
 .course-list-actions svg { width: 16px; }
+.course-list-actions .course-qr-button { display: flex; width: auto; min-height: 44px; height: auto; gap: 6px; padding: 8px; color: var(--primary); }
+.course-qr-dialog { padding: 24px; max-height: calc(100dvh - 32px); overflow-y: auto; }
+.course-qr-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.course-qr-image { display: grid; justify-items: center; gap: 12px; margin-top: 20px; }
+.course-qr-image svg { display: block; width: min(288px, 100%); height: auto; background: white; }
+.course-qr-image strong { color: var(--text-strong); font-size: 32px; letter-spacing: .12em; user-select: all; }
+.course-qr-image span { color: var(--muted); font-size: 16px; }
 .course-list-row > a { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 9px 12px; color: var(--text-strong); background: var(--surface-subtle); border: 1px solid var(--border-soft); border-radius: 8px; font-weight: 800; text-decoration: none; }
 .course-list-row > a:hover { color: var(--primary); background: var(--primary-soft); border-color: #b8d8d3; }
 .course-list-row > a svg { width: 17px; }

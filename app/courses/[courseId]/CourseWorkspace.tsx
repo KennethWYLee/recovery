@@ -14,7 +14,7 @@ import { StudentQuestionPicker } from "./StudentQuestionPicker";
 import { StudentTestPicker, StudentTestResetDialog } from "./StudentTestTools";
 import { TeacherRankingEntry, TeacherRankingPanel } from "./TeacherRankingPanel";
 import { QuestionActions } from "./QuestionActions";
-import { CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
+import { CourseJoinHelp, CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
 import { StudentActionFeedback } from "./StudentActionFeedback";
 import { useProgressiveRanking } from "./useProgressiveRanking";
 import { useWorkspaceLoader } from "./useWorkspaceLoader";
@@ -558,7 +558,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
           {error ? (
             <div className="courses-error">
               <strong>無法開啟課程</strong>
-              <span>{error}</span>
+              <span>{error}</span><CourseJoinHelp />
               <button className="button secondary" onClick={() => void load()}>
                 重新載入
               </button>
