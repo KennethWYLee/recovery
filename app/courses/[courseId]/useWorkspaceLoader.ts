@@ -42,6 +42,8 @@ function snapshotSignature(snapshot: ClassroomSessionSnapshot | null): string {
     snapshot.groups.map((group) => `${group.id}:${group.representativeUserId}:${group.response.version}:${group.response.status}`).join(","),
     snapshot.participants.map((participant) => `${participant.userId}:${participant.groupId}`).join(","),
     snapshot.currentUser.groupId ?? "none", snapshot.currentUser.hasSubmittedRanking ? 1 : 0,
+    snapshot.currentUser.isRepresentative ? 1 : 0,
+    snapshot.currentUser.participatesInQuestion ? 1 : 0, snapshot.currentUser.canRank ? 1 : 0,
   ].join("|");
 }
 

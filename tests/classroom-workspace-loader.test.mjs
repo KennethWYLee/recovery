@@ -43,7 +43,7 @@ function harness() {
     setPending: (value) => { state.pending = value; }, setError: (value) => { state.error = value; },
     setPayload: (value) => { state.payload = value; }, setResponseText() {}, setAnswerLabels() {},
   } });
-  const respond = (index) => requests[index].resolve({ ok: true, json: async () => ({ data: { actor: { id: "synthetic-actor" }, snapshot: null } }) });
+  const respond = (index, snapshot = null) => requests[index].resolve({ ok: true, json: async () => ({ data: { actor: { id: "synthetic-actor" }, snapshot } }) });
   return { ...loader, state, requests, timers, respond };
 }
 
@@ -96,4 +96,24 @@ test("manual retry supersedes an old request without letting it clear the new lo
   await retry;
   assert.equal(h.state.pending, false);
   assert.equal(h.timers.size, 0);
+});
+
+test("student polling applies speaker handover even when group identities are hidden", async () => {
+  const h = harness();
+  const snapshot = {
+    session: { version: 1 }, question: { id: "question-1", version: 1, phase: "answering" },
+    completion: { checkedIn: 2, submittedGroups: 0, rankedStudents: 0 },
+    groups: [{ id: "group-1", representativeUserId: null, members: [], response: { version: 1, status: "draft", content: "共同草稿" } }],
+    participants: [],
+    currentUser: { groupId: "group-1", isRepresentative: false, participatesInQuestion: true, canRank: false, hasSubmittedRanking: false },
+  };
+  const initial = h.load(); h.respond(0, snapshot); await initial;
+  assert.equal(h.state.payload.snapshot.currentUser.isRepresentative, false);
+  const appointed = { ...snapshot, currentUser: { ...snapshot.currentUser, isRepresentative: true } };
+  const poll = h.load(true); h.respond(1, appointed); await poll;
+  assert.equal(h.state.payload.snapshot.currentUser.isRepresentative, true);
+  assert.equal(h.state.payload.snapshot.groups[0].response.content, "共同草稿");
+  assert.equal(h.state.payload.snapshot.groups[0].representativeUserId, null);
+  const replaced = h.load(true); h.respond(2, snapshot); await replaced;
+  assert.equal(h.state.payload.snapshot.currentUser.isRepresentative, false);
 });
