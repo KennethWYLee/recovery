@@ -586,7 +586,7 @@ export async function createClassroomQuestion(
   const questionText = normalizeSessionText(bankItem?.question_text ?? values.questionText, 2_000);
   const criteria = normalizeSessionText(bankItem?.ranking_criteria ?? values.rankingCriteria, 500);
   const answerDurationSeconds = values.answerDurationSeconds === undefined ? 300 : Number(values.answerDurationSeconds);
-  if (questionText.length < 5 || criteria.length < 5) throw new ClassroomWorkflowError(400, "INVALID_QUESTION", "請完整填寫問題與排序判準。");
+  if (questionText.length < 5 || criteria.length < 5) throw new ClassroomWorkflowError(400, "INVALID_QUESTION", "問題與排序判準都至少需要 5 個字，請補充後再建立草稿。");
   if (!Number.isInteger(answerDurationSeconds) || answerDurationSeconds < 60 || answerDurationSeconds > 7_200) {
     throw new ClassroomWorkflowError(400, "INVALID_ANSWER_DURATION", "小組作答時間必須介於 1 至 120 分鐘。");
   }

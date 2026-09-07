@@ -364,7 +364,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
   async function createQuestion() {
     if (!snapshot) return;
-    await applySnapshot(
+    const created = await applySnapshot(
       fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/questions`, {
         method: "POST",
         headers: {
@@ -380,9 +380,9 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
       }),
       "問題草稿已建立，確認後即可開放作答。",
     );
-    setQuestionPrompt("");
-    setSelectedQuestionBankId("");
-    setShowQuestionForm(false);
+    if (created) setQuestionPrompt("");
+    if (created) setSelectedQuestionBankId("");
+    if (created) setShowQuestionForm(false);
   }
 
   async function toggleQuestionCreator() {
@@ -851,15 +851,15 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
                         </button>
                       </section>
                       <label>
-                        <span>新問題</span>
+                        <span>新問題</span><small>至少 5 個字，目前 {questionPrompt.trim().length} 個字</small>
                         <textarea rows={4} maxLength={2000} value={questionPrompt} onChange={(event) => updateQuestionPrompt(event.target.value)} />
                       </label>
                       <label>
-                        <span>排序判準</span>
+                        <span>排序判準</span><small>至少 5 個字，目前 {questionCriteria.trim().length} 個字</small>
                         <textarea rows={3} maxLength={500} value={questionCriteria} onChange={(event) => updateQuestionCriteria(event.target.value)} />
                       </label>
                       <label>
-                        <span>小組作答時間（分鐘）</span>
+                        <span>小組作答時間（分鐘）</span><small>請填寫 1 至 120 分鐘</small>
                         <input type="number" min={1} max={120} value={answerDurationMinutes} onChange={(event) => setAnswerDurationMinutes(Number(event.target.value))} />
                       </label>
                       <button className="button primary wide" disabled={pending || questionPrompt.trim().length < 5 || questionCriteria.trim().length < 5 || answerDurationMinutes < 1 || answerDurationMinutes > 120} onClick={() => void createQuestion()}>
