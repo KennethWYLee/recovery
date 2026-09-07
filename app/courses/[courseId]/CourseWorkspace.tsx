@@ -13,17 +13,13 @@ import { StudentProgressiveRanking } from "./StudentProgressiveRanking";
 import { StudentQuestionPicker } from "./StudentQuestionPicker";
 import { StudentTestPicker, StudentTestResetDialog } from "./StudentTestTools";
 import { TeacherRankingPanel } from "./TeacherRankingPanel";
+import { QuestionActions } from "./QuestionActions";
 import { useProgressiveRanking } from "./useProgressiveRanking";
 import { useWorkspaceLoader } from "./useWorkspaceLoader";
 import type { WorkspaceActor as Actor, WorkspacePayload } from "./workspace-types";
 
 function displayGroup(group: ClassroomGroup, anonymous: boolean, groups: ClassroomGroup[]) {
   return anonymous ? `回答 ${String.fromCharCode(65 + groups.findIndex((item) => item.id === group.id))}` : group.label;
-}
-
-function questionAdvanceIsDisabled(pending: boolean, phase: string, rankedStudents: number, teacherSubmitted: boolean): boolean {
-  if (pending) return true;
-  return phase === "ranking" && (rankedStudents === 0 || !teacherSubmitted);
 }
 
 function EmptySession({ course, onCreated }: { course: ClassroomCourse; onCreated: () => void }) {
@@ -964,17 +960,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
                       {question.phase === "ranking" && <RankingStage snapshot={snapshot} actor={actor} rankingOrder={rankingOrder} dragRank={dragRank} setDragRank={setDragRank} moveRank={moveRank} dropRank={dropRank} pending={pending} submitRanking={submitRanking} />}
                       {["locked", "published", "archived"].includes(question.phase) && <ResultsStage snapshot={snapshot} actor={actor} />}
                       {actor.isAdmin && question.phase !== "archived" && (
-                        <div className="session-action-bar question-actions">
-                          <span>{question.phase === "locked" ? "學生目前仍看不到排名；確認後再正式公布。" : question.phase === "published" ? "結果已固定並對學生公開。" : "同一時間只會開放一個問題。"}</span>
-                          <button
-                            className="button primary"
-                            disabled={questionAdvanceIsDisabled(pending, question.phase, snapshot.completion.rankedStudents, snapshot.currentUser.hasSubmittedRanking)}
-                            onClick={() => void advanceQuestion()}
-                          >
-                            {questionAdvanceLabels[question.phase]}
-                            <ArrowRight />
-                          </button>
-                        </div>
+                        <QuestionActions snapshot={snapshot} pending={pending} label={questionAdvanceLabels[question.phase]} onAdvance={() => void advanceQuestion()} onReopen={() => void applySnapshot(fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/questions/${encodeURIComponent(question.id)}/reopen-ranking`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ expectedQuestionVersion: question.version }) }), "已重新開放排序；已送出的排序仍保留，請未完成的學生補送。") } />
                       )}
                     </>
                   )}

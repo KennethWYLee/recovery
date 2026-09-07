@@ -7,13 +7,13 @@
   },
   "fileExceptions": {
     "app/courses/[courseId]/CourseWorkspace.tsx": {
-      "baselineLines": 1615,
+      "baselineLines": 1601,
       "reason": "既有課堂工作區同時承載教師與學生流程；須先以行為測試保護，再按畫面責任拆分。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"
     },
     "db/classroom-live.ts": {
-      "baselineLines": 845,
+      "baselineLines": 844,
       "reason": "既有即時課堂交易集中於單一資料模組；須依交易邊界逐步拆分並維持一致性。",
       "ownerRole": "後端資料層維護者",
       "expiresOn": "2026-11-30"
@@ -33,8 +33,8 @@
       "expiresOn": "2026-10-31"
     },
     "app/courses/[courseId]/CourseWorkspace.tsx::CourseWorkspace": {
-      "baselineLines": 833,
-      "baselineComplexity": 60,
+      "baselineLines": 823,
+      "baselineComplexity": 58,
       "reason": "既有教師工作區整合資料載入、狀態控制及多個階段畫面；將依課堂階段拆成可測元件。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"

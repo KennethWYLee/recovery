@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Clock3, Download, RefreshCw, UserCheck, UsersRound } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClassroomParticipationReport, ClassroomQuestionPhase } from "@/lib/classroom-domain";
 
 type Envelope = { data?: { report: ClassroomParticipationReport }; error?: { message?: string } };
@@ -20,20 +20,22 @@ function participationLabel(
   phase: ClassroomQuestionPhase,
 ): { label: string; kind: string } {
   if (!eligible) return { label: "尚未加入", kind: "not-eligible" };
-  if (completed) return { label: "已完成排序", kind: "completed" };
+  if (completed) return { label: "個人排序：已送出", kind: "completed" };
   if (["answering", "presenting"].includes(phase)) return { label: "已參與", kind: "participating" };
-  if (phase === "ranking") return { label: "待完成排序", kind: "pending" };
-  return { label: "未完成排序", kind: "missing" };
+  if (phase === "ranking") return { label: "個人排序：尚未送出", kind: "pending" };
+  return { label: "個人排序：尚未送出", kind: "missing" };
 }
 
 export function StudentParticipationPanel({ sessionId }: { sessionId: string }) {
   const [report, setReport] = useState<ClassroomParticipationReport | null>(null);
   const [pending, setPending] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadingRef = useRef(false);
 
-  const load = useCallback(async () => {
-    setPending(true);
-    setError(null);
+  const load = useCallback(async (quiet = false) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    if (!quiet) setPending(true);
     try {
       const response = await fetch(`/api/classroom/sessions/${encodeURIComponent(sessionId)}/participation`, {
         cache: "no-store",
@@ -42,9 +44,11 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
       const payload = await response.json().catch(() => null) as Envelope | null;
       if (!response.ok || !payload?.data?.report) throw new Error(payload?.error?.message ?? "目前無法取得學生參與紀錄。");
       setReport(payload.data.report);
+      setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "目前無法取得學生參與紀錄。");
     } finally {
+      loadingRef.current = false;
       setPending(false);
     }
   }, [sessionId]);
@@ -52,6 +56,13 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
+  }, [load]);
+
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") void load(true); };
+    const timer = window.setInterval(refresh, 6_000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };
   }, [load]);
 
   const students = useMemo(() => [...(report?.students ?? [])].sort((left, right) => {
@@ -72,6 +83,7 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
           <p>學生參與紀錄</p>
           <h2 id="student-participation-title">哪些學生參與較少？</h2>
           <span>完成率只計算學生到課後、且已進入排序階段的題目；遲到前未取得參與資格的題目不列入分母。</span>
+          <span>小組回答由代表送出；個人排序須每位學生各自送出。本表每 6 秒自動更新。</span>
         </div>
         <div>
           <a className="button secondary" href={`/api/classroom/sessions/${encodeURIComponent(sessionId)}/export`}>
@@ -118,7 +130,7 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
                       return (
                         <td key={question.id}>
                           <span className={`participation-status ${status.kind}`}>{status.label}</span>
-                          {state?.representativeSubmitted && <small>代表送出回答</small>}
+                          {state?.representativeSubmitted && <small>小組回答：已由此代表送出</small>}
                         </td>
                       );
                     })}

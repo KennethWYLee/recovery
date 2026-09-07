@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T03:57:46.235Z",
+  "generatedAt": "2026-09-07T04:26:13.565Z",
   "synthetic": true,
   "scenario": {
     "teachers": 1,
@@ -24,21 +24,24 @@
     ]
   },
   "requests": {
-    "total": 288,
-    "successful": 182,
-    "expectedRejected": 106,
+    "total": 316,
+    "successful": 207,
+    "expectedRejected": 109,
     "localRuntimeReconnects": 0,
     "unexpectedFailures": 0,
-    "elapsedMs": 13002,
-    "requestsPerSecond": 22.15,
+    "elapsedMs": 14113,
+    "requestsPerSecond": 22.39,
     "latencyMs": {
-      "p50": 65,
-      "p95": 982,
-      "maximum": 1349
+      "p50": 39,
+      "p95": 934,
+      "maximum": 1319
     }
   },
   "checks": {
     "newlyCreatedSessionGrouping": "passed",
+    "publicationWithOneOrTwoStudentRankings": "passed",
+    "reopenUnpublishedRankingsWithoutDataLoss": "passed",
+    "participationReflectsActualSubmissions": "passed",
     "anonymousStudentPayloads": "passed",
     "representativeOnlyResponses": "passed",
     "responseVersionConflict": "passed",

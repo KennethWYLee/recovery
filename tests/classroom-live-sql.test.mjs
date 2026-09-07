@@ -292,7 +292,7 @@ test("a ranking batch rolls back when the teacher locks the question before inse
   db.close();
 });
 
-test("publishing counts three students and requires a separate teacher ranking", async () => {
+test("publishing counts actual student submissions separately from the teacher ranking", async () => {
   const db = await liveDatabase({ phase: "locked", studentCount: 3 });
   for (let index = 1; index <= 3; index += 1) {
     db.prepare(`INSERT INTO classroom_question_memberships
@@ -305,7 +305,7 @@ test("publishing counts three students and requires a separate teacher ranking",
       FROM classroom_question_ranking_submissions s
       JOIN classroom_question_memberships m ON m.question_id = s.question_id AND m.user_id = s.user_id
       WHERE s.question_id = 'question-1' AND s.is_current = 1 AND s.status = 'valid'`).get().count;
-    assert.equal(count >= 3, index >= 3);
+    assert.equal(count, index);
   }
   db.prepare(`INSERT INTO classroom_question_ranking_submissions
     (id, question_id, user_id, version, is_current, status, invalid_reason, submitted_at)

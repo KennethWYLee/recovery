@@ -10,7 +10,6 @@ export async function questionAdvanceEvidenceFailure(
   db: D1Database,
   phase: ClassroomQuestionPhase,
   questionId: string,
-  minimumRankings: number,
 ): Promise<ClassroomLiveGuardFailure | null> {
   if (phase !== "ranking" && phase !== "locked") return null;
   const valid = await db.prepare(
@@ -20,15 +19,8 @@ export async function questionAdvanceEvidenceFailure(
      WHERE s.question_id = ? AND s.is_current = 1 AND s.status = 'valid'`,
   ).bind(questionId).first<{ count: number }>();
   const count = valid?.count ?? 0;
-  if (phase === "ranking" && count === 0) {
+  if (count === 0) {
     return { status: 409, code: "NO_RANKINGS", message: "尚未收到任何完整排序。" };
-  }
-  if (phase === "locked" && count < minimumRankings) {
-    return {
-      status: 409,
-      code: "NOT_ENOUGH_RANKINGS_TO_PUBLISH",
-      message: `至少需要 ${minimumRankings} 位學生完成有效排序，才能公布彙整結果。`,
-    };
   }
   if (phase === "ranking" || phase === "locked") {
     const teacher = await db.prepare(

@@ -56,7 +56,6 @@ const QUESTION_COLUMNS = `id, session_id, question_text, ranking_criteria, phase
 const SESSION_COLUMNS = `id, course_id, title, join_code, phase, group_count,
   effective_group_capacity, anonymous_groups, allow_ranking_edits,
   admission_open, qr_enabled, version, created_by_user_id, created_at, updated_at`;
-const MINIMUM_RANKINGS_TO_PUBLISH = 3;
 
 function mapSession(row: SessionRow): ClassroomSession {
   return {
@@ -644,15 +643,15 @@ export async function advanceClassroomQuestion(
     ).bind(sessionId).all<{ user_id: string; group_id: string; can_rank: number }>();
     if (groups.results.length !== session.group_count || members.results.length === 0) throw new ClassroomWorkflowError(409, "GROUPING_INCOMPLETE", "分組尚未完成。");
     if (members.results.length > 0) {
-      statements.push(db.prepare(
+      statements.push(...members.results.map((member) => db.prepare(
         `INSERT INTO classroom_question_memberships (id, question_id, user_id, group_id, can_rank, captured_at)
-         VALUES ${placeholders(members.results.length, 6)}`,
-      ).bind(...members.results.flatMap((member) => [classroomId("qmember"), questionId, member.user_id, member.group_id, member.can_rank, now])));
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).bind(classroomId("qmember"), questionId, member.user_id, member.group_id, member.can_rank, now)));
     }
-    statements.push(db.prepare(
+    statements.push(...groups.results.map((group) => db.prepare(
       `INSERT INTO classroom_question_responses (id, question_id, group_id, content, status, version)
-       VALUES ${placeholders(groups.results.length, 6)}`,
-    ).bind(...groups.results.flatMap((group) => [classroomId("qresponse"), questionId, group.id, "", "draft", 1])));
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).bind(classroomId("qresponse"), questionId, group.id, "", "draft", 1)));
   }
   if (question.phase === "answering") {
     const incomplete = await db.prepare(
@@ -667,7 +666,7 @@ export async function advanceClassroomQuestion(
     )
       .bind(now, questionId));
   }
-  const evidenceFailure = await questionAdvanceEvidenceFailure(db, question.phase, questionId, MINIMUM_RANKINGS_TO_PUBLISH);
+  const evidenceFailure = await questionAdvanceEvidenceFailure(db, question.phase, questionId);
   if (evidenceFailure) throw new ClassroomWorkflowError(evidenceFailure.status, evidenceFailure.code, evidenceFailure.message);
   const timestampColumn = question.phase === "answering" ? "responses_locked_at" : question.phase === "ranking" ? "ranking_locked_at" : question.phase === "locked" ? "published_at" : null;
   if (question.phase === "draft") {

@@ -108,7 +108,7 @@ test("client bundles contain course management and access review without removed
   assert.match(client, /哪些學生參與較少/);
   assert.match(client, /遲到前未取得參與資格的題目不列入分母/);
   assert.match(client, /目前與歷史問題/);
-  assert.match(client, /重選最後一名/);
+  assert.match(client, /取消剛才的選擇/);
   assert.match(client, /本組，不列入/);
   assert.match(css, /focus-visible/);
   assert.match(css, /prefers-reduced-motion/);

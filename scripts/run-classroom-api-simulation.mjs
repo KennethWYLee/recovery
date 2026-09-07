@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { Miniflare } from "miniflare";
 import { verifyClassroomGrouping } from "./verify-classroom-grouping.mjs";
+import { verifyClassroomPublication } from "./verify-classroom-publication.mjs";
 
 const root = process.cwd();
 const workerEntry = resolve(root, "dist/server/index.js");
@@ -386,6 +387,7 @@ function simulationReport(records, elapsedMs) {
     "CROSS_ORIGIN_REQUEST_REJECTED", "INCOMPLETE_RANKING", "INVALID_JSON", "RANKING_CLOSED",
     "RANKING_NOT_ALLOWED", "RANKING_VERSION_CONFLICT", "RATE_LIMITED", "REPRESENTATIVE_REQUIRED",
     "REQUEST_TOO_LARGE", "RESPONSE_VERSION_CONFLICT", "NOT_ENOUGH_PARTICIPANTS", "SESSION_VERSION_CONFLICT",
+    "NO_RANKINGS", "TEACHER_RANKING_REQUIRED", "QUESTION_VERSION_CONFLICT", "RANKING_REOPEN_NOT_ALLOWED",
   ]);
   const unexpected = records.filter((record) => !record.transient && record.status >= 400 && !expectedErrors.has(record.errorCode));
   return {
@@ -416,6 +418,9 @@ function simulationReport(records, elapsedMs) {
     },
     checks: {
       newlyCreatedSessionGrouping: "passed",
+      publicationWithOneOrTwoStudentRankings: "passed",
+      reopenUnpublishedRankingsWithoutDataLoss: "passed",
+      participationReflectsActualSubmissions: "passed",
       anonymousStudentPayloads: "passed",
       representativeOnlyResponses: "passed",
       responseVersionConflict: "passed",
@@ -464,6 +469,7 @@ async function runScenario(baseUrl, dispatchFetch, db) {
   await verifyPublishedResults(client);
   await db.prepare("UPDATE classroom_questions SET phase = 'archived', published_at = NULL WHERE id = 'question-demo-2'").run();
   await verifyHistoricalVisibility(client);
+  await verifyClassroomPublication(client, db, DEMO_SESSION_ID);
   await verifyMutationRateLimit(client);
   console.log("[8/8] 產生可重現測試報告");
   const report = simulationReport(client.records, performance.now() - startedAt);
