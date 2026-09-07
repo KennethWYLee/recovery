@@ -33,9 +33,9 @@ export function ParticipationRows({ report, students, pending, onManage }: {
         </select>
       </td>
       <td>
-        {isRepresentative ? <strong className="participation-speaker">發言人</strong> : group ? <button type="button" className="button secondary participation-speaker-button" disabled={pending || !editable}
+        {isRepresentative ? <strong className="participation-speaker">{group.label}發言人</strong> : group ? <button type="button" className="button secondary participation-speaker-button" disabled={pending || !editable}
           aria-label={`將 ${student.displayName} 設為 ${group.label} 發言人`}
-          onClick={() => onManage({ action: "set_representative", groupId: group.id, userId: student.userId }, `${group.label} 的發言人已改為 ${student.displayName}。`)}>設為發言人</button> : <span>尚未分組</span>}
+          onClick={() => onManage({ action: "set_representative", groupId: group.id, userId: student.userId }, `${group.label} 的發言人已改為 ${student.displayName}。`)}>設為{group.label}發言人</button> : <span>尚未分組</span>}
         {group && !group.representativeUserId && <small>本組尚未指定發言人</small>}
       </td>
       {report.questions.map((question) => {

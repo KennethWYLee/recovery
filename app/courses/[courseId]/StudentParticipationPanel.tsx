@@ -2,8 +2,9 @@
 
 import { CheckCircle2, Clock3, Download, RefreshCw, UserCheck, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ClassroomParticipationReport } from "@/lib/classroom-domain";
+import type { ClassroomParticipationReport, ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import { classroomApiData } from "@/lib/classroom-api-client";
+import { applyParticipationManagementSnapshot } from "@/lib/classroom-participation-state";
 import { ParticipationRows } from "./ParticipationRows";
 
 type Envelope = { data?: { report: ClassroomParticipationReport }; error?: { message?: string } };
@@ -48,16 +49,19 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
     loadingRef.current = false;
     setChanging(true); setChangeMessage(null); setChangeError(null);
     try {
-      await classroomApiData(await fetch(`/api/classroom/sessions/${encodeURIComponent(sessionId)}`, {
+      const data = await classroomApiData<{ snapshot: ClassroomSessionSnapshot }>(await fetch(`/api/classroom/sessions/${encodeURIComponent(sessionId)}`, {
         method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
       }));
+      setReport((current) => current ? applyParticipationManagementSnapshot(current, data.snapshot) : current);
+      setError(null);
       setChangeMessage(message);
     } catch (cause) {
       setChangeError(cause instanceof Error ? cause.message : "調整未完成，請稍後再試。");
-    } finally {
       await load();
+    } finally {
       changingRef.current = false;
       setChanging(false);
+      setPending(false);
     }
   }
 
