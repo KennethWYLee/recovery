@@ -53,7 +53,7 @@ function applyPayload(
   signatureRef: MutableRefObject<string>,
   setPayload: Dispatch<SetStateAction<WorkspacePayload | null>>,
 ) {
-  const signature = `${data.actor.id}|${snapshotSignature(data.snapshot)}`;
+  const signature = `${data.actor.id}|${snapshotSignature(data.snapshot)}|${data.actor.isAdmin ? data.snapshot?.serverNow ?? "" : ""}`;
   if (quiet && signature === signatureRef.current) return;
   signatureRef.current = signature;
   setPayload(data);
@@ -97,6 +97,21 @@ function workspaceSearch(questionId: string | null, testStudentId: string | null
   if (questionId) search.set("questionId", questionId);
   if (testStudentId) search.set("testStudentId", testStudentId);
   return search.size ? `?${search.toString()}` : "";
+}
+
+export function startWorkspaceRefresh({ load, isAdmin, answering }: {
+  load: (quiet: boolean) => Promise<void>; isAdmin: boolean; answering: boolean;
+}) {
+  const refresh = () => { if (isAdmin || document.visibilityState === "visible") void load(true); };
+  const resume = () => { if (document.visibilityState === "visible") void load(true); };
+  const timer = window.setInterval(refresh, isAdmin ? 2_000 : answering ? 8_000 : 6_000);
+  document.addEventListener("visibilitychange", resume);
+  window.addEventListener("focus", resume);
+  return () => {
+    window.clearInterval(timer);
+    document.removeEventListener("visibilitychange", resume);
+    window.removeEventListener("focus", resume);
+  };
 }
 
 export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, initializeRanking }: {

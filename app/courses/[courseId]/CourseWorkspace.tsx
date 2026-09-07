@@ -5,9 +5,9 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ClipboardCheck
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { classroomApiData as apiData } from "@/lib/classroom-api-client";
-import { courseTermLabel, QUESTION_PHASE_LABELS, rankingPosition, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
+import { courseTermLabel, QUESTION_PHASE_LABELS, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
-import { StudentConsensusResults } from "./StudentConsensusResults";
+import { RankingResultLists, StudentConsensusResults } from "./StudentConsensusResults";
 import { StudentParticipationPanel } from "./StudentParticipationPanel";
 import { StudentProgressiveRanking } from "./StudentProgressiveRanking";
 import { StudentQuestionPicker } from "./StudentQuestionPicker";
@@ -17,7 +17,7 @@ import { QuestionActions } from "./QuestionActions";
 import { CourseJoinHelp, CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
 import { StudentActionFeedback } from "./StudentActionFeedback";
 import { useProgressiveRanking } from "./useProgressiveRanking";
-import { useWorkspaceLoader } from "./useWorkspaceLoader";
+import { startWorkspaceRefresh, useWorkspaceLoader } from "./useWorkspaceLoader";
 import type { WorkspaceActor as Actor, WorkspacePayload } from "./workspace-types";
 
 function displayGroup(group: ClassroomGroup, anonymous: boolean, groups: ClassroomGroup[]) {
@@ -218,11 +218,11 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     return () => window.clearTimeout(timer);
   }, [load]);
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (!pending && document.visibilityState === "visible") void load(true);
-    }, !payload?.actor.isAdmin && question?.phase === "answering" ? 8_000 : 6_000);
-    return () => window.clearInterval(timer);
-  }, [load, pending, payload?.actor.isAdmin, question?.phase]);
+    return startWorkspaceRefresh({
+      load, isAdmin: Boolean(payload?.actor.isAdmin),
+      answering: question?.phase === "answering",
+    });
+  }, [load, payload?.actor.isAdmin, question?.phase]);
 
   const myGroup = useMemo(() => snapshot?.groups.find((group) => group.id === snapshot.currentUser.groupId) ?? null, [snapshot]);
 
@@ -1321,7 +1321,7 @@ function GroupBoard({ snapshot, actor, dragParticipant, setDragParticipant, muta
 function AnsweringStage({ snapshot, actor, myGroup, responseText, setResponseText, pending, saveResponse }: { snapshot: ClassroomSessionSnapshot; actor: Actor; myGroup: ClassroomGroup | null; responseText: string; setResponseText: (value: string) => void; pending: boolean; saveResponse: (submit: boolean) => Promise<void> }) {
   if (actor.isAdmin)
     return (
-      <div className="response-layout">
+      <div className="response-layout teacher-response-layout">
         <article className="response-workspace">
           <header>
             <div>
@@ -1345,7 +1345,7 @@ function AnsweringStage({ snapshot, actor, myGroup, responseText, setResponseTex
           </div>
         </article>
         <aside className="submission-progress">
-          <h2>即時完成率</h2>
+          <h2>已送出組數<small>每 2 秒更新 · {new Date(snapshot.serverNow).toLocaleTimeString("zh-TW", { hour12: false, timeZone: "Asia/Taipei" })}</small></h2>
           <strong>
             {snapshot.completion.submittedGroups}
             <small> / {snapshot.groups.length}</small>
@@ -1504,51 +1504,7 @@ function ResultsStage({ snapshot, actor }: { snapshot: ClassroomSessionSnapshot;
     );
   return (
     <div className="results-layout">
-      <article className="results-table">
-        <header>
-          <div>
-            <p>全班與教師排序</p>
-            <h2>逐份回答比較共識與教師判斷</h2>
-          </div>
-          <span>{snapshot.completion.rankedStudents} 份有效排序</span>
-        </header>
-        <ol>
-          {snapshot.results.map((result) => {
-            const group = snapshot.groups.find((item) => item.id === result.groupId);
-            const teacherRank = rankingPosition(snapshot.teacherRanking?.orderedGroupIds ?? [], result.groupId);
-            const difference = teacherRank === null ? null : teacherRank - result.finalRank;
-            return (
-              <li key={result.groupId}>
-                <p className="result-response">{group?.response.content || "未提供回答內容"}</p>
-                <div className="ranking-comparison">
-                  <span><small>全班共識</small><strong>第 {result.finalRank} 名</strong></span>
-                  <span><small>教師排序</small><strong>{teacherRank === null ? "尚未提供" : `第 ${teacherRank} 名`}</strong></span>
-                  {difference !== null && <em className={difference === 0 ? "same" : "different"}>{difference === 0 ? "一致" : `相差 ${Math.abs(difference)} 名`}</em>}
-                </div>
-                <footer className="result-meta">
-                  <span>
-                    <b>{result.label}</b>
-                    <small>{result.ratingCount} 人完成評選</small>
-                  </span>
-                  <span>
-                    <strong>{result.tied ? `全班並列第 ${result.finalRank} 名` : `全班第 ${result.finalRank} 名`}</strong>
-                    <em>
-                      平均 {result.averageScore.toFixed(2)} 分／最高 {result.maximumScore} 分
-                    </em>
-                  </span>
-                </footer>
-                <div className="result-bar">
-                  <i
-                    style={{
-                      width: `${result.maximumScore ? (result.averageScore / result.maximumScore) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      </article>
+      <RankingResultLists snapshot={snapshot} />
       {actor.isAdmin && snapshot.rawRankings.length > 0 && (
         <details className="raw-ranking-panel">
           <summary>查看 {snapshot.rawRankings.length} 位學生的原始完整排序</summary>
