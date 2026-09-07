@@ -6,8 +6,10 @@ import type { ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import { completeSavedRankingOrder, workspaceAnswerLabels, workspaceRankingKey, workspaceResponseKey } from "@/lib/classroom-workspace-state";
 import { rankingStartsComplete, shouldPrepareRanking } from "./useProgressiveRanking";
 import type { WorkspacePayload } from "./workspace-types";
+import { receiveResponseDraft, responseDraftScope, preserveNewerResponses, type ClassroomResponseDraft } from "@/lib/classroom-response-draft";
 
 type LoaderRefs = {
+  responseDraft: MutableRefObject<ClassroomResponseDraft>;
   responseKey: MutableRefObject<string>;
   rankingKey: MutableRefObject<string>;
   selectedQuestion: MutableRefObject<string | null>;
@@ -56,7 +58,7 @@ function applyPayload(
   const signature = `${data.actor.id}|${snapshotSignature(data.snapshot)}|${data.actor.isAdmin ? data.snapshot?.serverNow ?? "" : ""}`;
   if (quiet && signature === signatureRef.current) return;
   signatureRef.current = signature;
-  setPayload(data);
+  setPayload((current) => ({ ...data, snapshot: current?.actor.id === data.actor.id ? preserveNewerResponses(current.snapshot, data.snapshot) : data.snapshot }));
 }
 
 function preparePayloadState(
@@ -70,9 +72,9 @@ function preparePayloadState(
   refs.selectedQuestion.current = snapshot?.question?.id ?? null;
   const currentGroup = snapshot?.groups.find((group) => group.id === snapshot.currentUser.groupId);
   const responseKey = workspaceResponseKey(data.actor.id, snapshot?.question?.id, currentGroup);
-  if (responseKey && responseKey !== refs.responseKey.current) {
+  if (responseKey && currentGroup && snapshot?.question) {
     refs.responseKey.current = responseKey;
-    setResponseText(currentGroup?.response.content ?? "");
+    setResponseText(receiveResponseDraft(refs.responseDraft.current, responseDraftScope(data.actor.id, snapshot.question.id, currentGroup.id), currentGroup.response));
   }
   const question = snapshot?.question;
   if (!snapshot || !question || !shouldPrepareRanking(data.actor.isAdmin, question.phase)) return;

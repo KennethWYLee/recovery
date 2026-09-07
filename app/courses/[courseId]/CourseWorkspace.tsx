@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ClipboardCheck, Clock3, Copy, Download, Eye, GripVertical, Hash, History, LockKeyhole, LogOut, LibraryBig, Plus, RefreshCw, Send, Settings2, UserCheck, UserRoundSearch, UsersRound, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { classroomApiData as apiData } from "@/lib/classroom-api-client";
 import { courseTermLabel, QUESTION_PHASE_LABELS, type ClassroomCourse, type ClassroomGroup, type ClassroomQuestionBankItem, type ClassroomSessionSnapshot } from "@/lib/classroom-domain";
 import type { ClassroomPageIdentity } from "../classroom-page-identity";
@@ -19,6 +19,8 @@ import { StudentActionFeedback } from "./StudentActionFeedback";
 import { useProgressiveRanking } from "./useProgressiveRanking";
 import { startWorkspaceRefresh, useWorkspaceLoader } from "./useWorkspaceLoader";
 import type { WorkspaceActor as Actor, WorkspacePayload } from "./workspace-types";
+import { emptyResponseDraft } from "@/lib/classroom-response-draft";
+import { useResponseAutosave } from "./useResponseAutosave";
 
 function displayGroup(group: ClassroomGroup, anonymous: boolean, groups: ClassroomGroup[]) {
   return anonymous ? `回答 ${String.fromCharCode(65 + groups.findIndex((item) => item.id === group.id))}` : group.label;
@@ -159,7 +161,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [dragParticipant, setDragParticipant] = useState<string | null>(null);
-  const [responseText, setResponseText] = useState("");
+  const [responseText, setResponseTextState] = useState("");
   const [responseSaveState, setResponseSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const { rankingOrder, rankingSelectionCount, dragRank, setDragRank, initializeRanking, resetRanking, chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, moveRank, dropRank } = useProgressiveRanking();
   const [answerLabels, setAnswerLabels] = useState<Record<string, string>>({});
@@ -178,13 +180,20 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const [showStudentTestReset, setShowStudentTestReset] = useState(false);
   const [testStudentId, setTestStudentId] = useState<string | null>(null);
   const responseKeyRef = useRef("");
+  const responseDraftRef = useRef(emptyResponseDraft());
+  const setResponseText = useCallback((value: string) => {
+    responseDraftRef.current.text = value;
+    responseDraftRef.current.dirty = value !== responseDraftRef.current.serverContent;
+    setResponseTextState(value);
+    setResponseSaveState("idle");
+  }, []);
   const rankingKeyRef = useRef("");
   const expiryKeyRef = useRef("");
   const selectedQuestionRef = useRef<string | null>(null);
   const snapshotSignatureRef = useRef("");
-  const loaderRefs = useMemo(() => ({ responseKey: responseKeyRef, rankingKey: rankingKeyRef,
+  const loaderRefs = useMemo(() => ({ responseDraft: responseDraftRef, responseKey: responseKeyRef, rankingKey: rankingKeyRef,
     selectedQuestion: selectedQuestionRef, snapshotSignature: snapshotSignatureRef }), []);
-  const loaderSetters = useMemo(() => ({ setPayload, setError, setPending, setResponseText, setAnswerLabels }), []);
+  const loaderSetters = useMemo(() => ({ setPayload, setError, setPending, setResponseText: setResponseTextState, setAnswerLabels }), []);
   const { load, cancelLoading } = useWorkspaceLoader({
     courseId,
     testStudentId,
@@ -226,43 +235,8 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
   const myGroup = useMemo(() => snapshot?.groups.find((group) => group.id === snapshot.currentUser.groupId) ?? null, [snapshot]);
 
-  useEffect(() => {
-    if (!payload || payload.actor.isAdmin || !snapshot || !question || question.phase !== "answering" || !myGroup || !snapshot.currentUser.isRepresentative || myGroup.response.status !== "draft" || responseText === myGroup.response.content) return;
-    const timer = window.setTimeout(async () => {
-      setResponseSaveState("saving");
-      try {
-        const data = await apiData<{ live: { response: ClassroomGroup["response"] } }>(
-          await fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/response`, {
-            method: "PUT",
-            headers: {
-              accept: "application/json",
-              "content-type": "application/json",
-            },
-            body: JSON.stringify({
-              questionId: question.id,
-              content: responseText,
-              expectedVersion: myGroup.response.version,
-              submit: false,
-              testStudentId,
-            }),
-          }),
-        );
-        responseKeyRef.current = `${question.id}:${data.live.response.version}`;
-        setPayload((current) => current?.snapshot ? {
-          ...current,
-          snapshot: {
-            ...current.snapshot,
-            groups: current.snapshot.groups.map((group) => group.id === myGroup.id ? { ...group, response: data.live.response } : group),
-          },
-        } : current);
-        setResponseSaveState("saved");
-      } catch (cause) {
-        setResponseSaveState("error");
-        setError(cause instanceof Error ? cause.message : "自動儲存失敗，請重新整理後再試。");
-      }
-    }, 1_000);
-    return () => window.clearTimeout(timer);
-  }, [payload, snapshot, question, myGroup, responseText, testStudentId]);
+  const { saveResponse } = useResponseAutosave({ payload, responseText, testStudentId, draftRef: responseDraftRef,
+    setPayload, setResponseText: setResponseTextState, saveState: responseSaveState, setSaveState: setResponseSaveState, setPending, setError, setNotice });
 
   useEffect(() => {
     if (!payload || payload.actor.isAdmin || !snapshot || !question || question.phase !== "answering" || !myGroup || snapshot.currentUser.isRepresentative) return;
@@ -275,12 +249,12 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
           live: { response: ClassroomGroup["response"] };
         }>(await fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/response?${search.toString()}`, { cache: "no-store", headers: { accept: "application/json" } }));
         setPayload((current) =>
-          current?.snapshot
+          current?.snapshot && current.actor.id === payload.actor.id && current.snapshot.question?.id === question.id
             ? {
                 ...current,
                 snapshot: {
                   ...current.snapshot,
-                  groups: current.snapshot.groups.map((group) => (group.id === myGroup.id ? { ...group, response: data.live.response } : group)),
+                  groups: current.snapshot.groups.map((group) => (group.id === myGroup.id && group.response.version <= data.live.response.version ? { ...group, response: data.live.response } : group)),
                 },
               }
             : current,
@@ -427,29 +401,6 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     setSelectedQuestionBankId("");
   }
 
-  async function saveResponse(submit: boolean) {
-    if (!snapshot || !question || !myGroup) return;
-    setResponseSaveState("saving");
-    const updated = await applySnapshot(
-      fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/response`, {
-        method: "PUT",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          questionId: question.id,
-          content: responseText,
-          expectedVersion: myGroup.response.version,
-          submit,
-          testStudentId,
-        }),
-      }),
-      submit ? "小組回答已送出。" : "草稿已儲存。",
-    );
-    setResponseSaveState(updated ? "saved" : "error");
-  }
-
   async function advanceQuestion() {
     if (!snapshot || !question) return;
     const forceCloseResponses = question.phase === "answering"
@@ -489,7 +440,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
   function selectTestStudent(userId: string) {
     cancelLoading();
-    responseKeyRef.current = ""; rankingKeyRef.current = "";
+    responseKeyRef.current = ""; responseDraftRef.current = emptyResponseDraft(); rankingKeyRef.current = "";
     selectedQuestionRef.current = null;
     snapshotSignatureRef.current = "";
     setResponseText("");
@@ -505,7 +456,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   function selectStudentQuestion(questionId: string) { responseKeyRef.current = ""; rankingKeyRef.current = ""; selectedQuestionRef.current = questionId; void load(false, questionId); }
   function exitStudentTestMode() {
     cancelLoading();
-    responseKeyRef.current = "";
+    responseKeyRef.current = ""; responseDraftRef.current = emptyResponseDraft();
     rankingKeyRef.current = "";
     selectedQuestionRef.current = null;
     snapshotSignatureRef.current = "";
@@ -530,7 +481,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
           headers: { accept: "application/json" },
         }),
       );
-      responseKeyRef.current = "";
+      responseKeyRef.current = ""; responseDraftRef.current = emptyResponseDraft();
       rankingKeyRef.current = "";
       selectedQuestionRef.current = null;
       snapshotSignatureRef.current = "";
@@ -1084,8 +1035,8 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
                   <>
                     <textarea rows={10} maxLength={4000} value={responseText} onChange={(event) => setResponseText(event.target.value)} placeholder="輸入本組共同回答與理由；內容會自動儲存。" />
                     <footer>
-                      <span className={`autosave-state ${responseSaveState}`}>{responseSaveState === "saving" ? "正在儲存…" : responseSaveState === "saved" ? "已自動儲存" : responseSaveState === "error" ? "自動儲存失敗，請稍後再試" : "開始輸入後會自動儲存"}</span>
-                      <button className="button primary" disabled={pending || responseSaveState === "saving" || responseText.trim().length < 2} onClick={() => void saveResponse(true)}>
+                      <span className={`autosave-state ${responseSaveState}`}>{responseSaveState === "saving" ? "正在儲存…" : responseSaveState === "saved" ? "已自動儲存" : responseSaveState === "error" ? "尚未儲存，內容保留在畫面上，可按送出重試" : "開始輸入後會自動儲存"}</span>
+                      <button className="button primary" disabled={pending || responseText.trim().length < 1} onClick={() => void saveResponse(true)}>
                         <Send />
                         送出本組回答
                       </button>
@@ -1381,7 +1332,7 @@ function AnsweringStage({ snapshot, actor, myGroup, responseText, setResponseTex
                   <button className="button secondary" disabled={pending} onClick={() => void saveResponse(false)}>
                     儲存草稿
                   </button>
-                  <button className="button primary" disabled={pending || responseText.trim().length < 2} onClick={() => void saveResponse(true)}>
+                  <button className="button primary" disabled={pending || responseText.trim().length < 1} onClick={() => void saveResponse(true)}>
                     <Send />
                     送出回答
                   </button>

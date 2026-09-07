@@ -771,7 +771,7 @@ export async function saveClassroomGroupResponse(
   ).bind(questionId, actor.id, actor.id).first<{ group_id: string }>();
   if (!membership) throw new ClassroomWorkflowError(403, "REPRESENTATIVE_REQUIRED", "只有本組指定代表可以編輯回答。");
   const content = normalizeSessionText(contentValue, 4_000);
-  if (submit && content.length < 2) throw new ClassroomWorkflowError(400, "EMPTY_GROUP_RESPONSE", "請先填寫小組回答再提交。");
+  if (submit && content.length === 0) throw new ClassroomWorkflowError(400, "EMPTY_GROUP_RESPONSE", "請先填寫小組回答再提交。");
   const writeFailure = await guardedClassroomResponseWrite(db, {
     sessionId, questionId, groupId: membership.group_id, actorId: actor.id, content,
     expectedVersion, submit, now, auditId: classroomId("class-audit"),

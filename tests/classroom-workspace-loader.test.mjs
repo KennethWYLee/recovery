@@ -49,12 +49,13 @@ function harness() {
   }
   const { useWorkspaceLoader: createLoader, startWorkspaceRefresh } = moduleAt(new URL("app/courses/[courseId]/useWorkspaceLoader.ts", root));
   const refs = Object.fromEntries(["responseKey", "rankingKey", "selectedQuestion", "snapshotSignature"].map((key) => [key, { current: "" }]));
+  refs.responseDraft = { current: { scope: "", text: "", serverContent: "", version: 0, dirty: false } };
   const loader = createLoader({ courseId: "synthetic-course", testStudentId: null, refs, initializeRanking() {}, setters: {
     setPending: (value) => { state.pending = value; }, setError: (value) => { state.error = value; },
-    setPayload: (value) => { state.payload = value; }, setResponseText() {}, setAnswerLabels() {},
+    setPayload: (value) => { state.payload = typeof value === "function" ? value(state.payload) : value; }, setResponseText(value) { state.responseText = value; }, setAnswerLabels() {},
   } });
   const respond = (index, snapshot = null) => requests[index].resolve({ ok: true, json: async () => ({ data: { actor: { id: "synthetic-actor" }, snapshot } }) });
-  return { ...loader, state, requests, timers, respond, intervals, page, browser, startWorkspaceRefresh };
+  return { ...loader, state, requests, timers, respond, intervals, page, browser, startWorkspaceRefresh, refs };
 }
 
 test("initial load times out with a retryable error and retry can succeed", async () => {
@@ -124,11 +125,17 @@ test("student polling applies speaker handover even when group identities are hi
   assert.equal(h.state.payload.snapshot.currentUser.isRepresentative, true);
   assert.equal(h.state.payload.snapshot.groups[0].response.content, "共同草稿");
   assert.equal(h.state.payload.snapshot.groups[0].representativeUserId, null);
-  const replaced = h.load(true); h.respond(2, snapshot); await replaced;
+  h.refs.responseDraft.current.text = "學生繼續輸入的新答案";
+  h.refs.responseDraft.current.dirty = true;
+  const updated = h.load(true);
+  h.respond(2, { ...appointed, groups: [{ ...snapshot.groups[0], response: { ...snapshot.groups[0].response, version: 3, content: "先前儲存的答案" } }] });
+  await updated;
+  assert.equal(h.state.responseText, "學生繼續輸入的新答案");
+  const replaced = h.load(true); h.respond(3, snapshot); await replaced;
   assert.equal(h.state.payload.snapshot.currentUser.isRepresentative, false);
   for (const count of [1, 2]) {
     const progress = h.load(true);
-    h.respond(count + 2, { ...snapshot, completion: { ...snapshot.completion, submittedGroups: count } });
+    h.respond(count + 3, { ...snapshot, completion: { ...snapshot.completion, submittedGroups: count } });
     await progress;
     assert.equal(h.state.payload.snapshot.completion.submittedGroups, count);
   }

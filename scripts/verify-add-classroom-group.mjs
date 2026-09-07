@@ -62,6 +62,13 @@ async function verifyNewGroupAnswering({ client, db, base, sessionId, read, stud
   const studentView = (await client.request(`/api/classroom/courses/${snapshot.session.courseId}/session?testStudentId=${eligible.userId}`)).payload.data.snapshot;
   assert.equal(studentView.currentUser.isRepresentative, true);
   assert.equal(studentView.currentUser.groupId, group.id);
+  const empty = await client.request(`${base}/response`, { method: "PUT", body: JSON.stringify({
+    testStudentId: eligible.userId, questionId, expectedVersion: 1, content: "   ", submit: true,
+  }) }, [400]);
+  assert.equal(empty.payload.error.code, "EMPTY_GROUP_RESPONSE");
+  await client.request(`${base}/response`, { method: "PUT", body: JSON.stringify({
+    testStudentId: eligible.userId, questionId, expectedVersion: 1, content: "0", submit: true,
+  }) });
   const late = roster[1];
   await db.batch([
     db.prepare("DELETE FROM classroom_question_memberships WHERE question_id = ? AND user_id = ?").bind(questionId, late.userId),
