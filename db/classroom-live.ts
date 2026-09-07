@@ -93,7 +93,7 @@ async function actorCanAccessCourse(db: D1Database, actor: ClassroomActor, cours
   ).bind(courseId, actor.id).first<{ id: string }>());
 }
 
-async function requireSession(db: D1Database, actor: ClassroomActor, sessionId: string): Promise<SessionRow> {
+export async function requireSession(db: D1Database, actor: ClassroomActor, sessionId: string): Promise<SessionRow> {
   const row = await db.prepare(`SELECT ${SESSION_COLUMNS} FROM classroom_sessions WHERE id = ?`)
     .bind(sessionId).first<SessionRow>();
   if (!row || !await actorCanAccessCourse(db, actor, row.course_id)) {
@@ -488,7 +488,7 @@ export async function updateClassroomSessionSettings(
   const groupCount = values.groupCount ?? session.group_count;
   if (!Number.isInteger(groupCount) || groupCount < 2 || groupCount > 20) throw new ClassroomWorkflowError(400, "INVALID_GROUP_COUNT", "分組組數必須介於 2 至 20 組。");
   if (session.phase !== "check_in" && groupCount !== session.group_count) {
-    throw new ClassroomWorkflowError(409, "GROUP_COUNT_LOCKED", "完成分組後不能更改組數；其他設定仍可調整。");
+    throw new ClassroomWorkflowError(409, "GROUP_COUNT_LOCKED", "新增組別請使用學生表格的「新增一組」；其他設定仍可調整。");
   }
   const now = classroomNow();
   await db.batch([

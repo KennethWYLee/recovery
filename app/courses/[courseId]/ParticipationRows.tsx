@@ -27,9 +27,10 @@ export function ParticipationRows({ report, students, pending, onManage }: {
       <td><strong>{timeLabel(student.checkedInAt)}</strong><small>{student.attendance === "late" ? "遲到加入" : "準時加入"}</small></td>
       <td>
         <select className="participation-group-select" aria-label={`調整 ${student.displayName} 的組別`} value={student.groupId ?? ""} disabled={pending || !editable || report.groups.length === 0}
-          onChange={(event) => onManage({ action: "move_participant", participantId: student.participantId, groupId: event.target.value }, `${student.displayName} 的組別已更新。`)}>
+          onChange={(event) => onManage({ action: "move_participant", participantId: student.participantId, groupId: event.target.value, expectedGroupId: student.groupId ?? "" }, event.target.value === "new" ? `已新增一組，並將 ${student.displayName} 移入及設為發言人。` : `${student.displayName} 的組別已更新。`)}>
           {!group && <option value="" disabled>尚未分組</option>}
           {report.groups.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          <option value="new" disabled={report.groups.length >= 20}>＋ 新增一組{report.groups.length >= 20 ? "（已達 20 組上限）" : "（依現有編號 +1）"}</option>
         </select>
       </td>
       <td>

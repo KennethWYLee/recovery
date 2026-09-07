@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { verifyAddClassroomGroup } from "./verify-add-classroom-group.mjs";
 
 export async function verifyParticipationManagement(client, db, sessionId) {
   const base = `/api/classroom/sessions/${sessionId}`;
@@ -29,4 +30,5 @@ export async function verifyParticipationManagement(client, db, sessionId) {
   assert.equal(invalid.payload.error.code, "REPRESENTATIVE_NOT_IN_GROUP");
   assert.deepEqual(await historical(), before);
   console.log("學生表格管理驗證通過：換組、更新發言人、清除原組發言人、拒絕跨組指定，已公布題目分組不變。");
+  await verifyAddClassroomGroup(client, db, sessionId);
 }

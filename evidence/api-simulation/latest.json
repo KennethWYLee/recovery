@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T05:06:18.093Z",
+  "generatedAt": "2026-09-07T06:21:19.172Z",
   "synthetic": true,
   "scenario": {
     "teachers": 1,
@@ -24,17 +24,17 @@
     ]
   },
   "requests": {
-    "total": 322,
-    "successful": 212,
-    "expectedRejected": 110,
+    "total": 341,
+    "successful": 228,
+    "expectedRejected": 113,
     "localRuntimeReconnects": 0,
     "unexpectedFailures": 0,
-    "elapsedMs": 14445,
-    "requestsPerSecond": 22.29,
+    "elapsedMs": 16966,
+    "requestsPerSecond": 20.1,
     "latencyMs": {
       "p50": 38,
-      "p95": 882,
-      "maximum": 1289
+      "p95": 966,
+      "maximum": 1441
     }
   },
   "checks": {

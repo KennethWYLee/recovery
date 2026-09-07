@@ -766,7 +766,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
                 <GroupBoard snapshot={snapshot} actor={actor} dragParticipant={dragParticipant} setDragParticipant={setDragParticipant} mutate={mutate} />
                 {actor.isAdmin && (
                   <div className="session-action-bar">
-                    <span>組數在這一步確認後固定；之後移動組員只影響進行中的作答或未來問題。</span>
+                    <span>之後可在學生表格新增一組；調整組別只影響進行中的作答或未來問題。</span>
                     <button
                       className="button primary"
                       disabled={pending}
@@ -1179,7 +1179,7 @@ function SessionSettings({ snapshot, pending, onSave }: { snapshot: ClassroomSes
         <Settings2 />
         <div>
           <strong>本次課堂設定</strong>
-          <small>一般設定立即生效；完成分組後不能改變組數。</small>
+          <small>一般設定立即生效；新增組別請使用下方學生表格。</small>
         </div>
       </header>
       <label className="course-field">
@@ -1188,7 +1188,7 @@ function SessionSettings({ snapshot, pending, onSave }: { snapshot: ClassroomSes
       </label>
       <label className="course-field">
         <span>指定組數</span>
-        <input type="number" min={2} max={20} disabled={snapshot.session.phase !== "check_in"} value={groupCount} onChange={(event) => setGroupCount(Number(event.target.value))} />
+        <input type="number" min={2} max={20} disabled={snapshot.session.phase !== "check_in"} value={snapshot.session.phase === "check_in" ? groupCount : snapshot.session.groupCount} onChange={(event) => setGroupCount(Number(event.target.value))} />
       </label>
       <label className="check-field">
         <input type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} />
@@ -1221,7 +1221,7 @@ function SessionSettings({ snapshot, pending, onSave }: { snapshot: ClassroomSes
         onClick={() =>
           onSave({
             title,
-            groupCount,
+            groupCount: snapshot.session.phase === "check_in" ? groupCount : snapshot.session.groupCount,
             anonymousGroups: anonymous,
             allowRankingEdits: editable,
             admissionOpen,

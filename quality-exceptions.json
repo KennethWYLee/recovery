@@ -27,7 +27,7 @@
   },
   "functionExceptions": {
     "app/api/classroom/sessions/[sessionId]/route.ts::callback:withClassroomApi#2": {
-      "baselineComplexity": 18,
+      "baselineComplexity": 16,
       "reason": "既有課堂設定更新包含多項欄位驗證；預計抽出純驗證函式後移除此例外。",
       "ownerRole": "API 維護者",
       "expiresOn": "2026-10-31"

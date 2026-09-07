@@ -1,7 +1,6 @@
 import {
   advanceClassroomSession,
   classroomSessionSnapshot,
-  moveClassroomParticipant,
   rollbackClassroomSession,
   setClassroomRepresentative,
   advanceClassroomQuestion,
@@ -13,12 +12,12 @@ import {
   classroomData,
   classroomGroupId,
   classroomJsonBody,
-  classroomParticipantId,
   classroomQuestionId,
   classroomSessionId,
   expectedVersion,
   withClassroomApi,
 } from "../../_shared";
+import { manageParticipant } from "./manage-participant";
 
 export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ sessionId: string }> };
@@ -50,10 +49,7 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
         ? await advanceClassroomSession(api.db, api.actor, sessionId, version)
         : await rollbackClassroomSession(api.db, api.actor, sessionId, version);
     } else if (body.action === "move_participant") {
-      const participantId = classroomParticipantId(body.participantId);
-      const groupId = classroomGroupId(body.groupId);
-      if (!participantId || !groupId) throw new ClassroomApiError(400, "INVALID_GROUP_MOVE", "請選擇學生與目標組別。");
-      snapshot = await moveClassroomParticipant(api.db, api.actor, sessionId, participantId, groupId);
+      snapshot = await manageParticipant(api.db, api.actor, sessionId, body);
     } else if (body.action === "set_representative") {
       const groupId = classroomGroupId(body.groupId);
       const userId = typeof body.userId === "string" ? body.userId : "";
