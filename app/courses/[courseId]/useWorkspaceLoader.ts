@@ -39,7 +39,8 @@ function snapshotSignature(snapshot: ClassroomSessionSnapshot | null): string {
     snapshot.session.version, snapshot.question?.id ?? "none", snapshot.question?.version ?? 0,
     snapshot.question?.phase ?? "none", snapshot.completion.checkedIn,
     snapshot.completion.submittedGroups, snapshot.completion.rankedStudents,
-    snapshot.groups.map((group) => `${group.id}:${group.response.version}:${group.response.status}`).join(","),
+    snapshot.groups.map((group) => `${group.id}:${group.representativeUserId}:${group.response.version}:${group.response.status}`).join(","),
+    snapshot.participants.map((participant) => `${participant.userId}:${participant.groupId}`).join(","),
     snapshot.currentUser.groupId ?? "none", snapshot.currentUser.hasSubmittedRanking ? 1 : 0,
   ].join("|");
 }

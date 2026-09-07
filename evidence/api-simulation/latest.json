@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T04:26:13.565Z",
+  "generatedAt": "2026-09-07T05:06:18.093Z",
   "synthetic": true,
   "scenario": {
     "teachers": 1,
@@ -24,17 +24,17 @@
     ]
   },
   "requests": {
-    "total": 316,
-    "successful": 207,
-    "expectedRejected": 109,
+    "total": 322,
+    "successful": 212,
+    "expectedRejected": 110,
     "localRuntimeReconnects": 0,
     "unexpectedFailures": 0,
-    "elapsedMs": 14113,
-    "requestsPerSecond": 22.39,
+    "elapsedMs": 14445,
+    "requestsPerSecond": 22.29,
     "latencyMs": {
-      "p50": 39,
-      "p95": 934,
-      "maximum": 1319
+      "p50": 38,
+      "p95": 882,
+      "maximum": 1289
     }
   },
   "checks": {
@@ -42,6 +42,8 @@
     "publicationWithOneOrTwoStudentRankings": "passed",
     "reopenUnpublishedRankingsWithoutDataLoss": "passed",
     "participationReflectsActualSubmissions": "passed",
+    "participationGroupAndRepresentativeManagement": "passed",
+    "publishedMembershipsPreservedAfterGroupMove": "passed",
     "anonymousStudentPayloads": "passed",
     "representativeOnlyResponses": "passed",
     "responseVersionConflict": "passed",

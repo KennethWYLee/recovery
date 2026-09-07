@@ -529,6 +529,11 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .student-participation-panel > footer { padding: 13px 18px; background: var(--surface-subtle); }
 .participation-message { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 150px; padding: 24px; color: var(--muted); }
 .participation-message.error { color: var(--danger); }
+.participation-group-select { min-width: 110px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-strong); background: var(--surface); font: inherit; }
+.participation-speaker { color: var(--primary); }
+.participation-speaker-button { min-height: 44px; white-space: nowrap; }
+.participation-change-message { padding: 12px 22px; color: var(--success); background: var(--success-soft); }
+.participation-change-message.error { color: var(--danger); background: var(--danger-soft); }
 .course-summary-strip { display: flex; justify-content: flex-end; gap: 18px; margin-top: 18px; color: var(--muted); }
 .course-summary-strip > span { display: inline-flex; align-items: center; gap: 6px; }
 .course-summary-strip svg { width: 16px; color: var(--primary); }

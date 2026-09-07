@@ -160,13 +160,13 @@ export function classroomSessionId(value: unknown): string {
 export function classroomParticipantId(value: unknown): string {
   if (typeof value !== "string") return "";
   const id = value.trim();
-  return /^participant-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
+  return /^(?:participant-[a-z0-9-]{8,80}|participant-demo-(?:[1-9]|1\d|2[0-4]))$/u.test(id) ? id : "";
 }
 
 export function classroomGroupId(value: unknown): string {
   if (typeof value !== "string") return "";
   const id = value.trim();
-  return /^group-[a-z0-9-]{8,80}$/u.test(id) ? id : "";
+  return /^(?:group-[a-z0-9-]{8,80}|group-demo-[1-6])$/u.test(id) ? id : "";
 }
 
 export function classroomQuestionId(value: unknown): string {

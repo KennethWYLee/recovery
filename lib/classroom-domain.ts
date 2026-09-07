@@ -149,6 +149,8 @@ export type ClassroomStudentQuestionParticipation = {
 };
 
 export type ClassroomStudentParticipation = {
+  participantId: string;
+  groupId: string | null;
   userId: string;
   displayName: string;
   email: string;
@@ -167,6 +169,8 @@ export type ClassroomStudentParticipation = {
 export type ClassroomParticipationReport = {
   generatedAt: string;
   sessionId: string;
+  sessionPhase: ClassroomSessionPhase;
+  groups: Array<Pick<ClassroomGroup, "id" | "label" | "representativeUserId">>;
   questions: Array<Pick<ClassroomQuestion, "id" | "text" | "position" | "phase">>;
   students: ClassroomStudentParticipation[];
 };

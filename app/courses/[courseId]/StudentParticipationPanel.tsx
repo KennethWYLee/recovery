@@ -2,38 +2,26 @@
 
 import { CheckCircle2, Clock3, Download, RefreshCw, UserCheck, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ClassroomParticipationReport, ClassroomQuestionPhase } from "@/lib/classroom-domain";
+import type { ClassroomParticipationReport } from "@/lib/classroom-domain";
+import { classroomApiData } from "@/lib/classroom-api-client";
+import { ParticipationRows } from "./ParticipationRows";
 
 type Envelope = { data?: { report: ClassroomParticipationReport }; error?: { message?: string } };
-
-function timeLabel(value: string): string {
-  return new Intl.DateTimeFormat("zh-TW", {
-    timeZone: "Asia/Taipei",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function participationLabel(
-  eligible: boolean,
-  completed: boolean,
-  phase: ClassroomQuestionPhase,
-): { label: string; kind: string } {
-  if (!eligible) return { label: "本題開始後加入，未列入本題", kind: "not-eligible" };
-  if (completed) return { label: "個人排序：已送出", kind: "completed" };
-  if (["answering", "presenting"].includes(phase)) return { label: "已參與", kind: "participating" };
-  if (phase === "ranking") return { label: "個人排序：尚未送出", kind: "pending" };
-  return { label: "個人排序：未收到（已截止）", kind: "missing" };
-}
 
 export function StudentParticipationPanel({ sessionId }: { sessionId: string }) {
   const [report, setReport] = useState<ClassroomParticipationReport | null>(null);
   const [pending, setPending] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false);
+  const requestRef = useRef(0);
+  const changingRef = useRef(false);
+  const [changing, setChanging] = useState(false);
+  const [changeMessage, setChangeMessage] = useState<string | null>(null);
+  const [changeError, setChangeError] = useState<string | null>(null);
 
   const load = useCallback(async (quiet = false) => {
-    if (loadingRef.current) return;
+    if (loadingRef.current || (quiet && changingRef.current)) return;
+    const requestId = ++requestRef.current;
     loadingRef.current = true;
     if (!quiet) setPending(true);
     try {
@@ -42,16 +30,36 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
         headers: { accept: "application/json" },
       });
       const payload = await response.json().catch(() => null) as Envelope | null;
+      if (requestId !== requestRef.current) return;
       if (!response.ok || !payload?.data?.report) throw new Error(payload?.error?.message ?? "目前無法取得學生參與紀錄。");
       setReport(payload.data.report);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "目前無法取得學生參與紀錄。");
+      if (requestId === requestRef.current) setError(cause instanceof Error ? cause.message : "目前無法取得學生參與紀錄。");
     } finally {
-      loadingRef.current = false;
-      setPending(false);
+      if (requestId === requestRef.current) { loadingRef.current = false; setPending(false); }
     }
   }, [sessionId]);
+
+  async function manage(body: Record<string, string>, message: string) {
+    if (changingRef.current) return;
+    changingRef.current = true;
+    requestRef.current += 1;
+    loadingRef.current = false;
+    setChanging(true); setChangeMessage(null); setChangeError(null);
+    try {
+      await classroomApiData(await fetch(`/api/classroom/sessions/${encodeURIComponent(sessionId)}`, {
+        method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+      }));
+      setChangeMessage(message);
+    } catch (cause) {
+      setChangeError(cause instanceof Error ? cause.message : "調整未完成，請稍後再試。");
+    } finally {
+      await load();
+      changingRef.current = false;
+      setChanging(false);
+    }
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -84,16 +92,19 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
           <h2 id="student-participation-title">哪些學生參與較少？</h2>
           <span>完成率只計算學生到課後、且已進入排序階段的題目；遲到前未取得參與資格的題目不列入分母。</span>
           <span>小組回答由代表送出；個人排序須每位學生各自送出。本表每 6 秒自動更新。</span>
+          <span>可在下表調整目前組別與發言人；發言人就是負責送出小組回答的代表。組別調整只影響作答中或之後的題目。</span>
         </div>
         <div>
           <a className="button secondary" href={`/api/classroom/sessions/${encodeURIComponent(sessionId)}/export`}>
             <Download />匯出
           </a>
-          <button className="button secondary" type="button" disabled={pending} onClick={() => void load()}>
+          <button className="button secondary" type="button" disabled={pending || changing} onClick={() => void load()}>
             <RefreshCw />更新
           </button>
         </div>
       </header>
+      {changeMessage && <div className="participation-change-message" role="status">{changeMessage}</div>}
+      {changeError && <div className="participation-change-message error" role="alert">{changeError}</div>}
 
       {pending && !report ? <div className="participation-message"><span className="spinner" />正在整理參與紀錄…</div> : error ? (
         <div className="participation-message error" role="alert"><strong>{error}</strong><button className="button secondary" type="button" onClick={() => void load()}>重試</button></div>
@@ -111,35 +122,15 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
                 <tr>
                   <th>學生</th>
                   <th>報到</th>
-                  <th>組別</th>
+                  <th>目前組別</th>
+                  <th>目前發言人</th>
                   {report.questions.map((question) => <th key={question.id} title={question.text}>第 {question.position} 題</th>)}
                   <th>可參與題數</th>
                   <th>完成排序</th>
                   <th>完成率</th>
                 </tr>
               </thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student.userId} className={student.completionRate !== null && student.completionRate < 1 ? "needs-attention" : ""}>
-                    <td><strong>{student.displayName}</strong><small>{student.email}</small></td>
-                    <td><strong>{timeLabel(student.checkedInAt)}</strong><small>{student.attendance === "late" ? "遲到加入" : "準時加入"}</small></td>
-                    <td>{student.groupLabel ?? "尚未分組"}</td>
-                    {report.questions.map((question) => {
-                      const state = student.questions.find((item) => item.questionId === question.id);
-                      const status = participationLabel(Boolean(state?.eligible), Boolean(state?.rankingCompleted), question.phase);
-                      return (
-                        <td key={question.id}>
-                          <span className={`participation-status ${status.kind}`}>{status.label}</span>
-                          {state?.representativeSubmitted && <small>小組回答：已由此代表送出</small>}
-                        </td>
-                      );
-                    })}
-                    <td>{student.eligibleQuestionCount} / {report.questions.length}</td>
-                    <td>{student.completedRankingCount} / {student.rankingOpportunityCount}</td>
-                    <td><strong>{student.completionRate === null ? "—" : `${Math.round(student.completionRate * 100)}%`}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
+              <ParticipationRows report={report} students={students} pending={pending || changing} onManage={(body, message) => void manage(body, message)} />
             </table>
           </div>
           <footer>「本題開始後加入，未列入本題」表示學生已加入課堂，將從加入後的新題目開始參與。「已參與」表示學生在該題開始時已加入課堂；小組回答由指定代表送出，不能據此判定每位組員實際發言情形。</footer>

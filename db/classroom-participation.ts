@@ -8,6 +8,8 @@ import { classroomNow, type ClassroomActor } from "./classroom";
 import { ClassroomWorkflowError } from "./classroom-errors";
 
 type ParticipationRow = {
+  participant_id: string;
+  group_id: string | null;
   user_id: string;
   display_name: string;
   email: string;
@@ -32,13 +34,14 @@ type QuestionStateRow = {
   representative_submitted: number;
 };
 
-async function requireAdminSession(db: D1Database, actor: ClassroomActor, sessionId: string): Promise<void> {
+async function requireAdminSession(db: D1Database, actor: ClassroomActor, sessionId: string): Promise<ClassroomSessionPhase> {
   if (!actor.isAdmin) {
     throw new ClassroomWorkflowError(403, "PARTICIPATION_REPORT_REQUIRED", "只有系統管理員可查看學生參與紀錄。");
   }
-  const session = await db.prepare("SELECT id FROM classroom_sessions WHERE id = ?")
-    .bind(sessionId).first<{ id: string }>();
+  const session = await db.prepare("SELECT phase FROM classroom_sessions WHERE id = ?")
+    .bind(sessionId).first<{ phase: ClassroomSessionPhase }>();
   if (!session) throw new ClassroomWorkflowError(404, "SESSION_NOT_FOUND", "找不到這次課堂。");
+  return session.phase;
 }
 
 export async function classroomParticipationReport(
@@ -46,10 +49,10 @@ export async function classroomParticipationReport(
   actor: ClassroomActor,
   sessionId: string,
 ): Promise<ClassroomParticipationReport> {
-  await requireAdminSession(db, actor, sessionId);
-  const [participantRows, questionRows, stateRows] = await Promise.all([
+  const sessionPhase = await requireAdminSession(db, actor, sessionId);
+  const [participantRows, questionRows, stateRows, groupRows] = await Promise.all([
     db.prepare(
-      `SELECT p.user_id, u.display_name, u.email, p.attendance, p.joined_phase,
+      `SELECT p.id AS participant_id, p.group_id, p.user_id, u.display_name, u.email, p.attendance, p.joined_phase,
               p.checked_in_at, g.label AS group_label
        FROM classroom_session_participants p
        JOIN classroom_users u ON u.id = p.user_id
@@ -77,6 +80,8 @@ export async function classroomParticipationReport(
        WHERE p.session_id = ?
        GROUP BY p.user_id, q.id`,
     ).bind(sessionId).all<QuestionStateRow>(),
+    db.prepare("SELECT id, label, representative_user_id FROM classroom_groups WHERE session_id = ? ORDER BY position")
+      .bind(sessionId).all<{ id: string; label: string; representative_user_id: string | null }>(),
   ]);
 
   const stateByStudentQuestion = new Map(
@@ -99,6 +104,8 @@ export async function classroomParticipationReport(
     const rankingOpportunityCount = questions.filter((question) => question.eligible && rankingOpportunityIds.has(question.questionId)).length;
     const completedRankingCount = questions.filter((question) => question.rankingCompleted).length;
     return {
+      participantId: participant.participant_id,
+      groupId: participant.group_id,
       userId: participant.user_id,
       displayName: participant.display_name,
       email: participant.email,
@@ -118,6 +125,8 @@ export async function classroomParticipationReport(
   return {
     generatedAt: classroomNow(),
     sessionId,
+    sessionPhase,
+    groups: groupRows.results.map((group) => ({ id: group.id, label: group.label, representativeUserId: group.representative_user_id })),
     questions: questionRows.results.map((question) => ({
       id: question.id,
       text: question.question_text,

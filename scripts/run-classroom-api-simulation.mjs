@@ -7,6 +7,7 @@ import { performance } from "node:perf_hooks";
 import { Miniflare } from "miniflare";
 import { verifyClassroomGrouping } from "./verify-classroom-grouping.mjs";
 import { verifyClassroomPublication } from "./verify-classroom-publication.mjs";
+import { verifyParticipationManagement } from "./verify-participation-management.mjs";
 
 const root = process.cwd();
 const workerEntry = resolve(root, "dist/server/index.js");
@@ -388,6 +389,7 @@ function simulationReport(records, elapsedMs) {
     "RANKING_NOT_ALLOWED", "RANKING_VERSION_CONFLICT", "RATE_LIMITED", "REPRESENTATIVE_REQUIRED",
     "REQUEST_TOO_LARGE", "RESPONSE_VERSION_CONFLICT", "NOT_ENOUGH_PARTICIPANTS", "SESSION_VERSION_CONFLICT",
     "NO_RANKINGS", "TEACHER_RANKING_REQUIRED", "QUESTION_VERSION_CONFLICT", "RANKING_REOPEN_NOT_ALLOWED",
+    "REPRESENTATIVE_NOT_IN_GROUP",
   ]);
   const unexpected = records.filter((record) => !record.transient && record.status >= 400 && !expectedErrors.has(record.errorCode));
   return {
@@ -421,6 +423,8 @@ function simulationReport(records, elapsedMs) {
       publicationWithOneOrTwoStudentRankings: "passed",
       reopenUnpublishedRankingsWithoutDataLoss: "passed",
       participationReflectsActualSubmissions: "passed",
+      participationGroupAndRepresentativeManagement: "passed",
+      publishedMembershipsPreservedAfterGroupMove: "passed",
       anonymousStudentPayloads: "passed",
       representativeOnlyResponses: "passed",
       responseVersionConflict: "passed",
@@ -470,6 +474,7 @@ async function runScenario(baseUrl, dispatchFetch, db) {
   await db.prepare("UPDATE classroom_questions SET phase = 'archived', published_at = NULL WHERE id = 'question-demo-2'").run();
   await verifyHistoricalVisibility(client);
   await verifyClassroomPublication(client, db, DEMO_SESSION_ID);
+  await verifyParticipationManagement(client, db, DEMO_SESSION_ID);
   await verifyMutationRateLimit(client);
   console.log("[8/8] 產生可重現測試報告");
   const report = simulationReport(client.records, performance.now() - startedAt);
