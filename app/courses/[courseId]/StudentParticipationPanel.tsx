@@ -19,7 +19,7 @@ function participationLabel(
   completed: boolean,
   phase: ClassroomQuestionPhase,
 ): { label: string; kind: string } {
-  if (!eligible) return { label: "尚未加入", kind: "not-eligible" };
+  if (!eligible) return { label: "本題開始後加入，未列入本題", kind: "not-eligible" };
   if (completed) return { label: "個人排序：已送出", kind: "completed" };
   if (["answering", "presenting"].includes(phase)) return { label: "已參與", kind: "participating" };
   if (phase === "ranking") return { label: "個人排序：尚未送出", kind: "pending" };
@@ -142,7 +142,7 @@ export function StudentParticipationPanel({ sessionId }: { sessionId: string }) 
               </tbody>
             </table>
           </div>
-          <footer>「已參與」表示學生在該題開始時已加入課堂；小組回答由指定代表送出，不能據此判定每位組員實際發言情形。</footer>
+          <footer>「本題開始後加入，未列入本題」表示學生已加入課堂，將從加入後的新題目開始參與。「已參與」表示學生在該題開始時已加入課堂；小組回答由指定代表送出，不能據此判定每位組員實際發言情形。</footer>
         </>
       ) : null}
     </section>
