@@ -85,8 +85,15 @@ function preparePayloadState(
   setAnswerLabels(workspaceAnswerLabels(snapshot.groups));
 }
 
-function requestIsStale(requestId: number, currentRequestId: number, aborted: boolean): boolean {
-  return requestId !== currentRequestId || aborted;
+function requestIsStale(requestId: number, currentRequestId: number, aborted: boolean, timedOut: boolean): boolean {
+  return requestId !== currentRequestId || (aborted && !timedOut);
+}
+
+function workspaceSearch(questionId: string | null, testStudentId: string | null): string {
+  const search = new URLSearchParams();
+  if (questionId) search.set("questionId", questionId);
+  if (testStudentId) search.set("testStudentId", testStudentId);
+  return search.size ? `?${search.toString()}` : "";
 }
 
 export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, initializeRanking }: {
@@ -104,19 +111,19 @@ export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, ini
     abortRef.current = null;
   }, []);
   const load = useCallback(async (quiet = false, questionId?: string | null, testStudentOverride?: string | null) => {
+    if (quiet && abortRef.current) return;
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
     if (!quiet) { setters.setError(null); setters.setPending(true); }
     const selected = questionId === undefined ? refs.selectedQuestion.current : questionId;
     const activeTestStudent = testStudentOverride === undefined ? testStudentId : testStudentOverride;
     try {
-      const search = new URLSearchParams();
-      if (selected) search.set("questionId", selected);
-      if (activeTestStudent) search.set("testStudentId", activeTestStudent);
-      const suffix = search.size ? `?${search.toString()}` : "";
+      const suffix = workspaceSearch(selected, activeTestStudent);
       const data = await classroomApiData<WorkspacePayload>(await fetch(`/api/classroom/courses/${encodeURIComponent(courseId)}/session${suffix}`, {
         cache: "no-store", headers: { accept: "application/json" }, signal: controller.signal,
       }));
@@ -124,9 +131,10 @@ export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, ini
       preparePayloadState(data, refs, initializeRanking, setters.setResponseText, setters.setAnswerLabels);
       applyPayload(data, quiet, refs.snapshotSignature, setters.setPayload);
     } catch (cause) {
-      if (requestIsStale(requestId, requestRef.current, controller.signal.aborted)) return;
-      if (!quiet) setters.setError(cause instanceof Error ? cause.message : "目前無法取得課堂資料。");
+      if (requestIsStale(requestId, requestRef.current, controller.signal.aborted, timedOut)) return;
+      if (!quiet) setters.setError(timedOut ? "課程載入超過 15 秒，請確認網路連線後按「重新載入」。" : cause instanceof Error ? cause.message : "目前無法取得課堂資料。");
     } finally {
+      clearTimeout(timeout);
       if (requestId === requestRef.current) {
         if (abortRef.current === controller) abortRef.current = null;
         if (!quiet) setters.setPending(false);
