@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { Miniflare } from "miniflare";
+import { verifyClassroomGrouping } from "./verify-classroom-grouping.mjs";
 
 const root = process.cwd();
 const workerEntry = resolve(root, "dist/server/index.js");
@@ -384,7 +385,7 @@ function simulationReport(records, elapsedMs) {
   const expectedErrors = new Set([
     "CROSS_ORIGIN_REQUEST_REJECTED", "INCOMPLETE_RANKING", "INVALID_JSON", "RANKING_CLOSED",
     "RANKING_NOT_ALLOWED", "RANKING_VERSION_CONFLICT", "RATE_LIMITED", "REPRESENTATIVE_REQUIRED",
-    "REQUEST_TOO_LARGE", "RESPONSE_VERSION_CONFLICT",
+    "REQUEST_TOO_LARGE", "RESPONSE_VERSION_CONFLICT", "NOT_ENOUGH_PARTICIPANTS", "SESSION_VERSION_CONFLICT",
   ]);
   const unexpected = records.filter((record) => !record.transient && record.status >= 400 && !expectedErrors.has(record.errorCode));
   return {
@@ -397,6 +398,7 @@ function simulationReport(records, elapsedMs) {
       lateObservers: 3,
       groups: 6,
       questions: 1,
+      groupingCases: [{ students: 2, groups: 2 }, { students: 7, groups: 6 }, { students: 41, groups: 2 }],
     },
     requests: {
       total: records.length,
@@ -413,6 +415,7 @@ function simulationReport(records, elapsedMs) {
       },
     },
     checks: {
+      newlyCreatedSessionGrouping: "passed",
       anonymousStudentPayloads: "passed",
       representativeOnlyResponses: "passed",
       responseVersionConflict: "passed",
@@ -434,6 +437,7 @@ async function runScenario(baseUrl, dispatchFetch, db) {
   const client = createMeasuredClient(baseUrl, dispatchFetch);
   console.log("[1/8] 重設示範課堂並讀取教師快照");
   let snapshot = await resetAndLoadClassroom(client);
+  await verifyClassroomGrouping(client, db);
   console.log("[2/8] 並行讀取 24 名學生作答畫面");
   const initialViews = await loadStudentViews(client, "answering");
   assert.equal(initialViews.filter(({ snapshot: view }) => view.currentUser.participatesInQuestion).length, 21);

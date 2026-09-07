@@ -417,7 +417,7 @@ async function createBalancedGroups(db: D1Database, actor: ClassroomActor, sessi
   }
   statements.push(
     db.prepare(
-      `UPDATE classroom_sessions SET phase = 'grouping', effective_group_capacity = ?, version = version + 1, updated_at = ?
+      `UPDATE classroom_sessions SET phase = 'grouping', effective_group_capacity = MAX(group_capacity, ?), version = version + 1, updated_at = ?
        WHERE id = ? AND phase = 'check_in' AND version = ?`,
     ).bind(Math.max(...sizes), now, session.id, session.version),
     db.prepare(

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T03:01:01.279Z",
+  "generatedAt": "2026-09-07T03:57:46.235Z",
   "synthetic": true,
   "scenario": {
     "teachers": 1,
@@ -7,23 +7,38 @@
     "eligibleStudents": 21,
     "lateObservers": 3,
     "groups": 6,
-    "questions": 1
+    "questions": 1,
+    "groupingCases": [
+      {
+        "students": 2,
+        "groups": 2
+      },
+      {
+        "students": 7,
+        "groups": 6
+      },
+      {
+        "students": 41,
+        "groups": 2
+      }
+    ]
   },
   "requests": {
-    "total": 270,
-    "successful": 170,
-    "expectedRejected": 100,
+    "total": 288,
+    "successful": 182,
+    "expectedRejected": 106,
     "localRuntimeReconnects": 0,
     "unexpectedFailures": 0,
-    "elapsedMs": 40288,
-    "requestsPerSecond": 6.7,
+    "elapsedMs": 13002,
+    "requestsPerSecond": 22.15,
     "latencyMs": {
-      "p50": 478,
-      "p95": 5509,
-      "maximum": 7529
+      "p50": 65,
+      "p95": 982,
+      "maximum": 1349
     }
   },
   "checks": {
+    "newlyCreatedSessionGrouping": "passed",
     "anonymousStudentPayloads": "passed",
     "representativeOnlyResponses": "passed",
     "responseVersionConflict": "passed",
