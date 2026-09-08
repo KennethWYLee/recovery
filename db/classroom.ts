@@ -15,6 +15,7 @@ import {
   type ClassroomRole,
 } from "@/lib/classroom-domain";
 import { enforceClassroomRateLimitScope } from "./classroom-rate-limit";
+import { synchronizeStudentAccess } from "./classroom-student-access";
 import { ensureDemoTeacherRankings } from "./classroom-demo-ranking";
 export { enforceClassroomMutationRateLimit } from "./classroom-rate-limit";
 export type ClassroomActor = {
@@ -58,6 +59,7 @@ export class ClassroomAccessError extends Error {
   }
 }
 
+let defaultsReady: Promise<void> | null = null;
 let schemaReady: Promise<void> | null = null;
 const CLASSROOM_SCHEMA_VERSION = 9;
 const CLASSROOM_SCHEMA_FINGERPRINT = "classroom-schema-v9-20260808";
@@ -170,32 +172,7 @@ export async function loadOrProvisionClassroomActor(request: Request): Promise<C
     isAdmin,
   };
   if (!isAdmin) {
-    const allowlisted = await db.prepare(
-      "SELECT email FROM classroom_access_allowlist WHERE email = ? AND user_id = ? AND status = 'active'",
-    ).bind(email, result.id).first<{ email: string }>();
-    const studentId = email.slice(0, email.lastIndexOf("@"));
-    const rosterMatches = await db.prepare(
-      `SELECT r.course_id, r.imported_by_user_id
-       FROM classroom_course_roster r
-       JOIN classroom_courses c ON c.id = r.course_id
-       WHERE r.status = 'active' AND c.status = 'active' AND (r.email = ? OR r.student_id = ?)
-       ORDER BY r.course_id`,
-    ).bind(email, studentId).all<{ course_id: string; imported_by_user_id: string }>();
-    if (rosterMatches.results.length > 0) {
-      const statements = rosterMatches.results.map((match) => db.prepare(
-        `INSERT INTO classroom_course_members
-          (id, course_id, user_id, role, status, joined_at, updated_at)
-         VALUES (?, ?, ?, 'student', 'active', ?, ?)
-         ON CONFLICT(course_id, user_id) DO UPDATE SET status = 'active', role = 'student', updated_at = excluded.updated_at`,
-      ).bind(classroomId("course-member"), match.course_id, result.id, now, now));
-      statements.push(db.prepare(
-        `UPDATE classroom_access_requests
-         SET status = 'approved', version = version + 1, reviewed_by_user_id = ?, reviewed_at = ?
-         WHERE email = ? AND status != 'approved'`,
-      ).bind(rosterMatches.results[0].imported_by_user_id, now, email));
-      await db.batch(statements);
-    }
-    if (!allowlisted && rosterMatches.results.length === 0) {
+    if (!await synchronizeStudentAccess(db, result.id, email, now)) {
       await requireClassroomAccessRequestCapacity(db, email);
       const request = await recordClassroomAccessRequest(db, result);
       if (request.status === "rejected") {
@@ -205,8 +182,8 @@ export async function loadOrProvisionClassroomActor(request: Request): Promise<C
     }
   }
   if (isAdmin) {
-    await seedTeacherCourses(db, result);
-    await ensureDemoClassroom(db, result);
+    defaultsReady ??= seedTeacherCourses(db, result).then(() => ensureDemoClassroom(db, result)).catch((error) => { defaultsReady = null; throw error; });
+    await defaultsReady;
   }
   return result;
 }

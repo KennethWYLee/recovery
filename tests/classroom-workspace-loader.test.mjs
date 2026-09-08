@@ -25,8 +25,8 @@ function harness() {
     AbortController, URLSearchParams, crypto, document: page, window: browser,
     setTimeout: (callback, delay) => { timers.set(++timerId, { callback, delay }); return timerId; },
     clearTimeout: (id) => timers.delete(id),
-    fetch: (_url, { signal }) => new Promise((resolve, reject) => {
-      requests.push({ signal, resolve });
+    fetch: (url, { signal, headers }) => new Promise((resolve, reject) => {
+      requests.push({ url, headers, signal, resolve });
       signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
     }),
   };
@@ -149,16 +149,49 @@ test("teacher progress refreshes every two seconds and resumes immediately on fo
   assert.equal(interval.delay, 2000);
   h.page.visibilityState = "hidden";
   interval.callback();
-  assert.equal(calls, 1);
+  assert.equal(calls, 0);
   h.page.visibilityState = "visible";
   h.page.dispatchEvent(new Event("visibilitychange"));
   h.browser.dispatchEvent(new Event("focus"));
-  assert.equal(calls, 3);
+  assert.equal(calls, 2);
   stop();
   assert.equal(h.intervals.size, 0);
   h.browser.dispatchEvent(new Event("focus"));
   h.page.dispatchEvent(new Event("visibilitychange"));
-  assert.equal(calls, 3);
+  assert.equal(calls, 2);
+});
+
+test("unchanged polling preserves the current payload and local text without reading a response body", async () => {
+  const h = harness();
+  const initial = h.load();
+  h.requests[0].resolve({ ok: true, headers: new Headers({ etag: '"one"' }), json: async () => ({ data: { actor: { id: "synthetic-actor" }, snapshot: null } }) });
+  await initial;
+  const payload = h.state.payload;
+  h.refs.responseDraft.current.text = "正在輸入的新答案";
+  h.refs.responseDraft.current.dirty = true;
+  const poll = h.load(true);
+  assert.equal(h.requests[1].headers["if-none-match"], '"one"');
+  h.requests[1].resolve({ status: 304, headers: new Headers({ "x-classroom-time": new Date().toISOString() }), json: () => assert.fail("304 has no body") });
+  await poll;
+  assert.equal(h.state.payload, payload);
+  assert.equal(h.refs.responseDraft.current.text, "正在輸入的新答案");
+  const selected = h.load(true, "different-question");
+  assert.equal(h.requests[2].headers["if-none-match"], undefined);
+  h.respond(2); await selected;
+  const refresh = h.load(false);
+  assert.equal(h.requests[3].headers["if-none-match"], undefined);
+  h.respond(3); await refresh;
+});
+
+test("student refresh checks every three seconds and pauses while hidden", () => {
+  const h = harness(); let calls = 0;
+  const stop = h.startWorkspaceRefresh({ load: async () => { calls++; }, isAdmin: false, answering: true });
+  const interval = [...h.intervals.values()][0];
+  assert.equal(interval.delay, 3000);
+  interval.callback(); assert.equal(calls, 1);
+  h.page.visibilityState = "hidden";
+  interval.callback(); assert.equal(calls, 1);
+  stop(); assert.equal(h.intervals.size, 0);
 });
 
 test("published lists independently order consensus by score and teacher by saved choices", () => {

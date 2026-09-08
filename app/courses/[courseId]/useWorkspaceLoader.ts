@@ -54,8 +54,9 @@ function applyPayload(
   quiet: boolean,
   signatureRef: MutableRefObject<string>,
   setPayload: Dispatch<SetStateAction<WorkspacePayload | null>>,
+  revision?: string | null,
 ) {
-  const signature = `${data.actor.id}|${snapshotSignature(data.snapshot)}|${data.actor.isAdmin ? data.snapshot?.serverNow ?? "" : ""}`;
+  const signature = revision ?? `${data.actor.id}|${snapshotSignature(data.snapshot)}|${data.actor.isAdmin ? data.snapshot?.serverNow ?? "" : ""}`;
   if (quiet && signature === signatureRef.current) return;
   signatureRef.current = signature;
   setPayload((current) => ({ ...data, snapshot: current?.actor.id === data.actor.id ? preserveNewerResponses(current.snapshot, data.snapshot) : data.snapshot }));
@@ -94,6 +95,11 @@ function requestIsStale(requestId: number, currentRequestId: number, aborted: bo
   return requestId !== currentRequestId || (aborted && !timedOut);
 }
 
+function workspaceLoadError(cause: unknown, timedOut: boolean): string {
+  if (timedOut) return "課程載入超過 15 秒，請確認網路連線後按「重新載入」。";
+  return cause instanceof Error ? cause.message : "目前無法取得課堂資料。";
+}
+
 function workspaceSearch(questionId: string | null, testStudentId: string | null): string {
   const search = new URLSearchParams();
   if (questionId) search.set("questionId", questionId);
@@ -101,12 +107,16 @@ function workspaceSearch(questionId: string | null, testStudentId: string | null
   return search.size ? `?${search.toString()}` : "";
 }
 
-export function startWorkspaceRefresh({ load, isAdmin, answering }: {
+function selectedWorkspaceValue(override: string | null | undefined, current: string | null): string | null {
+  return override === undefined ? current : override;
+}
+
+export function startWorkspaceRefresh({ load, isAdmin }: {
   load: (quiet: boolean) => Promise<void>; isAdmin: boolean; answering: boolean;
 }) {
-  const refresh = () => { if (isAdmin || document.visibilityState === "visible") void load(true); };
+  const refresh = () => { if (document.visibilityState === "visible") void load(true); };
   const resume = () => { if (document.visibilityState === "visible") void load(true); };
-  const timer = window.setInterval(refresh, isAdmin ? 2_000 : answering ? 8_000 : 6_000);
+  const timer = window.setInterval(refresh, isAdmin ? 2_000 : 3_000);
   document.addEventListener("visibilitychange", resume);
   window.addEventListener("focus", resume);
   return () => {
@@ -114,6 +124,18 @@ export function startWorkspaceRefresh({ load, isAdmin, answering }: {
     document.removeEventListener("visibilitychange", resume);
     window.removeEventListener("focus", resume);
   };
+}
+
+function workspaceHeaders(url: string, quiet: boolean, etag: { key: string; value: string } | null): Record<string, string> {
+  return quiet && etag?.key === url ? { accept: "application/json", "if-none-match": etag.value } : { accept: "application/json" };
+}
+
+function applyUnchangedWorkspace(response: Response, setPayload: LoaderSetters["setPayload"]): boolean {
+  if (response.status !== 304) return false;
+  const serverNow = response.headers.get("x-classroom-time");
+  if (serverNow) setPayload((current) => current?.actor.isAdmin && current.snapshot
+    ? { ...current, snapshot: { ...current.snapshot, serverNow } } : current);
+  return true;
 }
 
 export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, initializeRanking }: {
@@ -124,6 +146,7 @@ export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, ini
   initializeRanking: (order: string[], complete: boolean) => void;
 }) {
   const requestRef = useRef(0);
+  const etagRef = useRef<{ key: string; value: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const cancelLoading = useCallback(() => {
     requestRef.current += 1;
@@ -140,19 +163,24 @@ export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, ini
     let timedOut = false;
     const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
     if (!quiet) { setters.setError(null); setters.setPending(true); }
-    const selected = questionId === undefined ? refs.selectedQuestion.current : questionId;
-    const activeTestStudent = testStudentOverride === undefined ? testStudentId : testStudentOverride;
+    const selected = selectedWorkspaceValue(questionId, refs.selectedQuestion.current);
+    const activeTestStudent = selectedWorkspaceValue(testStudentOverride, testStudentId);
     try {
       const suffix = workspaceSearch(selected, activeTestStudent);
-      const data = await classroomApiData<WorkspacePayload>(await fetch(`/api/classroom/courses/${encodeURIComponent(courseId)}/session${suffix}`, {
-        cache: "no-store", headers: { accept: "application/json" }, signal: controller.signal,
-      }));
+      const url = `/api/classroom/courses/${encodeURIComponent(courseId)}/session${suffix}`;
+      const headers = workspaceHeaders(url, quiet, etagRef.current);
+      const response = await fetch(url, { cache: "no-store", headers, signal: controller.signal });
       if (requestId !== requestRef.current) return;
+      if (applyUnchangedWorkspace(response, setters.setPayload)) return;
+      const data = await classroomApiData<WorkspacePayload>(response);
+      if (requestId !== requestRef.current) return;
+      const etag = response.headers?.get("etag");
+      if (etag) etagRef.current = { key: url, value: etag };
       preparePayloadState(data, refs, initializeRanking, setters.setResponseText, setters.setAnswerLabels);
-      applyPayload(data, quiet, refs.snapshotSignature, setters.setPayload);
+      applyPayload(data, quiet, refs.snapshotSignature, setters.setPayload, etag);
     } catch (cause) {
       if (requestIsStale(requestId, requestRef.current, controller.signal.aborted, timedOut)) return;
-      if (!quiet) setters.setError(timedOut ? "課程載入超過 15 秒，請確認網路連線後按「重新載入」。" : cause instanceof Error ? cause.message : "目前無法取得課堂資料。");
+      if (!quiet) setters.setError(workspaceLoadError(cause, timedOut));
     } finally {
       clearTimeout(timeout);
       if (requestId === requestRef.current) {

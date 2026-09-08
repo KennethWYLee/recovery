@@ -17,6 +17,7 @@ import { QuestionActions } from "./QuestionActions";
 import { CourseJoinHelp, CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
 import { StudentActionFeedback } from "./StudentActionFeedback";
 import { useProgressiveRanking } from "./useProgressiveRanking";
+import { AnswerCountdown } from "./AnswerCountdown";
 import { startWorkspaceRefresh, useWorkspaceLoader } from "./useWorkspaceLoader";
 import type { WorkspaceActor as Actor, WorkspacePayload } from "./workspace-types";
 import { emptyResponseDraft } from "@/lib/classroom-response-draft";
@@ -237,35 +238,6 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
   const { saveResponse } = useResponseAutosave({ payload, responseText, testStudentId, draftRef: responseDraftRef,
     setPayload, setResponseText: setResponseTextState, saveState: responseSaveState, setSaveState: setResponseSaveState, setPending, setError, setNotice });
-
-  useEffect(() => {
-    if (!payload || payload.actor.isAdmin || !snapshot || !question || question.phase !== "answering" || !myGroup || snapshot.currentUser.isRepresentative) return;
-    const refreshResponse = async () => {
-      if (document.visibilityState !== "visible") return;
-      const search = new URLSearchParams({ questionId: question.id });
-      if (testStudentId) search.set("testStudentId", testStudentId);
-      try {
-        const data = await apiData<{
-          live: { response: ClassroomGroup["response"] };
-        }>(await fetch(`/api/classroom/sessions/${encodeURIComponent(snapshot.session.id)}/response?${search.toString()}`, { cache: "no-store", headers: { accept: "application/json" } }));
-        setPayload((current) =>
-          current?.snapshot && current.actor.id === payload.actor.id && current.snapshot.question?.id === question.id
-            ? {
-                ...current,
-                snapshot: {
-                  ...current.snapshot,
-                  groups: current.snapshot.groups.map((group) => (group.id === myGroup.id && group.response.version <= data.live.response.version ? { ...group, response: data.live.response } : group)),
-                },
-              }
-            : current,
-        );
-      } catch {
-        /* The regular snapshot refresh remains the fallback. */
-      }
-    };
-    const timer = window.setInterval(() => void refreshResponse(), 3_000);
-    return () => window.clearInterval(timer);
-  }, [payload, snapshot, question, myGroup, testStudentId]);
 
   useEffect(() => {
     if (!snapshot || !question || question.phase !== "answering" || !question.answerDeadlineAt) return;
@@ -928,20 +900,7 @@ function TeacherSessionSummary({ actor, snapshot }: { actor: Actor; snapshot: Cl
 }
 
 function StudentClassroomView({ actor, course, snapshot, identity, testMode, error, notice, responseText, setResponseText, responseSaveState, rankingOrder, rankingSelectionCount, answerLabels, pending, saveResponse, submitRanking, chooseNextRank, undoLastRank, restartRanking, moveSelectedRank, refresh, selectQuestion, exitStudentTestMode }: { actor: Actor; course: ClassroomCourse; snapshot: ClassroomSessionSnapshot; identity: ClassroomPageIdentity; testMode: boolean; error: string | null; notice: string | null; responseText: string; setResponseText: (value: string) => void; responseSaveState: "idle" | "saving" | "saved" | "error"; rankingOrder: string[]; rankingSelectionCount: number; answerLabels: Record<string, string>; pending: boolean; saveResponse: (submit: boolean) => Promise<void>; submitRanking: () => Promise<void>; chooseNextRank: (groupId: string) => void; undoLastRank: () => void; restartRanking: () => void; moveSelectedRank: (index: number, offset: number) => void; refresh: () => void; selectQuestion: (questionId: string) => void; exitStudentTestMode: () => void }) {
-  const [now, setNow] = useState(() => Date.now());
-  const [serverOffset, setServerOffset] = useState(0);
   const question = snapshot.question; const myGroup = snapshot.groups.find((group) => group.id === snapshot.currentUser.groupId) ?? null;
-  useEffect(() => {
-    const timer = window.setTimeout(() => setServerOffset(new Date(snapshot.serverNow).getTime() - Date.now()), 0);
-    return () => window.clearTimeout(timer);
-  }, [snapshot.serverNow]);
-  useEffect(() => {
-    if (question?.phase !== "answering") return;
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
-  }, [question?.phase]);
-  const remainingSeconds = question?.answerDeadlineAt ? Math.max(0, Math.ceil((new Date(question.answerDeadlineAt).getTime() - (now + serverOffset)) / 1_000)) : null;
-  const timerLabel = remainingSeconds === null ? "等待教師開始計時" : `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")}`;
   const eligibleGroups = snapshot.groups.filter((group) => ["submitted", "locked"].includes(group.response.status) && group.response.content.trim().length > 0);
 
   return (
@@ -1011,7 +970,7 @@ function StudentClassroomView({ actor, course, snapshot, identity, testMode, err
                     <p>{myGroup?.label ?? "尚未分組"}</p>
                     <h2>{snapshot.currentUser.isRepresentative ? "整理並送出本組的共同回答" : "查看本組正在整理的回答"}</h2>
                   </div>
-                  <time className={remainingSeconds !== null && remainingSeconds <= 60 ? "urgent" : ""}>{timerLabel}</time>
+                  <AnswerCountdown key={question.id} deadline={question.answerDeadlineAt} serverNow={snapshot.serverNow} />
                 </header>
                 {!snapshot.currentUser.participatesInQuestion ? (
                   <div className="student-waiting">

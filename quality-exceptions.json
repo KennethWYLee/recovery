@@ -7,19 +7,19 @@
   },
   "fileExceptions": {
     "app/courses/[courseId]/CourseWorkspace.tsx": {
-      "baselineLines": 1494,
+      "baselineLines": 1453,
       "reason": "既有課堂工作區同時承載教師與學生流程；須先以行為測試保護，再按畫面責任拆分。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"
     },
     "db/classroom-live.ts": {
-      "baselineLines": 844,
+      "baselineLines": 806,
       "reason": "既有即時課堂交易集中於單一資料模組；須依交易邊界逐步拆分並維持一致性。",
       "ownerRole": "後端資料層維護者",
       "expiresOn": "2026-11-30"
     },
     "db/classroom.ts": {
-      "baselineLines": 759,
+      "baselineLines": 736,
       "reason": "既有身分、課程與示範資料存取集中；須在介面契約固定後分離各資料責任。",
       "ownerRole": "後端資料層維護者",
       "expiresOn": "2026-11-30"
@@ -33,15 +33,15 @@
       "expiresOn": "2026-10-31"
     },
     "app/courses/[courseId]/CourseWorkspace.tsx::CourseWorkspace": {
-      "baselineLines": 757,
+      "baselineLines": 728,
       "baselineComplexity": 58,
       "reason": "既有教師工作區整合資料載入、狀態控制及多個階段畫面；將依課堂階段拆成可測元件。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"
     },
     "app/courses/[courseId]/CourseWorkspace.tsx::StudentClassroomView": {
-      "baselineLines": 189,
-      "baselineComplexity": 38,
+      "baselineLines": 176,
+      "baselineComplexity": 34,
       "reason": "既有學生畫面依課堂階段切換多種狀態；將各階段拆成獨立且可測的顯示元件。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"
@@ -60,7 +60,7 @@
       "expiresOn": "2026-10-31"
     },
     "db/classroom-live.ts::classroomSessionSnapshot": {
-      "baselineComplexity": 27,
+      "baselineComplexity": 21,
       "reason": "快照查詢目前組裝角色相關資料；待隱私契約測試穩定後拆分查詢與輸出轉換。",
       "ownerRole": "後端資料層維護者",
       "expiresOn": "2026-10-31"
@@ -78,7 +78,7 @@
       "expiresOn": "2026-10-31"
     },
     "db/classroom.ts::loadOrProvisionClassroomActor": {
-      "baselineComplexity": 22,
+      "baselineComplexity": 21,
       "reason": "登入建立流程需區分管理員、白名單與待審核狀態；將身分決策抽成純函式。",
       "ownerRole": "身分與存取維護者",
       "expiresOn": "2026-10-31"

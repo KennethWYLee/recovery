@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-09-08T01:18:33.755Z",
+  "label": "before",
+  "synthetic": true,
+  "students": 50,
+  "setting": "Built Worker with isolated local D1; no production network latency and no real student writes",
+  "full": {
+    "requests": 50,
+    "p50Ms": 1597,
+    "p95Ms": 1597,
+    "maxMs": 1598,
+    "meanBytes": 5048,
+    "unchanged": 0
+  },
+  "polling": {
+    "requests": 150,
+    "p50Ms": 1445,
+    "p95Ms": 1623,
+    "maxMs": 1624,
+    "meanBytes": 5048,
+    "unchanged": 0
+  }
+}

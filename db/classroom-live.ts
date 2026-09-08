@@ -16,23 +16,11 @@ import {
 import { classroomGroupsForViewer, classroomQuestionGroupId, studentMaySeeGroupNames } from "@/lib/classroom-privacy";
 import { classroomId, classroomNow, type ClassroomActor } from "./classroom";
 import {
-  classroomCurrentRanking,
-  classroomRankingResults,
-  classroomRawStudentRankings,
-  classroomStudentSubmissionUserIds,
-  classroomTeacherRanking,
-} from "./classroom-ranking";
-import {
   guardedClassroomRankingBatch,
   guardedClassroomResponseWrite,
   questionAdvanceEvidenceFailure,
 } from "./classroom-live-security";
-import {
-  snapshotParticipantTotals,
-  snapshotParticipants,
-  snapshotQuestionCounts,
-  snapshotQuestionVisibilitySql,
-} from "./classroom-snapshot-queries";
+import { readSnapshotBase, readSnapshotDetails, snapshotRanks } from "./classroom-snapshot-data";
 import { ClassroomWorkflowError } from "./classroom-errors";
 
 export { ClassroomWorkflowError } from "./classroom-errors";
@@ -94,9 +82,11 @@ async function actorCanAccessCourse(db: D1Database, actor: ClassroomActor, cours
 }
 
 export async function requireSession(db: D1Database, actor: ClassroomActor, sessionId: string): Promise<SessionRow> {
-  const row = await db.prepare(`SELECT ${SESSION_COLUMNS} FROM classroom_sessions WHERE id = ?`)
-    .bind(sessionId).first<SessionRow>();
-  if (!row || !await actorCanAccessCourse(db, actor, row.course_id)) {
+  const row = await db.prepare(`SELECT ${SESSION_COLUMNS.split(",").map((column) => `s.${column.trim()}`).join(", ")}
+    FROM classroom_sessions s JOIN classroom_courses c ON c.id = s.course_id AND c.status = 'active'
+    WHERE s.id = ? AND (? = 1 OR EXISTS (SELECT 1 FROM classroom_course_members m WHERE m.course_id = c.id AND m.user_id = ? AND m.status = 'active'))`)
+    .bind(sessionId, actor.isAdmin ? 1 : 0, actor.id).first<SessionRow>();
+  if (!row) {
     throw new ClassroomWorkflowError(404, "SESSION_NOT_FOUND", "找不到這次課堂，或你沒有查看權限。");
   }
   return row;
@@ -138,15 +128,6 @@ function actorMayRankQuestion(actor: ClassroomActor, question: QuestionRow | und
 
 function actorHasCurrentRanking(actor: ClassroomActor, current: ClassroomSavedRanking | null, studentUsers: Set<string>): boolean {
   return actor.isAdmin ? Boolean(current) : studentUsers.has(actor.id);
-}
-
-async function snapshotRankingState(db: D1Database, actor: ClassroomActor, question: ClassroomQuestion | null, showResults: boolean) {
-  if (!question) return { currentRanking: null, teacherRanking: null, rawRankings: [] };
-  const currentRanking = await classroomCurrentRanking(db, question.id, actor.id);
-  const teacherRanking = showResults ? await classroomTeacherRanking(db, question.id) : null;
-  const rawRankings = actor.isAdmin && ["ranking", "locked", "published", "archived"].includes(question.phase)
-    ? await classroomRawStudentRankings(db, question.id) : [];
-  return { currentRanking, teacherRanking, rawRankings };
 }
 
 async function requireRankingActor(db: D1Database, actor: ClassroomActor, question: QuestionRow): Promise<void> {
@@ -223,10 +204,11 @@ export async function createClassroomSession(
 export async function activeClassroomSession(
   db: D1Database, actor: ClassroomActor, courseId: string, questionId?: string | null,
 ): Promise<ClassroomSessionSnapshot | null> {
-  if (!await actorCanAccessCourse(db, actor, courseId)) return null;
   const row = await db.prepare(
-    "SELECT id FROM classroom_sessions WHERE course_id = ? AND phase != 'archived' ORDER BY created_at DESC LIMIT 1",
-  ).bind(courseId).first<{ id: string }>();
+    `SELECT s.id FROM classroom_sessions s JOIN classroom_courses c ON c.id = s.course_id AND c.status = 'active'
+     WHERE s.course_id = ? AND s.phase != 'archived' AND (? = 1 OR EXISTS (SELECT 1 FROM classroom_course_members m WHERE m.course_id = c.id AND m.user_id = ? AND m.status = 'active'))
+     ORDER BY s.created_at DESC LIMIT 1`,
+  ).bind(courseId, actor.isAdmin ? 1 : 0, actor.id).first<{ id: string }>();
   return row ? classroomSessionSnapshot(db, actor, row.id, questionId) : null;
 }
 
@@ -235,19 +217,9 @@ export async function classroomSessionSnapshot(
 ): Promise<ClassroomSessionSnapshot> {
   const sessionRow = await requireSession(db, actor, sessionId);
   const session = mapSession(sessionRow);
-  const participants = await snapshotParticipants(db, actor, sessionId);
-  const participantTotals = await snapshotParticipantTotals(db, sessionId, participants, actor.isAdmin);
-  const baseGroupRows = await db.prepare(
-    `SELECT id, label, position, representative_user_id
-     FROM classroom_groups WHERE session_id = ? ORDER BY position`,
-  ).bind(sessionId).all<{ id: string; label: string; position: number; representative_user_id: string | null }>();
-
-  const questionRows = await db.prepare(
-    `SELECT ${QUESTION_COLUMNS}
-     FROM classroom_questions WHERE session_id = ?
-       ${snapshotQuestionVisibilitySql(actor.isAdmin)}
-     ORDER BY position`,
-  ).bind(sessionId).all<QuestionRow>();
+  const base = await readSnapshotBase<QuestionRow>(db, actor, sessionId, QUESTION_COLUMNS);
+  const participants = base.participants; const participantTotals = base.totals;
+  const baseGroupRows = { results: base.groups }; const questionRows = { results: base.questions };
   const visibleRows = questionRows.results;
   let selectedRow = requestedQuestionId ? visibleRows.find((row) => row.id === requestedQuestionId) : undefined;
   if (!selectedRow) selectedRow = visibleRows.find((row) => ["answering", "presenting", "ranking", "locked"].includes(row.phase));
@@ -255,18 +227,12 @@ export async function classroomSessionSnapshot(
   if (!selectedRow && actor.isAdmin) selectedRow = visibleRows[0];
   const question = selectedRow ? mapQuestion(selectedRow) : null;
 
-  const responseRows = question ? await db.prepare(
-    `SELECT group_id, content, status, version, updated_at
-     FROM classroom_question_responses WHERE question_id = ?`,
-  ).bind(question.id).all<{
-    group_id: string; content: string; status: "draft" | "submitted" | "locked";
-    version: number; updated_at: string | null;
-  }>() : { results: [] as Array<{ group_id: string; content: string; status: "draft" | "submitted" | "locked"; version: number; updated_at: string | null }> };
+  const showResults = Boolean(question && (actor.isAdmin ? ["locked", "published", "archived"].includes(question.phase) : ["published", "archived"].includes(question.phase)));
+  const details = await readSnapshotDetails(db, actor, sessionId, question?.id ?? null, showResults);
+  const responseRows = { results: details.responses };
   const responseByGroup = new Map(responseRows.results.map((row) => [row.group_id, row]));
   const currentParticipant = participants.find((participant) => participant.userId === actor.id) ?? null;
-  const membership = question ? await db.prepare(
-    "SELECT group_id, can_rank FROM classroom_question_memberships WHERE question_id = ? AND user_id = ?",
-  ).bind(question.id, actor.id).first<{ group_id: string; can_rank: number }>() : null;
+  const membership = details.membership;
   const questionGroupId = classroomQuestionGroupId(Boolean(question), membership?.group_id ?? null, currentParticipant?.groupId ?? null);
   const publicResponses = Boolean(question && ["presenting", "ranking", "locked", "published", "archived"].includes(question.phase));
   const internalGroups: ClassroomGroup[] = baseGroupRows.results.map((row) => {
@@ -286,7 +252,7 @@ export async function classroomSessionSnapshot(
   const groups = classroomGroupsForViewer(internalGroups, actor.isAdmin, !studentMaySeeGroupNames(question?.phase, session.anonymousGroups));
 
   const groupLabels = groups.map((group) => ({ id: group.id, label: group.label }));
-  const summaryCountRows = await snapshotQuestionCounts(db, sessionId, question?.id ?? null, actor.isAdmin);
+  const summaryCountRows = details.counts;
   const summaryCounts = new Map(summaryCountRows.map((row) => [row.id, row]));
   const summaries: ClassroomQuestionSummary[] = visibleRows.map((row) => ({
     ...mapQuestion(row),
@@ -297,9 +263,8 @@ export async function classroomSessionSnapshot(
     leaderAverageScore: null,
   }));
 
-  const submittedUsers = question ? await classroomStudentSubmissionUserIds(db, question.id) : new Set<string>();
-  const showResults = Boolean(question && (actor.isAdmin ? ["locked", "published", "archived"].includes(question.phase) : ["published", "archived"].includes(question.phase)));
-  const results = showResults && question ? await classroomRankingResults(db, question.id, groupLabels) : [];
+  const submittedUsers = details.submittedUsers;
+  const { currentRanking, teacherRanking, rawRankings, results } = snapshotRanks(details.ranks, details.responses, actor, showResults, groupLabels, question?.phase);
   if (question?.phase === "published" && results[0]) {
     const summary = summaries.find((item) => item.id === question.id);
     if (summary) {
@@ -307,11 +272,8 @@ export async function classroomSessionSnapshot(
       summary.leaderAverageScore = results[0].averageScore;
     }
   }
-  const { currentRanking, teacherRanking, rawRankings } = await snapshotRankingState(db, actor, question, showResults);
   const orderedGroupIds = currentRanking?.orderedGroupIds ?? [];
-  const eligible = question ? await db.prepare(
-    "SELECT COUNT(*) AS count FROM classroom_question_memberships WHERE question_id = ? AND can_rank = 1",
-  ).bind(question.id).first<{ count: number }>() : null;
+  const eligible = { count: details.eligible };
   return {
     serverNow: classroomNow(), session, questions: summaries, question,
     participants: actor.isAdmin ? participants : [], groups,

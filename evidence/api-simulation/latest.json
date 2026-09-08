@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T06:41:11.213Z",
+  "generatedAt": "2026-09-08T03:11:40.720Z",
   "synthetic": true,
   "scenario": {
     "teachers": 1,
@@ -29,12 +29,12 @@
     "expectedRejected": 114,
     "localRuntimeReconnects": 0,
     "unexpectedFailures": 0,
-    "elapsedMs": 16583,
-    "requestsPerSecond": 20.68,
+    "elapsedMs": 12055,
+    "requestsPerSecond": 28.45,
     "latencyMs": {
-      "p50": 36,
-      "p95": 883,
-      "maximum": 1316
+      "p50": 18,
+      "p95": 386,
+      "maximum": 548
     }
   },
   "checks": {

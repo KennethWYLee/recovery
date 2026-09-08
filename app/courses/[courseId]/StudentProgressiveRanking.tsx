@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Check, ClipboardCheck, Hand, RotateCcw, Undo2 } from "lucide-react";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import type { ClassroomGroup } from "@/lib/classroom-domain";
 
 type Props = {
@@ -35,9 +35,10 @@ export function StudentProgressiveRanking({
   const candidates = order.slice(selectedCount);
   const complete = order.length > 0 && selectedCount === order.length;
   const instructionRef = useRef<HTMLHeadingElement>(null);
+  const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
   function selectAndContinue(action: () => void) {
     action();
-    requestAnimationFrame(() => instructionRef.current?.focus());
+    requestAnimationFrame(() => instructionRef.current?.focus({ preventScroll: true }));
   }
 
   return (
@@ -61,7 +62,7 @@ export function StudentProgressiveRanking({
           {complete ? <Check aria-hidden="true" /> : <Hand aria-hidden="true" />}
           {complete ? "全部選好了，確認後記得送出" : `點選下方按鈕，排第 ${selectedCount + 1} 名`}
         </h3>
-        {selected.length > 0 && <p>已選：{selected.map((id, index) => `第 ${index + 1} 名 ${labels[id] ?? groups.find((group) => group.id === id)?.label ?? ""}`).join("、")}</p>}
+        {selected.length > 0 && <p>已選：{selected.map((id, index) => `第 ${index + 1} 名 ${labels[id] ?? groupsById.get(id)?.label ?? ""}`).join("、")}</p>}
         {selected.length > 0 && <div className="ranking-edit-actions">
           <button type="button" disabled={pending} onClick={() => selectAndContinue(onUndo)}><Undo2 />取消剛才的選擇</button>
           <button type="button" disabled={pending} onClick={() => selectAndContinue(onRestart)}><RotateCcw />全部重選</button>
@@ -75,7 +76,7 @@ export function StudentProgressiveRanking({
           </div>
           <div className="ranking-choice-list">
             {candidates.map((groupId) => {
-              const group = groups.find((item) => item.id === groupId);
+              const group = groupsById.get(groupId);
               if (!group) return null;
               const label = labels[group.id] ?? group.label;
               return (
@@ -102,7 +103,7 @@ export function StudentProgressiveRanking({
           </div>
           <ol>
             {selected.map((groupId, index) => {
-              const group = groups.find((item) => item.id === groupId);
+              const group = groupsById.get(groupId);
               if (!group) return null;
               return (
                 <li key={group.id}>

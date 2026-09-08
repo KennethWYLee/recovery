@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-09-08T03:09:35.565Z",
+  "label": "after",
+  "synthetic": true,
+  "students": 50,
+  "checks": {
+    "unchangedBody": "passed",
+    "activeMembershipNotRewritten": "passed",
+    "actorAndQuestionIsolation": "passed",
+    "draftAndSpeakerUpdates": "passed",
+    "membershipAndRankingUpdates": "passed",
+    "phaseAndCourseUpdates": "passed",
+    "freshAuthorization": "passed",
+    "deletedCourseNotRestored": "passed"
+  },
+  "setting": "Built Worker with isolated local D1; no production network latency and no real student writes",
+  "full": {
+    "requests": 50,
+    "p50Ms": 620,
+    "p95Ms": 621,
+    "maxMs": 621,
+    "meanBytes": 5048,
+    "unchanged": 0
+  },
+  "polling": {
+    "requests": 150,
+    "p50Ms": 161,
+    "p95Ms": 291,
+    "maxMs": 330,
+    "meanBytes": 0,
+    "unchanged": 150
+  }
+}
