@@ -1,6 +1,7 @@
 import { getClassroomCourse } from "@/db/classroom";
 import { activeClassroomSession, createClassroomSession } from "@/db/classroom-live";
 import { classroomWorkspaceRevision } from "@/db/classroom-workspace-revision";
+import { matchesIfNoneMatch } from "@/lib/classroom-http";
 import {
   ClassroomApiError,
   classroomApiContext,
@@ -28,8 +29,8 @@ export async function GET(request: Request, context: Context): Promise<Response>
     const effective = await classroomDemoActorForCourse(api, courseId, search.get("testStudentId"));
     const etag = await classroomWorkspaceRevision(api.db, effective.actor, courseId, search.get("questionId"));
     if (!etag) throw new ClassroomApiError(404, "COURSE_NOT_FOUND", "找不到這門課程，或您沒有存取權限。");
-    const headers = { etag, "x-classroom-time": new Date().toISOString() };
-    if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
+    const headers = { etag: `W/${etag}`, "x-classroom-time": new Date().toISOString() };
+    if (matchesIfNoneMatch(request.headers.get("if-none-match"), etag)) return new Response(null, { status: 304, headers });
     const course = await getClassroomCourse(api.db, api.actor, courseId);
     if (!course) throw new ClassroomApiError(404, "COURSE_NOT_FOUND", "找不到這門課程，或您沒有存取權限。");
     const snapshot = await activeClassroomSession(api.db, effective.actor, courseId, search.get("questionId"));

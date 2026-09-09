@@ -8,6 +8,7 @@ import { Miniflare } from "miniflare";
 import { verifyClassroomGrouping } from "./verify-classroom-grouping.mjs";
 import { verifyClassroomPublication } from "./verify-classroom-publication.mjs";
 import { verifyParticipationManagement } from "./verify-participation-management.mjs";
+import { verifyConditionalWorkspaceRead } from "./verify-classroom-refresh.mjs";
 
 const root = process.cwd();
 const workerEntry = resolve(root, "dist/server/index.js");
@@ -430,6 +431,7 @@ function simulationReport(records, elapsedMs) {
       responseVersionConflict: "passed",
       concurrentRankingEdits: "passed",
       fiftyRequestReadBurst: "passed",
+      conditionalWorkspaceReads: "passed",
       cancelledReadRecovery: "passed",
       invalidInputBoundaries: "passed",
       lateStudentBoundary: "passed",
@@ -446,6 +448,7 @@ async function runScenario(baseUrl, dispatchFetch, db) {
   const client = createMeasuredClient(baseUrl, dispatchFetch);
   console.log("[1/8] 重設示範課堂並讀取教師快照");
   let snapshot = await resetAndLoadClassroom(client);
+  await verifyConditionalWorkspaceRead(client);
   await verifyClassroomGrouping(client, db);
   console.log("[2/8] 並行讀取 24 名學生作答畫面");
   const initialViews = await loadStudentViews(client, "answering");

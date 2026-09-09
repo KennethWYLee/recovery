@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { matchesIfNoneMatch } from "../lib/classroom-http.ts";
 import {
   ClassroomRequestBodyError,
   drainClassroomRequestBody,
@@ -23,6 +24,22 @@ function streamRequest(chunks: Uint8Array[], headers: Record<string, string> = {
 }
 
 const bytes = (value: string) => new TextEncoder().encode(value);
+
+test("conditional reads match weak and strong entity tags and complete tag lists", () => {
+  for (const header of ['"current"', 'W/"current"', '"old", W/"current"', ' W/"current" , "old" ', ', , W/"current",', '*']) {
+    assert.equal(matchesIfNoneMatch(header, '"current"'), true, header);
+    assert.equal(matchesIfNoneMatch(header, 'W/"current"'), true, header);
+  }
+  assert.equal(matchesIfNoneMatch('W/"a,b", "old"', '"a,b"'), true);
+  assert.equal(matchesIfNoneMatch('""', 'W/""'), true);
+});
+
+test("conditional reads reject stale, partial, malformed and case-mismatched tags", () => {
+  for (const header of [null, '', ', ,', '"old"', 'W/"Current"', 'current', 'W/current', 'W/"current', 'w/"current"', '* , "current"', 'garbage, "current"', '"prefix, "current", garbage', '"current" trailing']) {
+    assert.equal(matchesIfNoneMatch(header, '"current"'), false, String(header));
+  }
+  assert.equal(matchesIfNoneMatch('W/"a,b"', '"b"'), false);
+});
 
 async function rejectsWithKind(promise: Promise<unknown>, kind: ClassroomRequestBodyError["kind"]): Promise<void> {
   await assert.rejects(promise, (error: unknown) => {
