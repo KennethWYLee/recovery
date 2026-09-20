@@ -40,7 +40,7 @@ export function TeacherRankingPanel({ snapshot, order, dragging, pending, onDrag
       </section>
       <section id="teacher-ranking-workspace" tabIndex={-1} className="ranking-workspace teacher-ranking-workspace">
         <header>
-          <div><p>教師排序</p><h2>按 ↑ ↓ 調整名次，最上方為第 1 名</h2></div>
+          <div><p>教師排序</p><h2>按「上移／下移」調整名次，最上方為第 1 名</h2></div>
           <span>{groups.length} 份回答</span>
         </header>
         <ol className="ranking-list">
@@ -53,8 +53,8 @@ export function TeacherRankingPanel({ snapshot, order, dragging, pending, onDrag
                 <GripVertical />
                 <div className="ranking-answer"><p>{group.response.content}</p><small>{group.label}</small></div>
                 <span className="rank-controls">
-                  <button type="button" aria-label="上移" disabled={index === 0} onClick={() => onMove(index, -1)}><ArrowUp /></button>
-                  <button type="button" aria-label="下移" disabled={index === order.length - 1} onClick={() => onMove(index, 1)}><ArrowDown /></button>
+                  <button type="button" aria-label="上移" disabled={index === 0} onClick={() => onMove(index, -1)}><ArrowUp />上移</button>
+                  <button type="button" aria-label="下移" disabled={index === order.length - 1} onClick={() => onMove(index, 1)}><ArrowDown />下移</button>
                 </span>
               </li>
             );

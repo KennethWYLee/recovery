@@ -161,6 +161,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   line-height: 1.1;
 }
 .courses-heading span, .course-workspace-heading span, .access-review-heading span { display: block; margin-top: 10px; color: var(--muted); font-size: 16px; }
+.course-workspace-heading > div:first-child { min-width: 0; }
+.course-workspace-heading h1 { overflow-wrap: anywhere; }
 .courses-heading .button svg, .access-review-heading .button svg { width: 18px; height: 18px; }
 
 .course-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
@@ -483,9 +485,17 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .ranking-monitor svg { width: 48px; height: 48px; color: var(--primary); }
 .ranking-monitor strong { margin-top: 14px; color: var(--text-strong); font-size: 24px; }
 .ranking-monitor span { max-width: 440px; margin-top: 6px; color: var(--muted); }
-.teacher-ranking-layout { display: grid; grid-template-columns: minmax(250px, .7fr) minmax(0, 1.3fr); gap: 18px; padding: 18px; }
+.teacher-ranking-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); align-items: start; gap: 18px; padding: 18px; }
 .teacher-ranking-layout .ranking-monitor { min-height: 280px; padding: 26px; background: var(--surface-subtle); border: 1px solid var(--border-soft); border-radius: 12px; }
 .teacher-ranking-workspace { min-width: 0; }
+.teacher-ranking-workspace > header { flex-wrap: wrap; gap: 8px; }
+.teacher-ranking-workspace > header > div { flex: 1 1 240px; min-width: 0; }
+.teacher-ranking-workspace > header > span { white-space: nowrap; }
+.teacher-ranking-workspace .ranking-list li { grid-template-columns: 38px minmax(0, 1fr) 20px; }
+.teacher-ranking-workspace .ranking-list li > svg { grid-column: 3; grid-row: 1; }
+.teacher-ranking-workspace .ranking-answer { grid-column: 1 / -1; grid-row: 2; }
+.teacher-ranking-workspace .rank-controls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.teacher-ranking-workspace .rank-controls button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 88px; height: auto; min-height: 44px; padding: 10px 12px; font-size: 14px; touch-action: manipulation; }
 .teacher-ranking-entry { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px; background: var(--surface-subtle); border-bottom: 1px solid var(--border-soft); }
 .teacher-ranking-entry p { margin: 6px 0 0; color: var(--muted); }
 #teacher-ranking-workspace { scroll-margin-top: 100px; }
@@ -586,7 +596,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .join-code-panel small { color: var(--muted); }
 .join-code-panel .test-class-code { display: inline-block; margin-left: 8px; padding: 3px 8px; color: var(--primary); background: var(--primary-soft); border-radius: 6px; font-size: 13px; font-weight: 850; letter-spacing: .03em; }
 .join-code-panel input { min-height: 42px; padding: 8px 12px; color: var(--text-strong); background: #fff; border: 1px solid var(--border); border-radius: 8px; font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.workspace-heading-actions { display: flex; gap: 9px; }
+.workspace-heading-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.workspace-heading-actions .button { white-space: nowrap; }
 .student-test-banner { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; padding: 14px 16px; color: #17453f; background: #e2f4f0; border: 1px solid #9ed6cc; border-radius: 11px; }
 .student-test-banner > div, .student-test-banner > div > span { display: flex; align-items: center; gap: 10px; }
 .student-test-banner > div > span { align-items: flex-start; flex-direction: column; gap: 1px; }
@@ -611,7 +622,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .student-test-grid small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .student-test-grid em { padding: 3px 6px; color: var(--primary); background: #fff; border-radius: 999px; font-size: 10px; font-style: normal; font-weight: 800; }
 .student-test-picker > footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; background: var(--surface-subtle); border-top: 1px solid var(--border-soft); font-size: 12px; }
-.session-settings-panel { display: grid; grid-template-columns: minmax(220px, 1.2fr) 160px repeat(4, minmax(140px, .8fr)) auto; align-items: end; gap: 10px; margin-bottom: 18px; padding: 17px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.session-settings-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); align-items: end; gap: 10px; margin-bottom: 18px; padding: 17px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.session-settings-panel > * { min-width: 0; }
 .session-settings-panel > header { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
 .session-settings-panel > header svg { width: 20px; color: var(--primary); }
 .session-settings-panel > header div { display: grid; }
@@ -677,6 +689,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .teacher-response-layout .submission-progress .progress-track, .teacher-response-layout .submission-progress > p { grid-column: 1 / -1; margin: 0; }
 .teacher-response-layout .presentation-grid.compact { grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
 @media (max-width: 980px) {
+  .live-classroom-layout { grid-template-columns: 1fr; }
+  .question-rail { position: static; }
   .live-classroom-layout > .question-stage { order: -1; }
 }
 .presentation-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; }
@@ -810,6 +824,11 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .student-answers article > span { color: var(--primary); font-weight: 850; }
 .student-answers article > em { margin-left: 8px; padding: 3px 7px; color: #17453f; background: #e2f4f0; border-radius: 999px; font-size: 12px; font-style: normal; font-weight: 800; }
 .student-answers article > p { margin: 10px 0 0; color: var(--text-strong); font-size: 17px; line-height: 1.7; white-space: pre-wrap; }
+.student-question-card h2, .student-question-card p,
+.student-live-draft > p, .student-submitted > p, .student-answers article > p,
+.presentation-grid p, .ranking-answer p, .response-readonly,
+.question-rail li strong, .question-bank-list li strong, .question-bank-list li p,
+.question-bank-classroom-list button strong, .question-bank-classroom-list button small { overflow-wrap: anywhere; }
 .student-ranking-card > .ranking-list { margin-top: 22px; }
 .student-ranking-card .ranking-list li { grid-template-columns: 20px minmax(0, 1fr) auto; padding: 18px; }
 .student-ranking-card .ranking-answer p { font-size: 17px; line-height: 1.72; }
@@ -890,10 +909,6 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .join-code-panel { grid-template-columns: 44px 1fr; }
   .join-code-panel input { grid-column: 1 / -1; }
   .join-code-panel .button { grid-column: 1 / -1; }
-  .session-settings-panel { grid-template-columns: 1fr 1fr; }
-  .session-settings-panel > header { grid-column: 1 / -1; }
-  .live-classroom-layout { grid-template-columns: 1fr; }
-  .question-rail { position: static; }
   .student-test-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -941,7 +956,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .course-admin-link { font-size: 0; }
   .course-admin-link svg { width: 20px; height: 20px; }
   .courses-main, .course-workspace-main, .access-review-main { width: min(100% - 28px, 1180px); padding-top: 34px; }
-  .courses-heading, .access-review-heading { align-items: flex-start; flex-direction: column; }
+  .courses-heading, .course-workspace-heading, .access-review-heading { align-items: flex-start; flex-direction: column; }
   .courses-heading .button { min-width: 44px; padding-inline: 11px; font-size: 0; }
   .course-grid, .access-review-summary { grid-template-columns: 1fr; }
   .course-card { min-height: 302px; }
@@ -963,6 +978,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .live-session-header dl { display: grid; grid-template-columns: repeat(3, 1fr); }
   .live-session-header dl div { min-width: 0; padding: 0 8px; }
   .attendance-panel > footer, .session-action-bar, .session-create-card > footer, .response-workspace > footer { align-items: stretch; flex-direction: column; }
+  .question-actions > div { flex: 0 1 auto; }
   .response-workspace > footer > div { display: grid; }
   .presentation-grid { grid-template-columns: 1fr; }
   .result-meta { align-items: flex-start; flex-direction: column; gap: 8px; }
@@ -972,8 +988,6 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .student-test-grid { grid-template-columns: 1fr; }
   .student-test-picker > footer, .student-test-banner { align-items: stretch; flex-direction: column; }
   .student-test-banner button { justify-content: center; }
-  .session-settings-panel { grid-template-columns: 1fr; }
-  .session-settings-panel > header { grid-column: auto; }
   .question-stage-header { flex-direction: column; }
   .roster-import { min-width: 0; }
   .roster-dropzone { grid-template-columns: 34px 1fr; }
