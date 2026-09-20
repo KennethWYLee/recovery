@@ -11,6 +11,9 @@ function metadataForBase(metadataBase: URL): Metadata {
     },
     description: "支援課堂小組回答、完整同儕排序與全班結果彙整。",
     applicationName: "課堂小組回應與排序系統",
+    icons: {
+      icon: [{ url: "/favicon.svg", type: "image/svg+xml" }, { url: "/favicon.ico", sizes: "32x32" }],
+    },
     openGraph: {
       type: "website",
       title: "課堂小組回應與排序系統",

@@ -98,23 +98,20 @@ export async function ensureClassroomSchema(db = classroomDb()): Promise<void> {
         "SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('classroom_users', 'classroom_courses', 'classroom_course_members', 'classroom_course_roster', 'classroom_course_question_bank', 'classroom_seed_state', 'classroom_schema_state', 'classroom_audit_events', 'classroom_access_requests', 'classroom_access_allowlist', 'classroom_sessions', 'classroom_groups', 'classroom_session_participants', 'classroom_group_responses', 'classroom_ranking_submissions', 'classroom_ranking_items', 'classroom_rate_limits', 'classroom_questions', 'classroom_question_memberships', 'classroom_question_responses', 'classroom_question_ranking_submissions', 'classroom_question_ranking_items', 'classroom_operation_logs', 'classroom_incidents') ORDER BY name",
       ).all<{ name: string }>();
       if (tables.results.length !== 24) throw classroomSchemaMismatch("required tables are missing");
-      const state = await db.prepare(
-        "SELECT schema_version, schema_fingerprint FROM classroom_schema_state WHERE singleton_id = 1",
-      ).first<{ schema_version: number; schema_fingerprint: string }>();
+      const [stateRows, questionColumns, currentRankingIndex] = await db.batch<{ schema_version?: number; schema_fingerprint?: string; name?: string }>([
+        db.prepare("SELECT schema_version, schema_fingerprint FROM classroom_schema_state WHERE singleton_id = 1"),
+        db.prepare("PRAGMA table_info(classroom_questions)"),
+        db.prepare("SELECT name FROM sqlite_schema WHERE type = 'index' AND name = 'classroom_question_rankings_current_unique'"),
+      ]);
+      const state = stateRows.results[0];
       if (state?.schema_version !== CLASSROOM_SCHEMA_VERSION || state.schema_fingerprint !== CLASSROOM_SCHEMA_FINGERPRINT) {
         throw classroomSchemaMismatch(`expected version ${CLASSROOM_SCHEMA_VERSION} (${CLASSROOM_SCHEMA_FINGERPRINT})`);
       }
-      const questionColumns = await db.prepare("PRAGMA table_info(classroom_questions)")
-        .all<{ name: string }>();
       const columnNames = new Set(questionColumns.results.map((column) => column.name));
       for (const requiredColumn of ["source_question_bank_id", "answer_duration_seconds", "answer_deadline_at"]) {
         if (!columnNames.has(requiredColumn)) throw classroomSchemaMismatch(`classroom_questions.${requiredColumn} is missing`);
       }
-      const currentRankingIndex = await db.prepare(
-        "SELECT name FROM sqlite_schema WHERE type = 'index' AND name = 'classroom_question_rankings_current_unique'",
-      ).first<{ name: string }>();
-      if (!currentRankingIndex) throw classroomSchemaMismatch("current ranking uniqueness index is missing");
-      await db.prepare("PRAGMA optimize").run();
+      if (!currentRankingIndex.results.length) throw classroomSchemaMismatch("current ranking uniqueness index is missing");
     })().catch((error) => {
       schemaReady = null;
       throw error;
@@ -262,9 +259,7 @@ function demoRankOrder(base: number[], ownGroup: number, studentIndex: number): 
 async function ensureDemoClassroom(db: D1Database, actor: ClassroomActor): Promise<void> {
   const courseId = "course-demo-classroom";
   const sessionId = "session-demo-classroom";
-  const existing = await db.prepare("SELECT id FROM classroom_sessions WHERE id = ?")
-    .bind(sessionId).first<{ id: string }>();
-  if (existing) return ensureDemoTeacherRankings(db);
+  if (await ensureDemoTeacherRankings(db)) return;
 
   const now = classroomNow();
   const earlier = (minutes: number) => new Date(Date.parse(now) - minutes * 60_000).toISOString();

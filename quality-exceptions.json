@@ -7,7 +7,7 @@
   },
   "fileExceptions": {
     "app/courses/[courseId]/CourseWorkspace.tsx": {
-      "baselineLines": 1453,
+      "baselineLines": 1439,
       "reason": "既有課堂工作區同時承載教師與學生流程；須先以行為測試保護，再按畫面責任拆分。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"
@@ -19,7 +19,7 @@
       "expiresOn": "2026-11-30"
     },
     "db/classroom.ts": {
-      "baselineLines": 736,
+      "baselineLines": 731,
       "reason": "既有身分、課程與示範資料存取集中；須在介面契約固定後分離各資料責任。",
       "ownerRole": "後端資料層維護者",
       "expiresOn": "2026-11-30"
@@ -33,8 +33,8 @@
       "expiresOn": "2026-10-31"
     },
     "app/courses/[courseId]/CourseWorkspace.tsx::CourseWorkspace": {
-      "baselineLines": 728,
-      "baselineComplexity": 58,
+      "baselineLines": 713,
+      "baselineComplexity": 57,
       "reason": "既有教師工作區整合資料載入、狀態控制及多個階段畫面；將依課堂階段拆成可測元件。",
       "ownerRole": "前端維護者",
       "expiresOn": "2026-11-30"
@@ -84,7 +84,7 @@
       "expiresOn": "2026-10-31"
     },
     "db/classroom.ts::ensureDemoClassroom": {
-      "baselineLines": 187,
+      "baselineLines": 185,
       "baselineComplexity": 22,
       "reason": "示範資料建立目前包含完整關聯資料；將固定樣本與寫入程序分離以降低維護風險。",
       "ownerRole": "示範資料維護者",

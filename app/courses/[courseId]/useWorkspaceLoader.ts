@@ -18,7 +18,7 @@ type LoaderRefs = {
 
 type LoaderSetters = {
   setPayload: Dispatch<SetStateAction<WorkspacePayload | null>>;
-  setError: Dispatch<SetStateAction<string | null>>;
+  setLoadError: Dispatch<SetStateAction<string | null>>;
   setPending: Dispatch<SetStateAction<boolean>>;
   setResponseText: Dispatch<SetStateAction<string>>;
   setAnswerLabels: Dispatch<SetStateAction<Record<string, string>>>;
@@ -97,6 +97,7 @@ function requestIsStale(requestId: number, currentRequestId: number, aborted: bo
 
 function workspaceLoadError(cause: unknown, timedOut: boolean): string {
   if (timedOut) return "課程載入超過 15 秒，請確認網路連線後按「重新載入」。";
+  if (cause instanceof TypeError) return "網路連線中斷，課堂畫面可能不是最新資料。請確認連線後再試。";
   return cause instanceof Error ? cause.message : "目前無法取得課堂資料。";
 }
 
@@ -148,6 +149,7 @@ export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, ini
   const requestRef = useRef(0);
   const etagRef = useRef<{ key: string; value: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const snapshotSignatureRef = refs.snapshotSignature;
   const cancelLoading = useCallback(() => {
     requestRef.current += 1;
     abortRef.current?.abort();
@@ -162,7 +164,7 @@ export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, ini
     abortRef.current = controller;
     let timedOut = false;
     const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
-    if (!quiet) { setters.setError(null); setters.setPending(true); }
+    if (!quiet) { setters.setLoadError(null); setters.setPending(true); }
     const selected = selectedWorkspaceValue(questionId, refs.selectedQuestion.current);
     const activeTestStudent = selectedWorkspaceValue(testStudentOverride, testStudentId);
     try {
@@ -171,16 +173,25 @@ export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, ini
       const headers = workspaceHeaders(url, quiet, etagRef.current);
       const response = await fetch(url, { cache: "no-store", headers, signal: controller.signal });
       if (requestId !== requestRef.current) return;
-      if (applyUnchangedWorkspace(response, setters.setPayload)) return;
+      if (applyUnchangedWorkspace(response, setters.setPayload)) {
+        setters.setLoadError(null);
+        return;
+      }
+      if ([401, 403, 404].includes(response.status)) {
+        etagRef.current = null;
+        snapshotSignatureRef.current = "";
+        setters.setPayload(null);
+      }
       const data = await classroomApiData<WorkspacePayload>(response);
       if (requestId !== requestRef.current) return;
+      setters.setLoadError(null);
       const etag = response.headers?.get("etag");
       if (etag) etagRef.current = { key: url, value: etag };
       preparePayloadState(data, refs, initializeRanking, setters.setResponseText, setters.setAnswerLabels);
       applyPayload(data, quiet, refs.snapshotSignature, setters.setPayload, etag);
     } catch (cause) {
       if (requestIsStale(requestId, requestRef.current, controller.signal.aborted, timedOut)) return;
-      if (!quiet) setters.setError(workspaceLoadError(cause, timedOut));
+      setters.setLoadError(workspaceLoadError(cause, timedOut));
     } finally {
       clearTimeout(timeout);
       if (requestId === requestRef.current) {
@@ -188,6 +199,6 @@ export function useWorkspaceLoader({ courseId, testStudentId, refs, setters, ini
         if (!quiet) setters.setPending(false);
       }
     }
-  }, [courseId, initializeRanking, refs, setters, testStudentId]);
+  }, [courseId, initializeRanking, refs, setters, snapshotSignatureRef, testStudentId]);
   return { load, cancelLoading };
 }

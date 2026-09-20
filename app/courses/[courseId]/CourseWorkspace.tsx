@@ -14,7 +14,8 @@ import { StudentQuestionPicker } from "./StudentQuestionPicker";
 import { StudentTestPicker, StudentTestResetDialog } from "./StudentTestTools";
 import { TeacherRankingEntry, TeacherRankingPanel } from "./TeacherRankingPanel";
 import { QuestionActions } from "./QuestionActions";
-import { CourseJoinHelp, CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
+import { CourseWorkspaceHeader } from "./CourseWorkspaceHeader";
+import { CourseWorkspaceLoadState } from "./CourseWorkspaceLoadState";
 import { StudentActionFeedback } from "./StudentActionFeedback";
 import { useProgressiveRanking } from "./useProgressiveRanking";
 import { AnswerCountdown } from "./AnswerCountdown";
@@ -159,6 +160,7 @@ function EmptySession({ course, onCreated }: { course: ClassroomCourse; onCreate
 export function CourseWorkspace({ courseId, identity }: { courseId: string; identity: ClassroomPageIdentity }) {
   const [payload, setPayload] = useState<WorkspacePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [dragParticipant, setDragParticipant] = useState<string | null>(null);
@@ -194,7 +196,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
   const snapshotSignatureRef = useRef("");
   const loaderRefs = useMemo(() => ({ responseDraft: responseDraftRef, responseKey: responseKeyRef, rankingKey: rankingKeyRef,
     selectedQuestion: selectedQuestionRef, snapshotSignature: snapshotSignatureRef }), []);
-  const loaderSetters = useMemo(() => ({ setPayload, setError, setPending, setResponseText: setResponseTextState, setAnswerLabels }), []);
+  const loaderSetters = useMemo(() => ({ setPayload, setLoadError, setPending, setResponseText: setResponseTextState, setAnswerLabels }), []);
   const { load, cancelLoading } = useWorkspaceLoader({
     courseId,
     testStudentId,
@@ -412,6 +414,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
 
   function selectTestStudent(userId: string) {
     cancelLoading();
+    setError(null);
     responseKeyRef.current = ""; responseDraftRef.current = emptyResponseDraft(); rankingKeyRef.current = "";
     selectedQuestionRef.current = null;
     snapshotSignatureRef.current = "";
@@ -425,9 +428,10 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     setNotice(null);
   }
 
-  function selectStudentQuestion(questionId: string) { responseKeyRef.current = ""; rankingKeyRef.current = ""; selectedQuestionRef.current = questionId; void load(false, questionId); }
+  function selectStudentQuestion(questionId: string) { setError(null); responseKeyRef.current = ""; rankingKeyRef.current = ""; selectedQuestionRef.current = questionId; void load(false, questionId); }
   function exitStudentTestMode() {
     cancelLoading();
+    setError(null);
     responseKeyRef.current = ""; responseDraftRef.current = emptyResponseDraft();
     rankingKeyRef.current = "";
     selectedQuestionRef.current = null;
@@ -474,27 +478,9 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     }
   }
 
-  if (!payload)
-    return (
-      <div className="course-shell">
-        <main className="course-workspace-main">
-          {error ? (
-            <div className="courses-error">
-              <strong>無法開啟課程</strong>
-              <span>{error}</span><CourseJoinHelp />
-              <button className="button secondary" onClick={() => void load()}>
-                重新載入
-              </button>
-            </div>
-          ) : (
-            <div className="courses-loading">
-              <span className="spinner" />
-              正在開啟課程…
-            </div>
-          )}
-        </main>
-      </div>
-    );
+  const displayedError = [loadError, error].filter(Boolean).join(" ");
+  if (!payload) return <CourseWorkspaceLoadState error={displayedError} draftText={responseText}
+    draftDirty={responseDraftRef.current.dirty} courseId={courseId} hosted={identity.mode === "hosted"} onRetry={() => void load()} />;
 
   const { actor, viewer, testMode, course } = payload;
   const joinUrl = snapshot && typeof window !== "undefined" ? `${window.location.origin}/join/${snapshot.session.joinCode}` : "";
@@ -507,7 +493,7 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
     published: "封存這個問題",
   };
 
-  if (!actor.isAdmin && snapshot) return <StudentClassroomView actor={actor} course={course} snapshot={snapshot} identity={identity} testMode={testMode} error={error} notice={notice} responseText={responseText} setResponseText={setResponseText} responseSaveState={responseSaveState} rankingOrder={rankingOrder} rankingSelectionCount={rankingSelectionCount} answerLabels={answerLabels} pending={pending} saveResponse={saveResponse} submitRanking={submitRanking} chooseNextRank={chooseNextRank} undoLastRank={undoLastRank} restartRanking={restartRanking} moveSelectedRank={moveSelectedRank} refresh={() => load(false)} selectQuestion={selectStudentQuestion} exitStudentTestMode={exitStudentTestMode} />;
+  if (!actor.isAdmin && snapshot) return <StudentClassroomView actor={actor} course={course} snapshot={snapshot} identity={identity} testMode={testMode} error={displayedError} notice={notice} responseText={responseText} setResponseText={setResponseText} responseSaveState={responseSaveState} rankingOrder={rankingOrder} rankingSelectionCount={rankingSelectionCount} answerLabels={answerLabels} pending={pending} saveResponse={saveResponse} submitRanking={submitRanking} chooseNextRank={chooseNextRank} undoLastRank={undoLastRank} restartRanking={restartRanking} moveSelectedRank={moveSelectedRank} refresh={() => load(false)} selectQuestion={selectStudentQuestion} exitStudentTestMode={exitStudentTestMode} />;
 
   return (
     <div className="course-shell">
@@ -564,9 +550,9 @@ export function CourseWorkspace({ courseId, identity }: { courseId: string; iden
         )}
         {showStudentTestPicker && viewer.isAdmin && course.isDemo && snapshot && <StudentTestPicker snapshot={snapshot} currentUserId={testMode ? actor.id : null} pending={pending} onSelect={selectTestStudent} onReset={() => setShowStudentTestReset(true)} onClose={() => setShowStudentTestPicker(false)} />}
         <StudentTestResetDialog open={showStudentTestReset} pending={pending} onClose={() => setShowStudentTestReset(false)} onConfirm={() => void resetStudentTestData()} />
-        {error && (
+        {displayedError && (
           <div className="workspace-alert error" role="alert">
-            {error}
+            課堂更新或操作未完成：{displayedError}
           </div>
         )}
         {notice && (

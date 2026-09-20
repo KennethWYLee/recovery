@@ -10,6 +10,31 @@ import ts from "typescript";
 
 const root = new URL("../", import.meta.url);
 
+test("unavailable course keeps unsaved text available to copy before sign-in", () => {
+  const loadedModule = { exports: {} };
+  const nativeRequire = createRequire(import.meta.url);
+  const source = ts.transpileModule(readFileSync(new URL("app/courses/[courseId]/CourseWorkspaceLoadState.tsx", root), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText;
+  vm.runInNewContext(source, { module: loadedModule, exports: loadedModule.exports, encodeURIComponent,
+    require: (specifier) => specifier === "./CourseWorkspaceHeader"
+      ? { CourseJoinHelp: () => createElement("span", null, "輸入課程代碼加入") }
+      : nativeRequire(specifier),
+  });
+  const props = { error: "請重新登入", draftText: "我的回答 <尚未儲存>", draftDirty: true,
+    courseId: "synthetic-course", hosted: true, onRetry() {} };
+  const render = (overrides) => renderToStaticMarkup(createElement(loadedModule.exports.CourseWorkspaceLoadState, { ...props, ...overrides }));
+  const html = render();
+  assert.match(html, /role="alert"/);
+  assert.match(html, /<textarea[^>]*readOnly=""[^>]*>我的回答 &lt;尚未儲存&gt;<\/textarea>/);
+  assert.match(html, /href="\/signin-with-chatgpt\?return_to=%2Fcourses%2Fsynthetic-course" target="_top"/);
+  assert.match(html, /重新載入/);
+  assert.match(html, /輸入課程代碼加入/);
+  assert.doesNotMatch(render({ draftDirty: false, hosted: false }), /textarea|signin-with-chatgpt/);
+  assert.match(render({ error: "" }), /正在開啟課程/);
+  assert.doesNotMatch(render({ error: "" }), /role="alert"/);
+});
+
 function harness() {
   const state = { pending: false, error: null, payload: null };
   const requests = [];
@@ -22,11 +47,11 @@ function harness() {
   browser.setInterval = (callback, delay) => { intervals.set(++timerId, { callback, delay }); return timerId; };
   browser.clearInterval = (id) => intervals.delete(id);
   const context = {
-    AbortController, URLSearchParams, crypto, document: page, window: browser,
+    AbortController, URLSearchParams, Error, TypeError, crypto, document: page, window: browser,
     setTimeout: (callback, delay) => { timers.set(++timerId, { callback, delay }); return timerId; },
     clearTimeout: (id) => timers.delete(id),
     fetch: (url, { signal, headers }) => new Promise((resolve, reject) => {
-      requests.push({ url, headers, signal, resolve });
+      requests.push({ url, headers, signal, resolve, reject });
       signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
     }),
   };
@@ -51,7 +76,7 @@ function harness() {
   const refs = Object.fromEntries(["responseKey", "rankingKey", "selectedQuestion", "snapshotSignature"].map((key) => [key, { current: "" }]));
   refs.responseDraft = { current: { scope: "", text: "", serverContent: "", version: 0, dirty: false } };
   const loader = createLoader({ courseId: "synthetic-course", testStudentId: null, refs, initializeRanking() {}, setters: {
-    setPending: (value) => { state.pending = value; }, setError: (value) => { state.error = value; },
+    setPending: (value) => { state.pending = value; }, setLoadError: (value) => { state.error = value; },
     setPayload: (value) => { state.payload = typeof value === "function" ? value(state.payload) : value; }, setResponseText(value) { state.responseText = value; }, setAnswerLabels() {},
   } });
   const respond = (index, snapshot = null) => requests[index].resolve({ ok: true, json: async () => ({ data: { actor: { id: "synthetic-actor" }, snapshot } }) });
@@ -192,6 +217,76 @@ test("student refresh checks every three seconds and pauses while hidden", () =>
   h.page.visibilityState = "hidden";
   interval.callback(); assert.equal(calls, 1);
   stop(); assert.equal(h.intervals.size, 0);
+});
+
+function draftSnapshot() {
+  return {
+    session: { version: 1 }, question: { id: "question-1", version: 1, phase: "answering" },
+    completion: { checkedIn: 2, submittedGroups: 0, rankedStudents: 0 },
+    groups: [{ id: "group-1", representativeUserId: null, members: [], response: { version: 1, status: "draft", content: "先前草稿" } }],
+    participants: [],
+    currentUser: { groupId: "group-1", isRepresentative: true, participatesInQuestion: true, canRank: false, hasSubmittedRanking: false },
+  };
+}
+
+function respondWithRevision(h, index, snapshot = null) {
+  h.requests[index].resolve({ ok: true, status: 200, headers: new Headers({ etag: 'W/"one"' }),
+    json: async () => ({ data: { actor: { id: "synthetic-actor" }, snapshot } }) });
+}
+
+for (const status of [401, 403, 404]) {
+  test(`background ${status} hides stale controls and restores the same revision without losing the draft`, async () => {
+    const h = harness();
+    const initial = h.load(); respondWithRevision(h, 0, draftSnapshot()); await initial;
+    h.refs.responseDraft.current.text = "尚未送出的回答";
+    h.refs.responseDraft.current.dirty = true;
+    const failed = h.load(true);
+    h.requests[1].resolve({ status, ok: false, json: async () => ({ error: { message: `無法存取 ${status}` } }) });
+    await failed;
+    assert.equal(h.state.payload, null);
+    assert.match(h.state.error, new RegExp(String(status)));
+    assert.equal(h.refs.responseDraft.current.text, "尚未送出的回答");
+    const recovered = h.load(true);
+    assert.equal(h.requests[2].headers["if-none-match"], undefined);
+    respondWithRevision(h, 2, draftSnapshot()); await recovered;
+    assert.equal(h.state.error, null);
+    assert.equal(h.state.payload.actor.id, "synthetic-actor");
+    assert.equal(h.state.responseText, "尚未送出的回答");
+  });
+}
+
+test("background network and service errors are visible, preserve input and clear on a successful 304", async () => {
+  const h = harness();
+  const initial = h.load(); respondWithRevision(h, 0); await initial;
+  const payload = h.state.payload;
+  h.refs.responseDraft.current.text = "正在輸入";
+  h.refs.responseDraft.current.dirty = true;
+  const disconnected = h.load(true);
+  h.requests[1].reject(new TypeError("Failed to fetch")); await disconnected;
+  assert.match(h.state.error, /網路連線中斷/);
+  assert.equal(h.state.payload, payload);
+  const unavailable = h.load(true);
+  h.requests[2].resolve({ status: 503, ok: false, json: async () => ({ error: { message: "服務暫時無法使用" } }) });
+  await unavailable;
+  assert.match(h.state.error, /服務暫時/);
+  assert.equal(h.state.payload, payload);
+  const recovered = h.load(true);
+  h.requests[3].resolve({ status: 304, headers: new Headers(), json: () => assert.fail("304 has no body") });
+  await recovered;
+  assert.equal(h.state.error, null);
+  assert.equal(h.state.payload, payload);
+  assert.equal(h.refs.responseDraft.current.text, "正在輸入");
+});
+
+test("a successful background retry clears an initial failure without a manual reload", async () => {
+  const h = harness();
+  const initial = h.load();
+  h.requests[0].resolve({ status: 403, ok: false, json: async () => ({ error: { message: "尚未取得權限" } }) });
+  await initial;
+  assert.match(h.state.error, /權限/);
+  const retry = h.load(true); h.respond(1); await retry;
+  assert.equal(h.state.error, null);
+  assert.equal(h.state.payload.actor.id, "synthetic-actor");
 });
 
 test("published lists independently order consensus by score and teacher by saved choices", () => {
